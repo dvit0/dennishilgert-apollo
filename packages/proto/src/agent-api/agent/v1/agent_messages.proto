@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package agent.v1;
+option go_package = "/agent/v1";
+
+import "agent/v1/agent_structs.proto";
+import "google/protobuf/any.proto";
+
+message ExecutionRequest {
+  string raw_path = 1;
+  string raw_query_string = 2;
+  repeated string cookies = 3;
+  map<string, string> headers = 4;
+  map<string, string> query_string_parameters = 5;
+  map<string, string> path_parameters = 6;
+  RequestContext request_context = 7;
+  google.protobuf.Any body = 8;
+}
+
+message ExecutionResponse {
+  int32 status_code = 1;
+  repeated string cookies = 2;
+  map<string, string> headers = 3;
+  google.protobuf.Any body = 4;
+}

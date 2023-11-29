@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package agent.v1.services;
+option go_package = "/agent/v1/services";
+
+import "agent/v1/agent_messages.proto";
+
+service AgentService {
+  rpc execute(ExecutionRequest) returns (ExecutionResponse) {}
+}
