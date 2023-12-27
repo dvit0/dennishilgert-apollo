@@ -41,7 +41,6 @@ func main() {
 	for vm := range vmPool {
 		interruptVm(c, &vm)
 	}
-	os.Exit(0)
 }
 
 func interruptVm(c chan os.Signal, vm *firecrackerInstance) {
