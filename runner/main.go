@@ -74,5 +74,6 @@ func bootVm(ctx context.Context, kernel string, image string, firecrackerBinary 
 }
 
 func main() {
-	bootVm(context.Background(), "../vmlinux-5.10.204", "../", "../firecracker")
+	log.Print("Starting vm ...")
+	bootVm(context.Background(), "../vmlinux-5.10.204", "../ubuntu-22.04.ext4", "../firecracker")
 }
