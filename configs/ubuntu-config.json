@@ -1,13 +1,13 @@
 {
   "boot-source": {
-    "kernel_image_path": "vmlinux-5.10.172",
+    "kernel_image_path": "vmlinux-5.10.204",
     "boot_args": "console=ttyS0 reboot=k panic=1 pci=off",
     "initrd_path": null
   },
   "drives": [
     {
       "drive_id": "rootfs",
-      "path_on_host": "rootfs-ubuntu-18.04.ext4",
+      "path_on_host": "rootfs-ubuntu-22.04.ext4",
       "is_root_device": true,
       "partuuid": null,
       "is_read_only": true,
