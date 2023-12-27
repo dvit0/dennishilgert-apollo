@@ -63,7 +63,7 @@ func bootVm(ctx context.Context, kernel string, image string, firecrackerBinary 
 			{
 				CNIConfiguration: &firecracker.CNIConfiguration{
 					NetworkName: "fcnet",
-					IfName:      "eth0",
+					IfName:      "veth0",
 				},
 			},
 		},
