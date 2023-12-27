@@ -12,12 +12,12 @@ plugins:
       - outputServices=grpc-js
       - esModuleInterop=true
       - env=node
-    out: dist/ts
+    out: ../dist/ts
     strategy: all
-    path: node_modules/.bin/protoc-gen-ts_proto
+    path: ../../node_modules/.bin/protoc-gen-ts_proto
 
   # Build GoLang Stubs
   - plugin: buf.build/protocolbuffers/go:v1.31.0
-    out: dist/go
+    out: ../dist/go
     opt:
       - paths=source_relative
