@@ -41,7 +41,7 @@ func bootVm(ctx context.Context, kernel string, image string, firecrackerBinary 
 		SocketPath:      filepath.Join(string(os.PathSeparator), "tmp", "fc", vmId+".sock"),
 		KernelImagePath: kernel,
 		//KernelArgs:      "console=tty0 reboot=k panic=1 acpi=off pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -- \"/usr/bin/agent.sh\"",
-		KernelArgs: "console=tty0 reboot=k panic=1 acpi=off pci=off nomodules",
+		KernelArgs: "console=tty0 reboot=k panic=1 acpi=off pci=off i8042.noaux i8042.nomux i8042.nopnp i8042.dumbkbd nomodules",
 		Drives:     devices,
 		MachineCfg: models.MachineConfiguration{
 			VcpuCount:   firecracker.Int64(2),
