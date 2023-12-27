@@ -65,10 +65,10 @@ func createAndStartVm(ctx context.Context) (*firecrackerInstance, error) {
 	//installSignalHandlers(vmmCtx, machine)
 
 	// wait for the VMM to exit
-	log.Printf("Waiting for machine %s ...", vmmId)
-	if err := machine.Wait(vmmCtx); err != nil {
-		return nil, fmt.Errorf("Wait returned an error %s", err)
-	}
+	//log.Printf("Waiting for machine %s ...", vmmId)
+	//if err := machine.Wait(vmmCtx); err != nil {
+	//	return nil, fmt.Errorf("Wait returned an error %s", err)
+	//}
 
 	log.Printf("Machine has been started successfully")
 	return &firecrackerInstance{
