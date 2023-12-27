@@ -38,7 +38,7 @@ func bootVm(ctx context.Context, kernel string, image string, firecrackerBinary 
 	}
 	fcCfg := firecracker.Config{
 		LogLevel:        "debug",
-		SocketPath:      filepath.Join("/tmp/fc/", vmId, ".sock"),
+		SocketPath:      filepath.Join("/tmp/fc/", vmId+".sock"),
 		KernelImagePath: kernel,
 		//KernelArgs:      "console=tty0 reboot=k panic=1 acpi=off pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -- \"/usr/bin/agent.sh\"",
 		KernelArgs: "console=tty0 reboot=k panic=1 acpi=off pci=off nomodules",
