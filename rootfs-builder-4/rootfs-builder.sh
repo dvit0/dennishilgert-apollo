@@ -1,7 +1,7 @@
 #!/bin/bash
 
 docker pull debian:stable
-docker pull debian:bookworm-slim
+docker pull debian:bullseye-slim
 
 docker build -t fc-rootfs-builder -f Dockerfile.builder .
 
