@@ -30,7 +30,6 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 				BinPath:     []string{"/opt/cni/bin"},
 				ConfDir:     "/etc/cni/conf.d",
 				CacheDir:    "/var/lib/cni",
-				VMIfName:    "eth0",
 			},
 		}},
 		MachineCfg: models.MachineConfiguration{
@@ -39,6 +38,7 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 			Smt:             firecracker.Bool(true),
 			TrackDirtyPages: *firecracker.Bool(false),
 		},
+		VMID: vmmId,
 	}, nil
 }
 
