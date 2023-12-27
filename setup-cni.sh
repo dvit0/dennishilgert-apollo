@@ -30,14 +30,14 @@ make install
 sudo sh -c 'cat > /etc/cni/conf.d/fcnet.conflist << EOF
 {
   "name": "fcnet",
-  "cniVersion": "0.3.1",
+  "cniVersion": "0.4.0",
   "plugins": [
     {
       "type": "ptp",
       "ipMasq": true,
       "ipam": {
         "type": "host-local",
-        "subnet": "10.2.6.0/24",
+        "subnet": "10.6.0.0/24",
         "resolvConf": "/etc/resolv.conf"
       }
     },
