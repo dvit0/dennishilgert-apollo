@@ -14,9 +14,8 @@ import (
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 )
 
-var random = rand.New(rand.NewSource(1))
-
 func randomString(length int) string {
+	var random = rand.New(rand.NewSource(1))
 	const allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, length)
 	for i := 0; i < length; i++ {
