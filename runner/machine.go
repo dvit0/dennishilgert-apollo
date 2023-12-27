@@ -46,11 +46,13 @@ func createAndStartVm(ctx context.Context) (*firecrackerInstance, error) {
 		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
 	}
 
+	log.Printf("Building machine %s ...", vmmId)
 	machine, err := firecracker.NewMachine(vmmCtx, fcCfg, machineOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("Failed creating machine: %s", err)
 	}
 
+	log.Printf("Starting machine %s ...", vmmId)
 	if err := machine.Start(vmmCtx); err != nil {
 		return nil, fmt.Errorf("Failed to start machine: %v", err)
 	}
@@ -63,6 +65,7 @@ func createAndStartVm(ctx context.Context) (*firecrackerInstance, error) {
 	//installSignalHandlers(vmmCtx, machine)
 
 	// wait for the VMM to exit
+	log.Printf("Waiting for machine %s ...", vmmId)
 	if err := machine.Wait(vmmCtx); err != nil {
 		return nil, fmt.Errorf("Wait returned an error %s", err)
 	}
