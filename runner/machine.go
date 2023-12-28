@@ -25,7 +25,7 @@ func createAndStartVm(ctx context.Context) (*firecrackerInstance, error) {
 	logger.SetLevel(log.DebugLevel)
 
 	vmmCtx, vmmCancel := context.WithCancel(ctx)
-	defer vmmCancel()
+	//defer vmmCancel()
 
 	machineOpts := []firecracker.Opt{
 		firecracker.WithLogger(log.NewEntry(logger)),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"os/signal"
 	"syscall"
 
 	"github.com/firecracker-microvm/firecracker-go-sdk"
@@ -38,9 +39,9 @@ func main() {
 	log.Printf("IP", vm.machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr.IP)
 	log.Printf("IP Mask", vm.machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr.Mask)
 
-	//c := make(chan os.Signal, 1)
-	//signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	//log.Println("Blocking, press ctrl+c to continue ...")
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	log.Println("Blocking, press ctrl+c to continue ...")
 
 	// wait for the VMM to exit
 	log.Printf("Waiting for machine %s ...", vm.vmmId)
@@ -48,11 +49,11 @@ func main() {
 		log.Errorf("Error: %s", err)
 	}
 
-	//<-c // Will block here until user hits ctrl+c
+	<-c // Will block here until user hits ctrl+c
 
-	//for vm := range vmPool {
-	//	interruptVm(c, &vm)
-	//}
+	for vm := range vmPool {
+		interruptVm(c, &vm)
+	}
 }
 
 func interruptVm(c chan os.Signal, vm *firecrackerInstance) {
