@@ -44,10 +44,10 @@ func main() {
 	log.Println("Blocking, press ctrl+c to continue ...")
 
 	// wait for the VMM to exit
-	log.Printf("Waiting for machine %s ...", vm.vmmId)
-	if err := vm.machine.Wait(vm.vmmCtx); err != nil {
-		log.Errorf("Error: %s", err)
-	}
+	//log.Printf("Waiting for machine %s ...", vm.vmmId)
+	//if err := vm.machine.Wait(vm.vmmCtx); err != nil {
+	//	log.Errorf("Error: %s", err)
+	//}
 
 	<-c // Will block here until user hits ctrl+c
 
