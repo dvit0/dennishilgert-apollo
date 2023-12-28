@@ -16,6 +16,7 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 	return firecracker.Config{
 		SocketPath:      socket,
 		KernelImagePath: "../vmlinux-5.10.204",
+		KernelArgs:      "console=ttyS0 reboot=k panic=1 pci=off nomodules",
 		LogPath:         fmt.Sprintf("%s.log", socket),
 		Drives: []models.Drive{{
 			DriveID:      firecracker.String("1"),
