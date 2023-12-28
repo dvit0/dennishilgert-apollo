@@ -31,6 +31,12 @@ func main() {
 	}
 	vmPool <- *vm
 
+	log.Printf("HostDevName", vm.machine.Cfg.NetworkInterfaces[0].StaticConfiguration.HostDevName)
+	log.Printf("MacAdress", vm.machine.Cfg.NetworkInterfaces[0].StaticConfiguration.MacAddress)
+	log.Printf("Gateway", vm.machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.Gateway)
+	log.Printf("IP", vm.machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr.IP)
+	log.Printf("IP Mask", vm.machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr.Mask)
+
 	log.SetReportCaller(true)
 
 	c := make(chan os.Signal, 1)
@@ -38,9 +44,9 @@ func main() {
 	log.Println("Blocking, press ctrl+c to continue ...")
 	<-c // Will block here until user hits ctrl+c
 
-	for vm := range vmPool {
-		interruptVm(c, &vm)
-	}
+	//for vm := range vmPool {
+	//	interruptVm(c, &vm)
+	//}
 }
 
 func interruptVm(c chan os.Signal, vm *firecrackerInstance) {

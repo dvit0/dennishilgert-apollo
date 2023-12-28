@@ -52,25 +52,25 @@ func createAndStartVm(ctx context.Context) (*firecrackerInstance, error) {
 		return nil, fmt.Errorf("Failed creating machine: %s", err)
 	}
 
-	log.Printf("Starting machine %s ...", vmmId)
-	if err := machine.Start(vmmCtx); err != nil {
-		return nil, fmt.Errorf("Failed to start machine: %v", err)
-	}
-	defer func() {
-		if err := machine.StopVMM(); err != nil {
-			log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
-		}
-	}()
+	//log.Printf("Starting machine %s ...", vmmId)
+	//if err := machine.Start(vmmCtx); err != nil {
+	//	return nil, fmt.Errorf("Failed to start machine: %v", err)
+	//}
+	//defer func() {
+	//	if err := machine.StopVMM(); err != nil {
+	//		log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
+	//	}
+	//}()
 
 	//installSignalHandlers(vmmCtx, machine)
 
 	// wait for the VMM to exit
-	log.Printf("Waiting for machine %s ...", vmmId)
-	if err := machine.Wait(vmmCtx); err != nil {
-		return nil, fmt.Errorf("Wait returned an error %s", err)
-	}
+	//log.Printf("Waiting for machine %s ...", vmmId)
+	//if err := machine.Wait(vmmCtx); err != nil {
+	//	return nil, fmt.Errorf("Wait returned an error %s", err)
+	//}
 
-	log.Printf("Machine has been started successfully")
+	//log.Printf("Machine has been started successfully")
 	return &firecrackerInstance{
 		vmmCtx:    ctx,
 		vmmCancel: vmmCancel,
