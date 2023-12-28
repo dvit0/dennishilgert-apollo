@@ -56,11 +56,11 @@ func createAndStartVm(ctx context.Context) (*firecrackerInstance, error) {
 	if err := machine.Start(vmmCtx); err != nil {
 		return nil, fmt.Errorf("Failed to start machine: %v", err)
 	}
-	defer func() {
-		if err := machine.StopVMM(); err != nil {
-			log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
-		}
-	}()
+	//defer func() {
+	//	if err := machine.StopVMM(); err != nil {
+	//		log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
+	//	}
+	//}()
 
 	//installSignalHandlers(vmmCtx, machine)
 
