@@ -39,14 +39,20 @@ func main() {
 
 	log.SetReportCaller(true)
 
+	// wait for the VMM to exit
+	log.Printf("Waiting for machine %s ...", vm.vmmId)
+	if err := vm.machine.Wait(vm.vmmCtx); err != nil {
+		log.Errorf("Error: %s", err)
+	}
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	log.Println("Blocking, press ctrl+c to continue ...")
 	<-c // Will block here until user hits ctrl+c
 
-	//for vm := range vmPool {
-	//	interruptVm(c, &vm)
-	//}
+	for vm := range vmPool {
+		interruptVm(c, &vm)
+	}
 }
 
 func interruptVm(c chan os.Signal, vm *firecrackerInstance) {
