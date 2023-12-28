@@ -28,6 +28,7 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 			CNIConfiguration: &firecracker.CNIConfiguration{
 				NetworkName: "fcnet",
 				IfName:      "veth0",
+				VMIfName:    "eth0",
 				BinPath:     []string{"/opt/cni/bin"},
 				ConfDir:     "/etc/cni/conf.d",
 				CacheDir:    "/var/lib/cni",
