@@ -52,8 +52,6 @@ func createAndStartVm(ctx context.Context) (*firecrackerInstance, error) {
 		return nil, fmt.Errorf("Failed creating machine: %s", err)
 	}
 
-	log.Printf("Kernel args: %s", machine.Cfg.KernelArgs)
-
 	log.Printf("Starting machine %s ...", vmmId)
 	if err := machine.Start(vmmCtx); err != nil {
 		return nil, fmt.Errorf("Failed to start machine: %v", err)
