@@ -18,12 +18,20 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 		KernelImagePath: "../vmlinux-5.10.204",
 		KernelArgs:      "console=ttyS0 reboot=k panic=1 pci=off nomodules",
 		LogPath:         fmt.Sprintf("%s.log", socket),
-		Drives: []models.Drive{{
-			DriveID:      firecracker.String("1"),
-			PathOnHost:   firecracker.String("../ubuntu-22.04.ext4"),
-			IsRootDevice: firecracker.Bool(true),
-			IsReadOnly:   firecracker.Bool(true),
-		}},
+		Drives: []models.Drive{
+			{
+				DriveID:      firecracker.String("1"),
+				PathOnHost:   firecracker.String("../ubuntu-22.04.ext4"),
+				IsRootDevice: firecracker.Bool(true),
+				IsReadOnly:   firecracker.Bool(true),
+			},
+			{
+				DriveID:      firecracker.String("2"),
+				PathOnHost:   firecracker.String("../sidecar-drive.img"),
+				IsRootDevice: firecracker.Bool(false),
+				IsReadOnly:   firecracker.Bool(false),
+			},
+		},
 		NetworkInterfaces: []firecracker.NetworkInterface{{
 			CNIConfiguration: &firecracker.CNIConfiguration{
 				NetworkName: "fcnet",
