@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package agent.v1;
+option go_package = "agent/v1;agentpb";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+service AgentService {
+  rpc execute(ExecutionRequest) returns (ExecutionResponse) {}
+}
+
+message ExecutionRequest {
+  string raw_path = 1;
+  string raw_query_string = 2;
+  repeated string cookies = 3;
+  map<string, string> headers = 4;
+  map<string, string> query_string_parameters = 5;
+  map<string, string> path_parameters = 6;
+  RequestContext request_context = 7;
+  google.protobuf.Struct body = 8;
+}
+
+message ExecutionResponse {
+  int32 status_code = 1;
+  repeated string cookies = 2;
+  map<string, string> headers = 3;
+  google.protobuf.Struct body = 4;
+}
+
+message RequestContext {
+  string request_id = 1;
+  string domain_name = 2;
+  string domain_prefix = 3;
+  RequestContextHttp http = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+message RequestContextHttp {
+  string method = 1;
+  string path = 2;
+  string protocol = 3;
+  string source_ip = 4;
+  string user_agent = 5;
+}
