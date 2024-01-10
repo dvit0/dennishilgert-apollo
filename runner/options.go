@@ -16,8 +16,11 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 	return firecracker.Config{
 		SocketPath:      socket,
 		KernelImagePath: "../vmlinux-5.10.204",
-		KernelArgs:      "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -p SIGQUIT -- \"/usr/bin/agent\"",
-		LogPath:         fmt.Sprintf("%s.log", socket),
+		// The KernelArgs are re-parsed in the sdk before they are passed to the vm.
+		// This means that values like the custom init statement with tini will be
+		// mixed up resulting in invalid kernel args.
+		KernelArgs: "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -p SIGQUIT -- \"/usr/bin/agent\"",
+		LogPath:    fmt.Sprintf("%s.log", socket),
 		Drives: []models.Drive{
 			{
 				DriveID:      firecracker.String("1"),
