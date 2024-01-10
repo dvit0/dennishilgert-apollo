@@ -2,5 +2,8 @@ go 1.21.5
 
 use (
 	./components/agent
+	./components/depot-service
+	./components/cli
 	./runner
+	./proto/gen
 )
