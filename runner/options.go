@@ -16,12 +16,12 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 	return firecracker.Config{
 		SocketPath:      socket,
 		KernelImagePath: "../vmlinux-5.10.204",
-		KernelArgs:      "console=ttyS0 reboot=k panic=1 pci=off nomodules",
+		KernelArgs:      "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -p SIGQUIT -- \"/usr/bin/agent\"",
 		LogPath:         fmt.Sprintf("%s.log", socket),
 		Drives: []models.Drive{
 			{
 				DriveID:      firecracker.String("1"),
-				PathOnHost:   firecracker.String("../ubuntu-22.04.ext4"),
+				PathOnHost:   firecracker.String("../rootfs.ext4"),
 				IsRootDevice: firecracker.Bool(true),
 				IsReadOnly:   firecracker.Bool(true),
 			},
