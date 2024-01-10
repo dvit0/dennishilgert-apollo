@@ -3,11 +3,18 @@ package main
 import (
 	kernel "apollo/agent/pkg/kernel"
 	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"os/signal"
+	"syscall"
 
-	//net "apollo/agent/pkg/network"
 	grpc "apollo/agent/pkg/grpc"
+	net "apollo/agent/pkg/network"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/labstack/echo/v4"
 )
 
 const timeFormat = "02-01-2006 15:04:05.000"
@@ -32,12 +39,40 @@ func main() {
 
 	logger.Debug("network configuration to apply", "net-conf", *kernelArgs.Ip)
 	logger.Info("applying network configuration ...")
-	// if err := net.Apply(kernelArgs.Ip); err != nil {
-	// 	log.Printf("failed to apply network configuration from kernel cmdline: %v", err)
-	// 	shutdown(logger)
-	// 	return
-	// }
+	if err := net.Apply(kernelArgs.Ip); err != nil {
+		log.Printf("failed to apply network configuration from kernel cmdline: %v", err)
+		shutdown(logger)
+		return
+	}
 	logger.Info("[OK] network configuration applied successfully")
+
+	// ==========
+
+	e := echo.New()
+
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello World!")
+	})
+
+	e.GET("/shutdown", func(c echo.Context) error {
+		logger.Info("received shutdown request")
+		shutdown(logger)
+		return c.String(http.StatusOK, "Shutting down now")
+	})
+
+	errorChan := make(chan error, 1)
+
+	go func() {
+		if err := e.Start("0.0.0.0:3000"); err != nil {
+			logger.Error("failed to serve http server", "reason", err)
+			errorChan <- err
+		}
+		close(errorChan)
+	}()
+
+	logger.Named("http").Info("http server is listening on 0.0.0.0:3000")
+
+	// ==========
 
 	grpcLogger := logger.Named("grpc")
 
@@ -50,6 +85,7 @@ func main() {
 	defer grpcServer.GracefulStop()
 	grpcLogger.Info("[OK] grpc server started successfully")
 
+	// sending a grpc request to the local server
 	grpcLogger.Info("sending grpc execute request ...")
 	res, err := grpc.Execute(context.Background(), grpcLogger)
 	if err != nil {
@@ -58,8 +94,19 @@ func main() {
 	}
 	grpcLogger.Info("response", "body", res.Body)
 	grpcLogger.Info("[OK] grpc execute request sent successfully")
+
+	doneChan := make(chan os.Signal, 1)
+	signal.Notify(doneChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
+	logger.Info("agent is up and running - waiting for requests")
+	<-doneChan
+	logger.Info("received signal to shutdown")
+	shutdown(logger)
 }
 
 func shutdown(logger hclog.Logger) {
-	logger.Warn("System reboot not implemented yet")
+	logger.Info("shutting down now")
+	cmd := exec.Command("reboot")
+	if err := cmd.Run(); err != nil {
+		logger.Error("failed to execute the reboot command", "reason", err)
+	}
 }

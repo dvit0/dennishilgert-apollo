@@ -25,18 +25,18 @@ func NewGrpcServer(logger hclog.Logger) (*grpc.Server, error) {
 	grpcServer := grpc.NewServer()
 	agent.RegisterAgentServiceServer(grpcServer, &server{})
 
-	errChan := make(chan error)
+	errorChan := make(chan error)
 
 	go func() {
 		if err := grpcServer.Serve(listen); err != nil {
-			logger.Error("failed to serve server", "reason", err)
-			errChan <- err
+			logger.Error("failed to serve grpc server", "reason", err)
+			errorChan <- err
 		}
-		close(errChan)
+		close(errorChan)
 	}()
 
 	select {
-	case err := <-errChan:
+	case err := <-errorChan:
 		return nil, err
 
 	default:
