@@ -1,0 +1,34 @@
+# Learn more https://docs.buf.build/configuration/v1/buf-gen-yaml
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    # <module_name>   : name in go.mod 
+    # <relative_path> : where generated code should be output 
+    default: apollo/proto # <module_name>/<relative_path>
+    # Remove `except` field if googleapis is not used
+    except:
+      - buf.build/googleapis/googleapis
+
+plugins:
+
+  # Build TypeScript Stubs - Derived from https://rsbh.dev/blogs/grpc-with-nodejs-typescript
+  - name: ts
+    opt:
+      # More options available at https://github.com/stephenh/ts-proto#supported-options
+      - outputServices=grpc-js
+      - esModuleInterop=true
+      - env=node
+    out: gen/ts
+    strategy: all
+    path: ../node_modules/.bin/protoc-gen-ts_proto
+
+  # Build GoLang Stubs
+  - plugin: buf.build/grpc/go:v1.3.0
+    out: gen/go
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/protocolbuffers/go
+    out: gen/go
+    opt:
+      - paths=source_relative
