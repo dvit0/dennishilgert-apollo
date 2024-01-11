@@ -51,6 +51,8 @@ func main() {
 
 	<-c // Will block here until user hits ctrl+c
 
+	os.Exit(0)
+
 	for vm := range vmPool {
 		interruptVm(c, &vm)
 	}
