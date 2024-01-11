@@ -1,3 +1,0 @@
-[submodule "firecracker-go-sdk"]
-	path = packages/firecracker-go-sdk
-	url = https://github.com/firecracker-microvm/firecracker-go-sdk
