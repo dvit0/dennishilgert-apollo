@@ -40,3 +40,8 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace (
+	github.com/firecracker-microvm/firecracker-go-sdk => ../firecracker-go-sdk
+	github.com/firecracker-microvm/firecracker-go-sdk/client/models => ../firecracker-go-sdk/client/models
+)
