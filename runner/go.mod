@@ -42,6 +42,6 @@ require (
 )
 
 replace (
-	github.com/firecracker-microvm/firecracker-go-sdk => ../firecracker-go-sdk
-	github.com/firecracker-microvm/firecracker-go-sdk/client/models => ../firecracker-go-sdk/client/models
+	github.com/firecracker-microvm/firecracker-go-sdk => ../packages/firecracker-go-sdk
+	github.com/firecracker-microvm/firecracker-go-sdk/client/models => ../packages/firecracker-go-sdk/client/models
 )
