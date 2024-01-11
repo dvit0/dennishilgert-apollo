@@ -49,7 +49,7 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 			VcpuCount:       firecracker.Int64(2),
 			MemSizeMib:      firecracker.Int64(512),
 			Smt:             firecracker.Bool(true),
-			TrackDirtyPages: *firecracker.Bool(false),
+			TrackDirtyPages: firecracker.Bool(false),
 		},
 		VMID: vmmId,
 	}, nil
