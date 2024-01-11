@@ -10,5 +10,6 @@ RUN apt update && apt install --no-install-recommends -y \
   udev
 
 COPY ./agent /usr/bin/agent
+RUN chmod +x /usr/bin/agent
 
 ENTRYPOINT [ "tail", "-f", "/dev/null" ]
