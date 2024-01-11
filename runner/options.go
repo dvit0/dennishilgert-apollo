@@ -19,7 +19,9 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 		// The KernelArgs are re-parsed in the sdk before they are passed to the vm.
 		// This means that values like the custom init statement with tini will be
 		// mixed up resulting in invalid kernel args.
-		KernelArgs: "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -p SIGQUIT -- \"/usr/bin/agent\"",
+		// Therefore the firecracker-go-sdk has been forked and modified which needs
+		// to be used for this.
+		KernelArgs: "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -- /usr/bin/agent",
 		LogPath:    fmt.Sprintf("%s.log", socket),
 		Drives: []models.Drive{
 			{
