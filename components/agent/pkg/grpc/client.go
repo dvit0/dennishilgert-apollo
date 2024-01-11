@@ -19,7 +19,7 @@ var (
 )
 
 func NewGrpcClient(ctx context.Context, logger hclog.Logger) error {
-	serverAddress := "0.0.0.0:8080"
+	serverAddress := ":8080"
 	conn, err := grpc.DialContext(ctx, serverAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Error("failed to connect to server", "server-address", serverAddress, "reason", err)
