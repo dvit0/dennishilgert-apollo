@@ -44,7 +44,7 @@ func processCommand() int {
 		rootLogger.Error("failed to get default Docker client", "reason", err)
 		return 1
 	}
-	if err := containers.ImageExport(context.Background(), dockerClient, rootLogger, "/Users/dennis/Projects/personal/apollo/components/cli/dist", "fc-rootfs:latest"); err != nil {
+	if err := containers.ImageExport(context.Background(), dockerClient, rootLogger, "/home/dennis/apollo-test/dist", "fc-rootfs:latest"); err != nil {
 		rootLogger.Error("failed to export Docker image")
 		return 1
 	}
