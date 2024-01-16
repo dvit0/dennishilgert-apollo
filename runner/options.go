@@ -21,7 +21,7 @@ func getFirecrackerConfig(vmmId string) (firecracker.Config, error) {
 		// mixed up resulting in invalid kernel args.
 		// Therefore the firecracker-go-sdk has been forked and modified which needs
 		// to be used for this.
-		KernelArgs: "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -- /usr/bin/agent",
+		KernelArgs: "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -- /usr/bin/init",
 		LogPath:    fmt.Sprintf("%s.log", socket),
 		Drives: []models.Drive{
 			{
