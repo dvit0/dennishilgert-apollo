@@ -21,40 +21,30 @@ import (
 )
 
 var (
+	// Name of the rootfs image file.
 	RootFsImageFileName = "rootfs.ext4"
 
-	RootFsExportMountTarget = "/export-rootfs"
-
-	// ContainerRootFsExportExcludeDirs specifies the directories whose content is excluded from export.
+	// Specifies the directories whose content is excluded from export.
 	RootFsExcludeDirs = []string{"/boot", "/opt", "/proc", "/run", "/srv", "/sys", "/tmp"}
 
+	// Specifies the Docker container tag to use for the worker container.
 	BuilderContainerImageTag = "debian:stable"
 
+	// Specifies the mount target for the destination directory on the host.
 	ContainerDestMountTarget = "/dest"
 
+	// Specifies the mount target for the rootfs image.
 	ContainerImageMountTarget = "/rootfs-image"
 
-	// ContainerStopTimeout specifies the time the container is given to shutdown gracefully.
-	ContainerStopTimeout = 30
+	// Specifies the time the container is given to shutdown gracefully.
+	ContainerStopTimeout = 5
 
-	// ContainerRootFsExportCommand specifies the comand that is run when image export container starts.
+	// Specifies the comand that is run when image export container starts.
 	ContainerCommand = []string{"/bin/sh"}
 
-	// ContainerRootFsCopyTimeout specifies the time the image export command is given to copy the rootfs.
+	// Specifies the time the image export command is given to copy the rootfs.
 	RootFsCopyTimeout = time.Duration(time.Second * 15)
 )
-
-type invokationConfig struct {
-	ContainerId  string
-	ImageTag     string
-	DestroyAfter bool
-	ExecConfigs  map[string]types.ExecConfig
-}
-
-type invokationResult struct {
-	ContainerId string
-	ExecResults map[string][]string
-}
 
 // GetDefaultClient returns a default instance of the Docker client.
 func GetDefaultClient() (*docker.Client, error) {
@@ -120,21 +110,25 @@ func ImageExport(ctx context.Context, client *docker.Client, opLogger hclog.Logg
 
 	imgFilePath := strings.Join([]string{ContainerDestMountTarget, RootFsImageFileName}, string(os.PathSeparator))
 
+	opLogger.Info("creating empty image ...")
 	workerContainerId, err := createImage(ctx, client, opLogger, destPath, imgFilePath)
 	if err != nil {
 		opLogger.Error("error while creating image file")
 		return err
 	}
 
+	opLogger.Info("copying rootfs from container to image ...")
 	if err := copyRootFsToImage(ctx, client, opLogger, destPath, imgFilePath, imageTag); err != nil {
 		opLogger.Error("error while copying rootfs to image file")
 		return err
 	}
 
+	opLogger.Info("resizing image to minimum size ...")
 	if err := resizeImage(ctx, client, opLogger, workerContainerId, imgFilePath); err != nil {
 		opLogger.Error("error while resizing image file")
 		return err
 	}
+
 	cleanup.Add(func() {
 		ContainerStop(ctx, client, opLogger, *workerContainerId)
 	})
@@ -184,7 +178,6 @@ func createImage(ctx context.Context, client *docker.Client, opLogger hclog.Logg
 	defer imgExecResponse.Close()
 
 	DebugOutput(opLogger, imgExecResponse.Reader)
-	ContainerLs(ctx, client, opLogger, *containerId, ContainerDestMountTarget)
 
 	return containerId, nil
 }
@@ -210,7 +203,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 		},
 		Privileged: true,
 	}
-	rootfsContainerId, err := ContainerStart(ctx, client, opLogger, cleanup, rootfsContainerConfig, rootfsHostConfig, "", true)
+	containerId, err := ContainerStart(ctx, client, opLogger, cleanup, rootfsContainerConfig, rootfsHostConfig, "", true)
 	if err != nil {
 		opLogger.Error("error while starting export Docker container")
 		return err
@@ -226,16 +219,14 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 		AttachStdout: true,
 		AttachStderr: true,
 	}
-	mntExecResponse, err := ContainerExec(ctx, client, opLogger, *rootfsContainerId, mntExecConfig)
+	mntExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, mntExecConfig)
 	if err != nil {
 		opLogger.Error("error while executing the image mount command")
 		return err
 	}
 	defer mntExecResponse.Close()
 
-	opLogger.Info("after mkdir and mount")
 	DebugOutput(opLogger, mntExecResponse.Reader)
-	ContainerLs(ctx, client, opLogger, *rootfsContainerId, ContainerImageMountTarget)
 
 	cleanup.Add(func() {
 		// execute umount command on the container to unmount the rootfs ext4 image.
@@ -245,7 +236,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 			AttachStdout: true,
 			AttachStderr: true,
 		}
-		unmntExecResponse, err := ContainerExec(ctx, client, opLogger, *rootfsContainerId, unmntExecConfig)
+		unmntExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, unmntExecConfig)
 		if err != nil {
 			opLogger.Error("error while executing unmount command")
 			return
@@ -260,7 +251,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 		AttachStdout: true,
 		AttachStderr: true,
 	}
-	findExecResponse, err := ContainerExec(ctx, client, opLogger, *rootfsContainerId, findExecConfig)
+	findExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, findExecConfig)
 	if err != nil {
 		opLogger.Error("error while executing find command")
 		return err
@@ -272,9 +263,6 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 		opLogger.Error("error while parsing find command exec output", "reason", err)
 		return err
 	}
-
-	opLogger.Info("after find")
-	ContainerLs(ctx, client, opLogger, *rootfsContainerId, ContainerImageMountTarget)
 
 	// iterate over the discovered filesystem directories and copy them to the rootfs image.
 	opLogger.Debug("copying directories")
@@ -297,7 +285,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 				AttachStdout: true,
 				AttachStderr: true,
 			}
-			mkdirExecResponse, err := ContainerExec(ctx, client, opLogger, *rootfsContainerId, mkdirExecConfig)
+			mkdirExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, mkdirExecConfig)
 			if err != nil {
 				opLogger.Error("error while executing mkdir command")
 				return err
@@ -305,14 +293,31 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 			defer mkdirExecResponse.Close()
 		} else {
 			// copy the whole directory to the rootfs image.
-			if err := ContainerCopy(ctx, client, opLogger, *rootfsContainerId, dir, ContainerImageMountTarget+dir); err != nil {
+			if err := ContainerCopy(ctx, client, opLogger, *containerId, dir, ContainerImageMountTarget+dir); err != nil {
 				opLogger.Error("error while copying to image file")
 				return err
 			}
 		}
-
-		ContainerLs(ctx, client, opLogger, *rootfsContainerId, ContainerImageMountTarget)
 	}
+
+	opLogger.Debug("applying network configuration")
+	resExecConfig := types.ExecConfig{
+		Cmd: []string{
+			"/bin/sh", "-c",
+			"rm " + ContainerImageMountTarget + "/etc/resolv.conf" + " && " +
+				"echo \"nameserver 1.1.1.1\nnameserver 1.0.0.1\n\" > " + ContainerImageMountTarget + "/etc/resolv.conf",
+		},
+		AttachStdout: true,
+		AttachStderr: true,
+	}
+	resExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, resExecConfig)
+	if err != nil {
+		opLogger.Error("error while setting up resolv.conf")
+		return err
+	}
+	defer resExecResponse.Close()
+
+	DebugOutput(opLogger, resExecResponse.Reader)
 
 	return nil
 }
@@ -405,16 +410,39 @@ func ContainerCopy(ctx context.Context, client *docker.Client, opLogger hclog.Lo
 	return nil
 }
 
-func ContainerLs(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId string, lsPath string) error {
-	opLogger.Debug("listing directory")
+func ContainerMount(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId *string, srcPath string, targetPath string) error {
+	opLogger.Debug("mounting", "src-path", srcPath, "target-path", targetPath)
 	execConfig := types.ExecConfig{
-		Cmd:          []string{"ls", "-al", lsPath},
+		Cmd: []string{
+			"/bin/sh", "-c",
+			"mkdir -p " + targetPath + " && " +
+				"mount " + srcPath + " " + targetPath,
+		},
 		AttachStdout: true,
 		AttachStderr: true,
 	}
-	execResponse, err := ContainerExec(ctx, client, opLogger, containerId, execConfig)
+	execResponse, err := ContainerExec(ctx, client, opLogger, *containerId, execConfig)
 	if err != nil {
-		opLogger.Error("error while executing ls command")
+		opLogger.Error("error while executing mount command")
+		return err
+	}
+	defer execResponse.Close()
+
+	DebugOutput(opLogger, execResponse.Reader)
+
+	return nil
+}
+
+func ContainerUnmount(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId *string, targetPath string) error {
+	opLogger.Debug("unmounting", "target-path", targetPath)
+	execConfig := types.ExecConfig{
+		Cmd:          []string{"umount", targetPath},
+		AttachStdout: true,
+		AttachStderr: true,
+	}
+	execResponse, err := ContainerExec(ctx, client, opLogger, *containerId, execConfig)
+	if err != nil {
+		opLogger.Error("error while executing umount command")
 		return err
 	}
 	defer execResponse.Close()
