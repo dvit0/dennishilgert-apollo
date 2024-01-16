@@ -33,13 +33,23 @@ sudo sh -c 'cat > /etc/cni/conf.d/fcnet.conflist << EOF
   "cniVersion": "0.4.0",
   "plugins": [
     {
-      "type": "ptp",
+      "type": "bridge",
+      "bridge": "fcnetbridge0",
+      "isDefaultGateway": true,
+      "hairpinMode": true,
       "ipMasq": true,
       "ipam": {
         "type": "host-local",
         "subnet": "10.6.0.0/24",
-        "resolvConf": "/etc/resolv.conf"
+        "rangeStart": "10.6.0.5",
+        "gateway": "10.6.0.1"
+      },
+      "dns": {
+        "nameservers": [ "10.6.0.1", "1.1.1.1" ]
       }
+    },
+    {
+      "type": "firewall"
     },
     {
       "type": "tc-redirect-tap"
