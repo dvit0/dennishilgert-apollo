@@ -1,21 +1,18 @@
 package main
 
 import (
-	kernel "apollo/agent/pkg/kernel"
-	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 
 	grpc "apollo/agent/pkg/grpc"
-	net "apollo/agent/pkg/network"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/labstack/echo/v4"
 )
 
+const VERSION = "v1.0.0"
 const timeFormat = "02-01-2006 15:04:05.000"
 
 func main() {
@@ -27,62 +24,12 @@ func main() {
 		TimeFormat:      timeFormat,
 	})
 
-	logger.Info("running mount | grep proc")
-	out, err := exec.Command("/bin/mount", "|", "grep", "proc").Output()
-	if err != nil {
-		logger.Error("failed to execute mount | grep proc command", "reason", err)
-	}
-	logger.Info("Output", string(out))
+	logger.Info("apollo agent - " + VERSION)
 
-	logger.Info("running mount -t proc proc /proc")
-	out, err = exec.Command("/bin/mount", "-t", "proc", "proc", "/proc").Output()
-	if err != nil {
-		logger.Error("failed to execute mount -t proc proc /proc command", "reason", err)
-	}
-	logger.Info("Output", string(out))
-
-	logger.Info("running ls -al /proc")
-	out, err = exec.Command("/bin/ls", "-al", "/proc").Output()
-	if err != nil {
-		logger.Error("failed to execute ls -al /proc command", "reason", err)
-	}
-	logger.Info("Output", string(out))
-
-	logger.Info("reading kernel command line ...")
-	kernelArgs, err := kernel.ReadCmdLine(logger.Named("kernel"))
-	if err != nil {
-		logger.Error("failed to read arguments from kernel command line")
-		shutdown(logger)
-		return
-	}
-	logger.Info("[OK] kernel command line arguments read successfully")
-
-	logger.Debug("network configuration to apply", "net-conf", *kernelArgs.Ip)
-	logger.Info("applying network configuration ...")
-	if err := net.Apply(kernelArgs.Ip); err != nil {
-		log.Printf("failed to apply network configuration from kernel cmdline: %v", err)
-		shutdown(logger)
-		return
-	}
-	logger.Info("[OK] network configuration applied successfully")
-
-	logger.Info("running ip a")
-	out, err = exec.Command("/bin/ip", "a").Output()
-	if err != nil {
-		logger.Error("failed to execute ip a command", "reason", err)
-	}
-	logger.Info("Output", string(out))
-
-	logger.Info("running ip route")
-	out, err = exec.Command("/bin/ip", "route").Output()
-	if err != nil {
-		logger.Error("failed to execute ip route command", "reason", err)
-	}
-	logger.Info("Output", string(out))
-
-	// ==========
+	// ========== temporary section
 
 	e := echo.New()
+	e.HideBanner = true
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello World!")
@@ -146,13 +93,4 @@ func shutdown(logger hclog.Logger) {
 	if err != nil {
 		logger.Error("failed to execute the reboot command", "reason", err)
 	}
-	// cmd := exec.Command("/sbin/reboot")
-	// var stdOut bytes.Buffer
-	// var stdErr bytes.Buffer
-	// cmd.Stdout = &stdOut
-	// cmd.Stderr = &stdErr
-	// if err := cmd.Run(); err != nil {
-	// 	logger.Error("failed to execute the reboot command", "reason", err, "stack", stdErr.String())
-	// }
-	// logger.Info("Output", stdOut.String())
 }
