@@ -16,24 +16,6 @@ type dockerOutput interface {
 	Captured() string
 }
 
-type dockerOutStatus struct {
-	Status string
-}
-
-func (d *dockerOutStatus) Captured() string {
-	return d.Status
-}
-
-func dockerReaderStatus() dockerOutputExtractor {
-	return func(raw string) dockerOutput {
-		out := &dockerOutStatus{}
-		if err := json.Unmarshal([]byte(raw), out); err != nil {
-			return nil
-		}
-		return out
-	}
-}
-
 type dockerOutStream struct {
 	Stream string
 }
@@ -73,7 +55,7 @@ func processDockerOutput(logger hclog.Logger, reader io.ReadCloser, lineReader d
 			logger.Warn("Docker output is not a stream line, skipping")
 			continue
 		}
-		logger.Info("Docker response", "stream", strings.TrimSpace(printable.Captured()))
+		logger.Debug("Docker response", "stream", strings.TrimSpace(printable.Captured()))
 	}
 
 	errLine := &dockerErrorLine{}
