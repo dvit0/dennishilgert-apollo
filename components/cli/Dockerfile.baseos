@@ -1,0 +1,24 @@
+FROM debian:bullseye-slim
+
+# set /tmp as the workdir to get rid of downloaded archives after installation
+WORKDIR /tmp
+
+# update the cached package lists and install basic os packages
+RUN apt-get update && apt-get install --no-install-recommends -y \
+  tini \
+  #iputils-ping \ # this package is used for testing purposes only
+  iproute2
+
+# removing unneeded packages
+RUN apt-get autoremove -y
+
+# copy over agent executable
+COPY ./agent /usr/bin/agent
+RUN chmod +x /usr/bin/agent
+
+# copy over init system script
+COPY ./init /usr/bin/init
+RUN chmod +x /usr/bin/init
+
+# set entrypoint to an inifinity loop as the container is only started for copying the rootfs
+ENTRYPOINT [ "tail", "-f", "/dev/null" ]
