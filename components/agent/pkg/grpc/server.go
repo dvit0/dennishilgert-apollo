@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type server struct {
@@ -44,12 +45,16 @@ func NewGrpcServer(logger hclog.Logger) (*grpc.Server, error) {
 	}
 }
 
-func (s *server) Execute(ctx context.Context, req *agent.ExecutionRequest) (*agent.ExecutionResponse, error) {
-	object, _ := structpb.NewStruct(map[string]interface{}{
-		"message": "okay",
+func (s *server) Execute(ctx context.Context, req *agent.FunctionRequest) (*agent.FunctionResponse, error) {
+	data, _ := structpb.NewStruct(map[string]interface{}{
+		"content": "Hello World!",
 	})
-	return &agent.ExecutionResponse{
-		StatusCode: 200,
-		Body:       object,
+	return &agent.FunctionResponse{
+		Id:             req.Id,
+		Status:         200,
+		StatusMessage:  "ok",
+		Data:           data,
+		InvocationTime: timestamppb.Now(),
+		CompletionTime: timestamppb.Now(),
 	}, nil
 }

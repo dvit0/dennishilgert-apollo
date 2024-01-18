@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AgentServiceClient struct{}
@@ -34,39 +33,29 @@ func NewGrpcClient(ctx context.Context, logger hclog.Logger) error {
 	return nil
 }
 
-func Execute(ctx context.Context, logger hclog.Logger) (*agent.ExecutionResponse, error) {
+func Execute(ctx context.Context, logger hclog.Logger) (*agent.FunctionResponse, error) {
 	if err := NewGrpcClient(ctx, logger); err != nil {
 		logger.Error("failed to create grpc client")
 		return nil, err
 	}
 	body, _ := structpb.NewStruct(map[string]interface{}{
-		"message": "okay",
+		"content": "important-data",
 	})
-	req := &agent.ExecutionRequest{
-		RawPath:               "",
-		RawQueryString:        "",
-		Cookies:               []string{},
-		Headers:               map[string]string{},
-		QueryStringParameters: map[string]string{},
-		PathParameters:        map[string]string{},
-		RequestContext: &agent.RequestContext{
-			RequestId:    "abcde-fghijkl-mnopqr-stuvw-xyz",
-			DomainName:   "",
-			DomainPrefix: "",
-			Http: &agent.RequestContextHttp{
-				Method:    "GET",
-				Path:      "/path",
-				Protocol:  "tcp",
-				SourceIp:  "127.0.0.1",
-				UserAgent: "chrome",
-			},
-			Timestamp: &timestamppb.Timestamp{
-				Nanos: timestamppb.Now().GetNanos(),
+	req := &agent.FunctionRequest{
+		Id:   "86e1414c-ceb9-4b31-a33d-52525f2c1f59",
+		Type: "http",
+		Data: &agent.FunctionRequest_HttpData{
+			HttpData: &agent.HTTPRequestData{
+				Method:      "GET",
+				Path:        "/data/migrate",
+				SourceIp:    "127.0.0.1",
+				Headers:     map[string]string{},
+				QueryParams: map[string]string{},
+				Body:        body,
 			},
 		},
-		Body: body,
 	}
-	res, err := agentGrpcClient.Execute(ctx, req)
+	res, err := agentGrpcClient.Invoke(ctx, req)
 	if err != nil {
 		logger.Error("error while execute request", "reason", status.Convert(err).Message())
 		return nil, err
