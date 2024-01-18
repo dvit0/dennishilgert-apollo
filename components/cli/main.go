@@ -6,6 +6,7 @@ import (
 
 	build "apollo/cli/cmd/images/build"
 	export "apollo/cli/cmd/images/export"
+	push "apollo/cli/cmd/images/push"
 
 	"github.com/spf13/cobra"
 )
@@ -22,6 +23,7 @@ var rootCommand = &cobra.Command{
 
 func init() {
 	rootCommand.AddCommand(build.Command)
+	rootCommand.AddCommand(push.Command)
 	rootCommand.AddCommand(export.Command)
 }
 

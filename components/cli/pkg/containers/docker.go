@@ -51,23 +51,67 @@ func GetDefaultClient() (*docker.Client, error) {
 	return docker.NewClientWithOpts(docker.WithAPIVersionNegotiation())
 }
 
-// FetchImageIdByTag fetches a Docker image id by its tag name.
-func FetchImageIdByTag(ctx context.Context, client *docker.Client, logger hclog.Logger, imageTag string) (string, error) {
+// FetchImageIdByTag fetchs a Docker image id by its tag name.
+func FetchImageIdByTag(ctx context.Context, client *docker.Client, logger hclog.Logger, imageTag string) (*string, error) {
 	images, err := client.ImageList(ctx, types.ImageListOptions{All: true})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
 			if tag == imageTag {
-				return image.ID, nil
+				return &image.ID, nil
 			}
 		}
 	}
 	logger.Error("cannot find image", "tag", imageTag, "reason", err)
-	return "", err
+	return nil, err
 }
 
+// ImagePull pulls an image from the docker image registry.
+func ImagePull(ctx context.Context, client *docker.Client, opLogger hclog.Logger, refStr string) error {
+	response, err := client.ImagePull(ctx, refStr, types.ImagePullOptions{All: false})
+	if err != nil {
+		return err
+	}
+	if err := processDockerOutput(opLogger, response, dockerReaderStatus()); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ImagePush pushes an image to the docker image registry.
+func ImagePush(ctx context.Context, client *docker.Client, opLogger hclog.Logger, imageTag string) error {
+	response, err := client.ImagePush(ctx, imageTag, types.ImagePushOptions{All: false})
+	if err != nil {
+		return err
+	}
+	if err := processDockerOutput(opLogger, response, dockerReaderStream()); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ImageRemove removes an image from the Docker host.
+func ImageRemove(ctx context.Context, client *docker.Client, opLogger hclog.Logger, imageTag string) error {
+	opLogger = opLogger.With("image-tag", imageTag)
+	imageId, err := FetchImageIdByTag(ctx, client, opLogger, imageTag)
+	if err != nil {
+		opLogger.Error("failed to fetch image id by tag", "reason", err)
+		return err
+	}
+	responses, err := client.ImageRemove(ctx, *imageId, types.ImageRemoveOptions{Force: true})
+	if err != nil {
+		opLogger.Error("failed to remove image", "reason", err)
+		return err
+	}
+	for _, response := range responses {
+		opLogger.Debug("docker image removal status", "image-id", imageId, "deleted", response.Deleted, "untagged", response.Untagged)
+	}
+	return nil
+}
+
+// ImageBuild builds the rootfs image from a Dockerfile.
 func ImageBuild(ctx context.Context, client *docker.Client, logger hclog.Logger, sourcePath string, dockerfilePath string, imageTag string) error {
 	if !strings.HasSuffix(sourcePath, string(os.PathSeparator)) {
 		sourcePath = fmt.Sprintf("%s%s", sourcePath, string(os.PathSeparator))
@@ -87,7 +131,7 @@ func ImageBuild(ctx context.Context, client *docker.Client, logger hclog.Logger,
 		Tags:        []string{imageTag},
 		ForceRemove: true,
 		Remove:      true,
-		PullParent:  true,
+		PullParent:  false, // this should be enabled in production to always use the latest version of the parent
 	})
 	if err != nil {
 		opLogger.Error("failed to build Docker image", "reason", err)
@@ -97,11 +141,13 @@ func ImageBuild(ctx context.Context, client *docker.Client, logger hclog.Logger,
 	return processDockerOutput(opLogger, buildResponse.Body, dockerReaderStream())
 }
 
+// exports rootfs from the container to the rootfs image file.
 func ImageExport(ctx context.Context, client *docker.Client, opLogger hclog.Logger, destPath string, imageTag string) error {
 	cleanup := utils.NewDefers()
 	defer cleanup.CallAll()
 
 	// check if destination path is a directory and is writable.
+	opLogger.Debug("checking destination path", "dest-path", destPath)
 	err := utils.IsDirAndWritable(destPath)
 	if err != nil {
 		opLogger.Error("error while checking destination path", "reason", err)
@@ -123,6 +169,12 @@ func ImageExport(ctx context.Context, client *docker.Client, opLogger hclog.Logg
 		return err
 	}
 
+	opLogger.Info("finalizing image ...")
+	if err := finalizeImage(ctx, client, opLogger, workerContainerId, imgFilePath); err != nil {
+		opLogger.Error("error while finalizing image file")
+		return err
+	}
+
 	opLogger.Info("resizing image to minimum size ...")
 	if err := resizeImage(ctx, client, opLogger, workerContainerId, imgFilePath); err != nil {
 		opLogger.Error("error while resizing image file")
@@ -136,8 +188,8 @@ func ImageExport(ctx context.Context, client *docker.Client, opLogger hclog.Logg
 	return nil
 }
 
+// createImage creates the empty rootfs image file.
 func createImage(ctx context.Context, client *docker.Client, opLogger hclog.Logger, destPath string, imgFilePath string) (*string, error) {
-	// create and start the builder container.
 	containerConfig := container.Config{
 		OpenStdin: true,
 		Tty:       true,
@@ -160,7 +212,7 @@ func createImage(ctx context.Context, client *docker.Client, opLogger hclog.Logg
 		return nil, err
 	}
 
-	// execute all commands on the builder container to create the empty rootfs ext4 image, create the mount dir and mount the image to that dir.
+	opLogger.Debug("creating empty rootfs image")
 	imgExecConfig := types.ExecConfig{
 		Cmd: []string{
 			"/bin/sh", "-c",
@@ -172,7 +224,7 @@ func createImage(ctx context.Context, client *docker.Client, opLogger hclog.Logg
 	}
 	imgExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, imgExecConfig)
 	if err != nil {
-		opLogger.Error("error while executing the image creation commands")
+		opLogger.Error("error while creating empty rootfs image")
 		return containerId, err
 	}
 	defer imgExecResponse.Close()
@@ -182,11 +234,11 @@ func createImage(ctx context.Context, client *docker.Client, opLogger hclog.Logg
 	return containerId, nil
 }
 
+// copyRootFsToImage copys the rootfs from inside the container to the rootfs image file.
 func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclog.Logger, destPath string, imgFilePath string, imageTag string) error {
 	cleanup := utils.NewDefers()
 	defer cleanup.CallAll()
 
-	// create and start the export container.
 	rootfsContainerConfig := container.Config{
 		OpenStdin: true,
 		Tty:       true,
@@ -210,41 +262,18 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 	}
 
 	opLogger.Debug("mounting rootfs image")
-	mntExecConfig := types.ExecConfig{
-		Cmd: []string{
-			"/bin/sh", "-c",
-			"mkdir -p " + ContainerImageMountTarget + " && " +
-				"mount " + imgFilePath + " " + ContainerImageMountTarget,
-		},
-		AttachStdout: true,
-		AttachStderr: true,
-	}
-	mntExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, mntExecConfig)
-	if err != nil {
-		opLogger.Error("error while executing the image mount command")
+	if err := ContainerMount(ctx, client, opLogger, containerId, imgFilePath, ContainerImageMountTarget); err != nil {
+		opLogger.Error("error while mounting rootfs image")
 		return err
 	}
-	defer mntExecResponse.Close()
-
-	DebugOutput(opLogger, mntExecResponse.Reader)
-
 	cleanup.Add(func() {
-		// execute umount command on the container to unmount the rootfs ext4 image.
 		opLogger.Debug("unmounting rootfs image")
-		unmntExecConfig := types.ExecConfig{
-			Cmd:          []string{"umount", ContainerDestMountTarget},
-			AttachStdout: true,
-			AttachStderr: true,
-		}
-		unmntExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, unmntExecConfig)
-		if err != nil {
-			opLogger.Error("error while executing unmount command")
+		if err := ContainerUnmount(ctx, client, opLogger, containerId, ContainerImageMountTarget); err != nil {
+			opLogger.Error("error while unmounting rootfs image")
 			return
 		}
-		defer unmntExecResponse.Close()
 	})
 
-	// execute the find command on the container to get the filesystems root directories.
 	opLogger.Debug("discovering directories to copy")
 	findExecConfig := types.ExecConfig{
 		Cmd:          []string{"find", "/", "-maxdepth", "1", "-type", "d"},
@@ -300,6 +329,54 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 		}
 	}
 
+	return nil
+}
+
+// finalizeImage finalizes the rootfs image by removing unnecessary files and applying the network config.
+func finalizeImage(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId *string, imgFilePath string) error {
+	cleanup := utils.NewDefers()
+	defer cleanup.CallAll()
+
+	opLogger.Debug("mounting rootfs image")
+	if err := ContainerMount(ctx, client, opLogger, containerId, imgFilePath, ContainerImageMountTarget); err != nil {
+		opLogger.Error("error while mounting rootfs image")
+		return err
+	}
+	cleanup.Add(func() {
+		opLogger.Debug("unmounting rootfs image")
+		if err := ContainerUnmount(ctx, client, opLogger, containerId, ContainerImageMountTarget); err != nil {
+			opLogger.Error("error while unmounting rootfs image")
+			return
+		}
+	})
+
+	opLogger.Debug("removing unnecessary files")
+	rmExecConfig := types.ExecConfig{
+		Cmd: []string{
+			"/bin/sh", "-c",
+			"rm -rf " +
+				"/var/lib/apt/lists/* " +
+				"/var/cache/apt/archives/* " +
+				"/var/tmp/* " +
+				"/var/log/* " +
+				"/usr/share/doc/* " +
+				"/usr/share/man/* " +
+				"/usr/share/info/* " +
+				"/etc/apt/sources.list.d/* " +
+				"/etc/apt/keyrings/*",
+		},
+		AttachStdout: true,
+		AttachStderr: true,
+	}
+	rmExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, rmExecConfig)
+	if err != nil {
+		opLogger.Error("error while removing unnecessary files")
+		return err
+	}
+	defer rmExecResponse.Close()
+
+	DebugOutput(opLogger, rmExecResponse.Reader)
+
 	opLogger.Debug("applying network configuration")
 	resExecConfig := types.ExecConfig{
 		Cmd: []string{
@@ -312,7 +389,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 	}
 	resExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, resExecConfig)
 	if err != nil {
-		opLogger.Error("error while setting up resolv.conf")
+		opLogger.Error("error while applying network configuration")
 		return err
 	}
 	defer resExecResponse.Close()
@@ -322,6 +399,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 	return nil
 }
 
+// resizeImage resizes the rootfs image to its minimum size.
 func resizeImage(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId *string, imgFilePath string) error {
 	opLogger.Debug("resizing image file")
 	execConfig := types.ExecConfig{
@@ -381,6 +459,7 @@ func ParseExecOutput(reader *bufio.Reader) ([]string, error) {
 	return lines, nil
 }
 
+// DebugOutput logs the lines of a reader as debug messages.
 func DebugOutput(opLogger hclog.Logger, reader *bufio.Reader) {
 	lines, err := ParseExecOutput(reader)
 	if err != nil {
@@ -391,6 +470,7 @@ func DebugOutput(opLogger hclog.Logger, reader *bufio.Reader) {
 	}
 }
 
+// ContainerCopy copies a file inside a container.
 func ContainerCopy(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId string, srcPath string, dstPath string) error {
 	opLogger.Debug("copying", "src", srcPath, "dst", dstPath)
 	execConfig := types.ExecConfig{
@@ -410,6 +490,7 @@ func ContainerCopy(ctx context.Context, client *docker.Client, opLogger hclog.Lo
 	return nil
 }
 
+// ContainerMount mounts an image file to an directory inside a container.
 func ContainerMount(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId *string, srcPath string, targetPath string) error {
 	opLogger.Debug("mounting", "src-path", srcPath, "target-path", targetPath)
 	execConfig := types.ExecConfig{
@@ -433,6 +514,7 @@ func ContainerMount(ctx context.Context, client *docker.Client, opLogger hclog.L
 	return nil
 }
 
+// ContainerUnmount unmounts a directory inside a container.
 func ContainerUnmount(ctx context.Context, client *docker.Client, opLogger hclog.Logger, containerId *string, targetPath string) error {
 	opLogger.Debug("unmounting", "target-path", targetPath)
 	execConfig := types.ExecConfig{

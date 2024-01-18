@@ -16,6 +16,24 @@ type dockerOutput interface {
 	Captured() string
 }
 
+type dockerOutStatus struct {
+	Status string `json:"status"`
+}
+
+func (d *dockerOutStatus) Captured() string {
+	return d.Status
+}
+
+func dockerReaderStatus() dockerOutputExtractor {
+	return func(raw string) dockerOutput {
+		out := &dockerOutStatus{}
+		if err := json.Unmarshal([]byte(raw), out); err != nil {
+			return nil
+		}
+		return out
+	}
+}
+
 type dockerOutStream struct {
 	Stream string
 }

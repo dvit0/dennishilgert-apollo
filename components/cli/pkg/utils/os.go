@@ -13,7 +13,7 @@ import (
 // Trap will listen for all stop signals and pass them along to the given process.
 func Trap(process *os.Process) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		process.Signal(<-c)
 	}()
