@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	build "apollo/cli/cmd/images/build"
-	export "apollo/cli/cmd/images/export"
-	push "apollo/cli/cmd/images/push"
+	"apollo/cli/cmd/image/build"
+	"apollo/cli/cmd/image/export"
+	"apollo/cli/cmd/image/push"
 
 	"github.com/spf13/cobra"
 )

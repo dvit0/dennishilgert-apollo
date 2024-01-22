@@ -2,7 +2,7 @@ package push
 
 import (
 	"apollo/cli/configs"
-	"apollo/cli/pkg/containers"
+	"apollo/cli/pkg/container"
 	"apollo/cli/pkg/utils"
 	"context"
 	"os"
@@ -48,13 +48,13 @@ func processCommand() int {
 		}
 	}
 
-	dockerClient, err := containers.GetDefaultClient()
+	dockerClient, err := container.GetDefaultClient()
 	if err != nil {
 		rootLogger.Error("failed to get default Docker client", "reason", err)
 		return 1
 	}
 
-	if err := containers.ImagePush(context.Background(), dockerClient, rootLogger, commandConfig.ImageTag); err != nil {
+	if err := container.ImagePush(context.Background(), dockerClient, rootLogger, commandConfig.ImageTag); err != nil {
 		rootLogger.Error("failed to push Docker image", "reason", err)
 		return 1
 	}

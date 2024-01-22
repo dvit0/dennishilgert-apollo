@@ -1,4 +1,4 @@
-package containers
+package container
 
 import (
 	"apollo/cli/pkg/utils"
@@ -376,6 +376,21 @@ func finalizeImage(ctx context.Context, client *docker.Client, opLogger hclog.Lo
 	defer rmExecResponse.Close()
 
 	DebugOutput(opLogger, rmExecResponse.Reader)
+
+	opLogger.Debug("creating workspace directory")
+	wrkExecConfig := types.ExecConfig{
+		Cmd:          []string{"mkdir", "/workspace"},
+		AttachStdout: true,
+		AttachStderr: true,
+	}
+	wrkExecResponse, err := ContainerExec(ctx, client, opLogger, *containerId, wrkExecConfig)
+	if err != nil {
+		opLogger.Error("error while creating workspace directory")
+		return err
+	}
+	defer wrkExecResponse.Close()
+
+	DebugOutput(opLogger, wrkExecResponse.Reader)
 
 	opLogger.Debug("applying network configuration")
 	resExecConfig := types.ExecConfig{

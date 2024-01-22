@@ -1,8 +1,8 @@
-package build
+package export
 
 import (
 	"apollo/cli/configs"
-	"apollo/cli/pkg/containers"
+	"apollo/cli/pkg/container"
 	"apollo/cli/pkg/utils"
 	"context"
 	"os"
@@ -51,19 +51,19 @@ func processCommand() int {
 		return 1
 	}
 
-	dockerClient, err := containers.GetDefaultClient()
+	dockerClient, err := container.GetDefaultClient()
 	if err != nil {
 		rootLogger.Error("failed to get default Docker client", "reason", err)
 		return 1
 	}
 
-	_, err = containers.FetchImageIdByTag(context.Background(), dockerClient, rootLogger, commandConfig.ImageTag)
+	_, err = container.FetchImageIdByTag(context.Background(), dockerClient, rootLogger, commandConfig.ImageTag)
 	if err != nil {
 		rootLogger.Error("specified image does not exist ")
 		return 1
 	}
 
-	if err := containers.ImageExport(context.Background(), dockerClient, rootLogger, commandConfig.DistPath, commandConfig.ImageTag); err != nil {
+	if err := container.ImageExport(context.Background(), dockerClient, rootLogger, commandConfig.DistPath, commandConfig.ImageTag); err != nil {
 		rootLogger.Error("failed to export Docker image")
 		return 1
 	}

@@ -2,7 +2,7 @@ package build
 
 import (
 	"apollo/cli/configs"
-	"apollo/cli/pkg/containers"
+	"apollo/cli/pkg/container"
 	"apollo/cli/pkg/utils"
 	"context"
 	"os"
@@ -68,13 +68,13 @@ func processCommand() int {
 		}
 	}
 
-	dockerClient, err := containers.GetDefaultClient()
+	dockerClient, err := container.GetDefaultClient()
 	if err != nil {
 		rootLogger.Error("failed to get default Docker client", "reason", err)
 		return 1
 	}
 
-	if err := containers.ImageBuild(context.Background(), dockerClient, rootLogger, commandConfig.SourcePath, commandConfig.Dockerfile, commandConfig.ImageTag); err != nil {
+	if err := container.ImageBuild(context.Background(), dockerClient, rootLogger, commandConfig.SourcePath, commandConfig.Dockerfile, commandConfig.ImageTag); err != nil {
 		rootLogger.Error("failed to build Docker image", "reason", err)
 		return 1
 	}
