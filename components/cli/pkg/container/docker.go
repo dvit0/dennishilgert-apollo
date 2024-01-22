@@ -355,15 +355,15 @@ func finalizeImage(ctx context.Context, client *docker.Client, opLogger hclog.Lo
 		Cmd: []string{
 			"/bin/sh", "-c",
 			"rm -rf " +
-				"/var/lib/apt/lists/* " +
-				"/var/cache/apt/archives/* " +
-				"/var/tmp/* " +
-				"/var/log/* " +
-				"/usr/share/doc/* " +
-				"/usr/share/man/* " +
-				"/usr/share/info/* " +
-				"/etc/apt/sources.list.d/* " +
-				"/etc/apt/keyrings/*",
+				ContainerImageMountTarget + "/var/lib/apt/lists/* " +
+				ContainerImageMountTarget + "/var/cache/apt/archives/* " +
+				ContainerImageMountTarget + "/var/tmp/* " +
+				ContainerImageMountTarget + "/var/log/* " +
+				ContainerImageMountTarget + "/usr/share/doc/* " +
+				ContainerImageMountTarget + "/usr/share/man/* " +
+				ContainerImageMountTarget + "/usr/share/info/* " +
+				ContainerImageMountTarget + "/etc/apt/sources.list.d/* " +
+				ContainerImageMountTarget + "/etc/apt/keyrings/*",
 		},
 		AttachStdout: true,
 		AttachStderr: true,
@@ -379,7 +379,7 @@ func finalizeImage(ctx context.Context, client *docker.Client, opLogger hclog.Lo
 
 	opLogger.Debug("creating workspace directory")
 	wrkExecConfig := types.ExecConfig{
-		Cmd:          []string{"mkdir", "/workspace"},
+		Cmd:          []string{"mkdir", ContainerImageMountTarget + "/workspace"},
 		AttachStdout: true,
 		AttachStderr: true,
 	}
