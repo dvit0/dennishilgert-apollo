@@ -31,7 +31,7 @@ var (
 	BuilderContainerImageTag = "debian:stable"
 
 	// Specifies the mount target for the destination directory on the host.
-	ContainerDestMountTarget = "/dest"
+	ContainerDestMountTarget = "/dist"
 
 	// Specifies the mount target for the rootfs image.
 	ContainerImageMountTarget = "/rootfs-image"
@@ -298,11 +298,11 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, opLogger hclo
 	for _, dir := range findExecLines {
 		opLogger.Debug("handling directory", "dir", dir)
 		if slices.Contains([]string{ContainerDestMountTarget, ContainerImageMountTarget}, dir) {
-			opLogger.Debug("directory is working directory")
+			opLogger.Debug("directory is working directory", "dir", dir)
 			continue
 		}
 		if !strings.HasPrefix(dir, "/") || !utils.IsValidDirName(dir) {
-			opLogger.Debug("directory is not a valid directory")
+			opLogger.Debug("directory is not a valid directory", "dir", dir)
 			continue
 		}
 		// only create empty directory on the rootfs image.
