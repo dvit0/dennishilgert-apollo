@@ -1,34 +1,63 @@
-import { join } from 'path'
+import { fileURLToPath } from 'url'
+import { join, dirname } from 'path'
 
-const indexFile = join(__dirname, 'index.js')
+// Helper function to get __dirname equivalent in ES module
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
-const indexModule = require(indexFile)
+const origConsoleLog = console.log
+
+function logJson(level, message) {
+  const timestamp = Date.now()
+  origConsoleLog(JSON.stringify({ timestamp, 'type': 'log', level, message }))
+}
+
+function errorJson(error) {
+  const timestamp = Date.now()
+  origConsoleLog('error', JSON.stringify({ timestamp, 'type': 'error', 'code': error.code, 'message': error.message, 'cause': error.cause, 'stack': error.stack }))
+}
+
+function resultJson(data) {
+  const timestamp = Date.now()
+  origConsoleLog(JSON.stringify({ timestamp, "type": "result", data }))
+}
+
+// Override console.log and console.error
+console.log = (message) => logJson('info', message)
+console.error = (message) => logJson('error', message)
 
 let rawData = ''
 process.stdin.on('data', (chunk) => {
   rawData += chunk
-})
+});
 
-process.stdin.on('end', () => {
+process.stdin.on('end', async () => {
   let inputData
   try {
     inputData = JSON.parse(rawData)
-  } catch(error) {
-    console.log('error parsing JSON input', error)
+  } catch (error) {
+    errorJson(error)
     process.exit(1)
   }
 
-  const { fnContext, fnData } = inputData
+  const { context, event } = inputData
 
-  if (typeof indexModule.handler === 'function') {
-    indexModule.handler(fnContext, fnData)
+  const handlerParts = context.Handler.split('.')
+  const index = handlerParts[0]
+  const handler = handlerParts[1]
+  const indexFile = join(__dirname, index + '.mjs')
+  
+  const indexModule = await import(indexFile)
+  const handlerFunction = indexModule[handler]
+
+  if (typeof handlerFunction === 'function') {
+    await handlerFunction(context, event)
       .then((result) => {
-        console.log(result)
+        resultJson(result)
       })
       .catch((error) => {
-        console.error('error in handler function', error)
+        errorJson(error)
       })
   } else {
-    console.error('cannot find handler function in index file')
+    errorJson(new Error('specified handler function does not exist: ' + context.Handler))
   }
 })
