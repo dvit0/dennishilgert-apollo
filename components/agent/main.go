@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	function "apollo/agent/pkg/function"
+	handler "apollo/agent/pkg/function/invoker"
 	grpc "apollo/agent/pkg/grpc"
 
 	"github.com/hashicorp/go-hclog"
@@ -39,6 +44,34 @@ func main() {
 		logger.Info("received shutdown request")
 		shutdown(logger)
 		return c.String(http.StatusOK, "Shutting down now")
+	})
+
+	e.GET("/run", func(c echo.Context) error {
+		logger.Info("received run request")
+
+		response := map[string]interface{}{}
+
+		timestamp := time.Now()
+
+		fnCtx, fnCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer fnCtxCancel()
+
+		result, logs, err := handler.Invoke(fnCtx, logger.Named("invoker"), function.Config{Runtime: "node", RuntimeVersion: "20"}, function.Context{Handler: "index.handler"}, function.Event{})
+
+		duration := fmt.Sprintf("%dms", time.Since(timestamp).Milliseconds())
+		response["duration"] = duration
+		response["logs"] = logs
+
+		if err != nil {
+			response["message"] = "error"
+			response["error"] = err.Error()
+			return c.JSONPretty(http.StatusInternalServerError, response, "  ")
+		}
+
+		response["message"] = "ok"
+		response["result"] = result
+
+		return c.JSONPretty(http.StatusOK, response, "  ")
 	})
 
 	errorChan := make(chan error, 1)
