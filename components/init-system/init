@@ -55,15 +55,32 @@ log_blank "apollo init system - $VERSION"
 if [ ! -d "/proc" ]; then
   # cannot use 'log' here because /proc is not mounted yet
   log_blank "cannot mount proc - /proc does not exist"
+  exit 1
 fi
 /bin/mount -t proc proc /proc
 log "mounted proc to /proc"
 
 if [ ! -d "/sys" ]; then
   log "cannot mount sysfs - /sys does not exist"
+  exit 1
 fi
 /bin/mount -t sysfs sysfs /sys
 log "mounted sysfs to /sys"
+
+# ----- mounting the code filesystem
+
+if [ ! -d "/workspace" ]; then
+  log "cannot mount codefs - /workspace does not exist"
+  exit 1
+fi
+
+if [ ! -b "/dev/vdb" ]; then
+  log "cannot mount codefs - target drive /dev/vdb does not exist"
+  exit 1
+fi
+
+/bin/mount /dev/vdb /workspace
+log "mounted codefs to /workspace"
 
 # ----- setting up the network
 
