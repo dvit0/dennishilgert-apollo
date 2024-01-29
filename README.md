@@ -1,4 +1,11 @@
-# apollo
+```
+    _             _ _     
+   /_\  _ __  ___| | |___ 
+  / _ \| '_ \/ _ \ | / _ \
+ /_/ \_\ .__/\___/_|_\___/
+       |_|                
+``````
+
 Function as a service platform using Firecracker Micro-VMs
 
 ## This repository contains git submodules
