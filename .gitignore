@@ -3,5 +3,7 @@ node_modules
 */**/gen/*/
 .DS_Store
 
+protoc*
+
 go.work
 go.work.sum

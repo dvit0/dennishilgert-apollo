@@ -1,0 +1,1 @@
+This part of the application has been reused from [Dapr Project](https://github.com/dapr/kit/blob/main/logger)

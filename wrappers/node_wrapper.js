@@ -8,17 +8,17 @@ const origConsoleLog = console.log
 
 function logJson(level, message) {
   const timestamp = Date.now()
-  origConsoleLog(JSON.stringify({ timestamp, 'type': 'log', level, message }))
+  origConsoleLog(JSON.stringify({ timestamp, 'type': 'log', 'properties': { level, message } }))
 }
 
 function errorJson(error) {
   const timestamp = Date.now()
-  origConsoleLog('error', JSON.stringify({ timestamp, 'type': 'error', 'code': error.code, 'message': error.message, 'cause': error.cause, 'stack': error.stack }))
+  origConsoleLog('error', JSON.stringify({ timestamp, 'type': 'error', 'properties': { 'code': error.code, 'message': error.message, 'cause': error.cause, 'stack': error.stack } }))
 }
 
 function resultJson(data) {
   const timestamp = Date.now()
-  origConsoleLog(JSON.stringify({ timestamp, "type": "result", data }))
+  origConsoleLog(JSON.stringify({ timestamp, "type": "result", 'properties': { data } }))
 }
 
 // Override console.log and console.error
@@ -41,7 +41,7 @@ process.stdin.on('end', async () => {
 
   const { context, event } = inputData
 
-  const handlerParts = context.Handler.split('.')
+  const handlerParts = context.runtimeHandler.split('.')
   const index = handlerParts[0]
   const handler = handlerParts[1]
   const indexFile = join(__dirname, index + '.mjs')

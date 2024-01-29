@@ -1,5 +1,0 @@
-package depotservice
-
-func main() {
-
-}

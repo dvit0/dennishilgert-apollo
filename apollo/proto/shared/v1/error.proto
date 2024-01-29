@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package apollo.proto.shared.v1;
+
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/shared/v1;shared";
+
+message Error {
+  int32 code = 1;
+  string message = 2;
+  string cause = 3;
+  string stack = 4;
+}
