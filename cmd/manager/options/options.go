@@ -8,7 +8,9 @@ import (
 type Options struct {
 	ApiPort               int
 	FirecrackerBinaryPath string
-	VmHealthCheckInterval int
+	WatchdogCheckInterval int
+	WatchdogWorkerCount   int
+	AgentApiPort          int
 	Logger                logger.Options
 }
 
@@ -36,7 +38,9 @@ func New(origArgs []string) *Options {
 
 	fs.IntVar(&opts.ApiPort, "api-port", 80, "the port used for the api server")
 	fs.StringVar(&opts.FirecrackerBinaryPath, "fc-binary-path", "./firecracker", "the path to the firecracker binary")
-	fs.IntVar(&opts.VmHealthCheckInterval, "vm-health-interval", 5, "the interval to perform health checks of the vms in seconds")
+	fs.IntVar(&opts.WatchdogCheckInterval, "watchdog-check-interval", 5, "the interval to perform health checks of the vms in seconds")
+	fs.IntVar(&opts.WatchdogWorkerCount, "watchdog-worker-count", 10, "the count of workers the watchdog can use")
+	fs.IntVar(&opts.AgentApiPort, "agent-api-port", 50051, "the port used to connect to the agent api")
 
 	// ignore errors; pflag is set for ExitOnError
 	_ = fs.Parse(args)

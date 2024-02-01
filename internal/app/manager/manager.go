@@ -15,7 +15,9 @@ var log = logger.NewLogger("apollo.manager")
 
 type Options struct {
 	FirecrackerBinaryPath string
-	VmHealthCheckInterval time.Duration
+	WatchdogCheckInterval time.Duration
+	WatchdogWorkerCount   int
+	AgentApiPort          int
 }
 
 type Manager interface {

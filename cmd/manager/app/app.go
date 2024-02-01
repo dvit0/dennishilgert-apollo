@@ -27,7 +27,9 @@ func Run() {
 	ctx := signals.Context()
 	manager, err := manager.NewManager(ctx, manager.Options{
 		FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
-		VmHealthCheckInterval: time.Duration(opts.VmHealthCheckInterval) * time.Second,
+		WatchdogCheckInterval: time.Duration(opts.WatchdogCheckInterval) * time.Second,
+		WatchdogWorkerCount:   opts.WatchdogWorkerCount,
+		AgentApiPort:          opts.AgentApiPort,
 	})
 	if err != nil {
 		log.Fatalf("error while creating manager: %v", err)

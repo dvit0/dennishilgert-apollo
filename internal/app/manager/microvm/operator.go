@@ -11,7 +11,9 @@ import (
 type Options struct {
 	OsArch                utils.OsArch
 	FirecrackerBinaryPath string
-	VmHealthCheckInterval time.Duration
+	WatchdogCheckInterval time.Duration
+	WatchdogWorkerCount   int
+	AgentApiPort          int
 }
 
 type Operator interface {
@@ -24,10 +26,17 @@ type vmOperator struct {
 
 func NewVmOperator(ctx context.Context, opts Options) Operator {
 	return &vmOperator{
-		pool: pool.NewVmPool(opts.VmHealthCheckInterval),
+		pool: pool.NewVmPool(pool.Options{
+			WatchdogCheckInterval: opts.WatchdogCheckInterval,
+			WatchdogWorkerCount:   opts.WatchdogWorkerCount,
+		}),
 	}
 }
 
-func (m *vmOperator) Init(ctx context.Context) error {
+func (v *vmOperator) Init(ctx context.Context) error {
+	return nil
+}
+
+func (v *vmOperator) GetOrStart(ctx context.Context) error {
 	return nil
 }

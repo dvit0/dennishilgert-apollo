@@ -12,6 +12,11 @@ import (
 
 var log = logger.NewLogger("apollo.manager.pool")
 
+type Options struct {
+	WatchdogCheckInterval time.Duration
+	WatchdogWorkerCount   int
+}
+
 type Pool interface {
 	Pool() *map[string]map[string]*machine.MachineInstance
 	Add(instance machine.MachineInstance) error
@@ -21,17 +26,19 @@ type Pool interface {
 }
 
 type vmPool struct {
-	healthCheckInterval time.Duration
-	watchdog            Watchdog
-	pool                map[string]map[string]*machine.MachineInstance
-	lock                sync.Mutex
+	watchdogCheckInterval time.Duration
+	watchdogWorkerCount   int
+	watchdog              Watchdog
+	pool                  map[string]map[string]*machine.MachineInstance
+	lock                  sync.Mutex
 }
 
 // NewVmPool returns a new instance of vmPool.
-func NewVmPool(healthCheckInterval time.Duration) Pool {
+func NewVmPool(opts Options) Pool {
 	return &vmPool{
-		healthCheckInterval: healthCheckInterval,
-		pool:                make(map[string]map[string]*machine.MachineInstance),
+		watchdogCheckInterval: opts.WatchdogCheckInterval,
+		watchdogWorkerCount:   opts.WatchdogWorkerCount,
+		pool:                  make(map[string]map[string]*machine.MachineInstance),
 	}
 }
 
@@ -94,7 +101,7 @@ func (m *vmPool) AvailableVm(fnId string) (*machine.MachineInstance, error) {
 		return nil, fmt.Errorf("pool does not contain available machine instance for function id: %s", fnId)
 	}
 	for _, vmInstance := range vms {
-		if vmInstance.State() == machine.VmStateAvailable {
+		if vmInstance.State() == machine.VmStateReady {
 			return vmInstance, nil
 		}
 	}

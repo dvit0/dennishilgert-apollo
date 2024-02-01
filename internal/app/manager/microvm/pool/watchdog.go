@@ -22,14 +22,14 @@ type poolWatchdog struct {
 func NewPoolWatchdog(vmPool *vmPool) Watchdog {
 	return &poolWatchdog{
 		vmPool: vmPool,
-		worker: worker.NewWorkerManager(10),
+		worker: worker.NewWorkerManager(vmPool.watchdogWorkerCount),
 		errCh:  make(chan error),
 	}
 }
 
 // Run runs the health checks in a specified time interval.
 func (p *poolWatchdog) Run(ctx context.Context) error {
-	ticker := time.NewTicker(p.vmPool.healthCheckInterval)
+	ticker := time.NewTicker(p.vmPool.watchdogCheckInterval)
 	defer ticker.Stop()
 
 	for {
@@ -73,7 +73,7 @@ func (p *poolWatchdog) checkVms() {
 			// add a callback to handle the result of the health check
 			task.Callback(func(healthy bool, err error) {
 				if !healthy || err != nil {
-					// destroy the firecracker machine if it is not healthy
+					// destroy the firecracker machine if it's not healthy
 					p.vmPool.RemoveAndDestroy(target.Cfg.FnId.String(), target.Cfg.VmId.String())
 				}
 				if err != nil {
