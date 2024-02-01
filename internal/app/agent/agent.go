@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/dennishilgert/apollo/internal/app/agent/api"
-	"github.com/dennishilgert/apollo/pkg/concurrency"
+	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
 )
 
@@ -36,11 +36,10 @@ func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 func (a *agent) Run(ctx context.Context) error {
 	log.Info("apollo agent is starting")
 
-	runner := concurrency.NewRunnerManager(
+	runner := runner.NewRunnerManager(
 		func(ctx context.Context) error {
 			log.Info("starting api server")
-			err := a.apiServer.Run(ctx)
-			if err != nil {
+			if err := a.apiServer.Run(ctx); err != nil {
 				return fmt.Errorf("failed to start api server: %v", err)
 			}
 			return nil

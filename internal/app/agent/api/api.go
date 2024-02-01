@@ -56,8 +56,10 @@ func (a *apiServer) Run(ctx context.Context) error {
 	}
 	close(a.readyCh)
 
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	go func() {
+		defer close(errCh) // ensure channel is closed to avoid goroutine leak
+
 		if err := s.Serve(lis); err != nil {
 			errCh <- fmt.Errorf("error while serving api server: %w", err)
 			return
@@ -103,14 +105,20 @@ func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent
 		VCpuCores:      in.Function.VcpuCores,
 	}
 	fnEvt := runtime.Event{
-		RequestID:   in.Id,
+		RequestId:   in.Id,
 		RequestType: in.Type,
 		Data:        in.Data,
 	}
 
-	resultCh := make(chan *runtime.Result)
-	errCh := make(chan error)
+	resultCh := make(chan *runtime.Result, 1)
+	errCh := make(chan error, 1)
 	go func() {
+		// ensure the channels are closed to avoid goroutine leak
+		defer func() {
+			close(errCh)
+			close(resultCh)
+		}()
+
 		result, err := runtime.Invoke(ctx, log.WithLogType("info"), fnCfg, fnCtx, fnEvt)
 		if err != nil {
 			errCh <- err
@@ -141,7 +149,7 @@ func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent
 	}
 
 	response := &agent.InvokeResponse{
-		RequestId:     result.RequestID,
+		RequestId:     result.RequestId,
 		Status:        int32(result.Status),
 		StatusMessage: result.StatusMessage,
 		Duration:      result.Duration,

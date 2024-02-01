@@ -5,12 +5,12 @@ import "fmt"
 const (
 	defaultJSONOutput  = false
 	defaultOutputLevel = "info"
-	undefinedAppID     = ""
+	undefinedAppId     = ""
 )
 
 type Options struct {
 	// appID is the unique id of the Apollo application
-	appID string
+	appId string
 
 	// JSONFormatEnabled defines the flag to enable JSON formatted log
 	JSONFormatEnabled bool
@@ -29,7 +29,7 @@ func (o *Options) SetOutputLevel(level string) error {
 
 // SetAppID sets Application ID.
 func (o *Options) SetAppID(id string) {
-	o.appID = id
+	o.appId = id
 }
 
 // AttachCmdFlags attaches log options to the command flags.
@@ -57,7 +57,7 @@ func (o *Options) AttachCmdFlags(
 func DefaultOptions() Options {
 	return Options{
 		JSONFormatEnabled: defaultJSONOutput,
-		appID:             undefinedAppID,
+		appId:             undefinedAppId,
 		OutputLevel:       defaultOutputLevel,
 	}
 }
@@ -70,8 +70,8 @@ func ApplyOptionsToLoggers(options *Options) error {
 	for _, v := range internalLoggers {
 		v.EnableJSONOutput(options.JSONFormatEnabled)
 
-		if options.appID != undefinedAppID {
-			v.SetAppID(options.appID)
+		if options.appId != undefinedAppId {
+			v.SetAppId(options.appId)
 		}
 	}
 

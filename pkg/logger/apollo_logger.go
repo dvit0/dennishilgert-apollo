@@ -70,6 +70,10 @@ func (l *apolloLogger) EnableJSONOutput(enabled bool) {
 	l.logger.Logger.SetFormatter(formatter)
 }
 
+func (l *apolloLogger) LogrusEntry() *logrus.Entry {
+	return l.logger
+}
+
 func (l *apolloLogger) PrintBanner() {
 	l.logger.Log(logrus.InfoLevel, "    _             _ _")
 	l.logger.Log(logrus.InfoLevel, "   /_\\  _ __  ___| | |___")
@@ -78,9 +82,9 @@ func (l *apolloLogger) PrintBanner() {
 	l.logger.Log(logrus.InfoLevel, "       |_|")
 }
 
-// SetAppID sets app_id field in the log. Default value is an empty string.
-func (l *apolloLogger) SetAppID(id string) {
-	l.logger = l.logger.WithField(logFieldAppID, id)
+// SetAppId sets app_id field in the log. Default value is an empty string.
+func (l *apolloLogger) SetAppId(id string) {
+	l.logger = l.logger.WithField(logFieldAppId, id)
 }
 
 func toLogrusLevel(lvl LogLevel) logrus.Level {

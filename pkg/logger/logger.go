@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -22,7 +24,7 @@ const (
 	logFieldMessage   = "msg"
 	logFieldInstance  = "instance"
 	logFieldApolloVer = "ver"
-	logFieldAppID     = "app_id"
+	logFieldAppId     = "app_id"
 )
 
 type logContextKeyType struct{}
@@ -60,15 +62,19 @@ var (
 )
 
 type Logger interface {
-	// EnableJSONOutput enables JSON formatted output log
+	// EnableJSONOutput enables JSON formatted output log.
 	EnableJSONOutput(enabled bool)
 
-	// SetAppID sets dapr_id field in the log. Default value is empty string
-	SetAppID(id string)
+	// Logger returns the logger instance.
+	LogrusEntry() *logrus.Entry
 
-	// SetOutputLevel sets the log output level
+	// SetAppId sets dapr_id field in the log. Default value is empty string.
+	SetAppId(id string)
+
+	// SetOutputLevel sets the log output level.
 	SetOutputLevel(outputLevel LogLevel)
-	// SetOutput sets the destination for the logs
+
+	// SetOutput sets the destination for the logs.
 	SetOutput(dst io.Writer)
 
 	// IsOutputLevelEnabled returns true if the logger will output this LogLevel.
@@ -117,7 +123,7 @@ func toLogLevel(level string) LogLevel {
 		return FatalLevel
 	}
 
-	// unsupported log level by Dapr
+	// unsupported log level by apollo.
 	return UndefinedLevel
 }
 

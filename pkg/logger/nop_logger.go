@@ -1,14 +1,22 @@
 package logger
 
-import "io"
+import (
+	"io"
+
+	"github.com/sirupsen/logrus"
+)
 
 type nopLogger struct{}
 
 // EnableJSONOutput enables JSON formatted output logging.
 func (n *nopLogger) EnableJSONOutput(_ bool) {}
 
+func (n *nopLogger) LogrusEntry() *logrus.Entry {
+	return nil
+}
+
 // SetAppID sets app_id field in the log. nopLogger value is an empty string.
-func (n *nopLogger) SetAppID(_ string) {}
+func (n *nopLogger) SetAppId(_ string) {}
 
 // SetOutputLevel sets the log output level.
 func (n *nopLogger) SetOutputLevel(_ LogLevel) {}

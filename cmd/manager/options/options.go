@@ -6,8 +6,10 @@ import (
 )
 
 type Options struct {
-	GrpcPort int
-	Logger   logger.Options
+	ApiPort               int
+	FirecrackerBinaryPath string
+	VmHealthCheckInterval int
+	Logger                logger.Options
 }
 
 func New(origArgs []string) *Options {
@@ -32,7 +34,9 @@ func New(origArgs []string) *Options {
 	fs := pflag.NewFlagSet("manager", pflag.ExitOnError)
 	fs.SortFlags = true
 
-	fs.IntVar(&opts.GrpcPort, "grpc-port", 80, "the port used for the grpc server")
+	fs.IntVar(&opts.ApiPort, "api-port", 80, "the port used for the api server")
+	fs.StringVar(&opts.FirecrackerBinaryPath, "fc-binary-path", "./firecracker", "the path to the firecracker binary")
+	fs.IntVar(&opts.VmHealthCheckInterval, "vm-health-interval", 5, "the interval to perform health checks of the vms in seconds")
 
 	// ignore errors; pflag is set for ExitOnError
 	_ = fs.Parse(args)

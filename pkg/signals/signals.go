@@ -29,6 +29,8 @@ func Context() context.Context {
 	signal.Notify(sigCh, shutdownSignals...)
 
 	go func() {
+		defer close(sigCh) // ensure channel is closed to avoid goroutine leak
+
 		sig := <-sigCh
 		log.Infof(`Received signal '%s'; beginning shutdown`, sig)
 		cancel()

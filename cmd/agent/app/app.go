@@ -5,7 +5,7 @@ import (
 
 	"github.com/dennishilgert/apollo/cmd/agent/options"
 	"github.com/dennishilgert/apollo/internal/app/agent"
-	"github.com/dennishilgert/apollo/pkg/concurrency"
+	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/signals"
 )
@@ -31,7 +31,7 @@ func Run() {
 		log.Fatalf("error while creating agent: %v", err)
 	}
 
-	err = concurrency.NewRunnerManager(
+	err = runner.NewRunnerManager(
 		agent.Run,
 	).Run(ctx)
 	if err != nil {

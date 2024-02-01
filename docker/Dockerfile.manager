@@ -1,0 +1,22 @@
+ARG GO_VERSION=1.21
+FROM golang:${GO_VERSION}-bullseye as builder
+
+WORKDIR /app
+
+COPY ../go.mod ../go.sum ./
+RUN go mod download
+
+COPY ../cmd ./
+COPY ../pkg ./
+COPY ../internal ./
+COPY ../third_party ./
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o manager ./cmd/manager/main.go
+
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /app/ app/
+
+ENTRYPOINT [ "./manager" ]
