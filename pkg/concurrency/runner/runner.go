@@ -1,7 +1,7 @@
 // This file has been reused from Dapr
 // https://github.com/dapr/kit/blob/main/concurrency/runner.go
 
-package concurrency
+package runner
 
 import (
 	"context"
@@ -19,8 +19,8 @@ type Runner func(ctx context.Context) error
 // waits for all runners to finish. If any runner returns, the RunnerManager
 // will stop all other runners and return any error.
 type RunnerManager struct {
-	lock    sync.Mutex
 	runners []Runner
+	lock    sync.Mutex
 	running atomic.Bool
 }
 
@@ -82,6 +82,8 @@ func (r *RunnerManager) Run(ctx context.Context) error {
 			errObjs = append(errObjs, err)
 		}
 	}
+
+	close(errCh) // ensure channel is closed to avoid goroutine leak
 
 	return errors.Join(errObjs...)
 }
