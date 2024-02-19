@@ -68,7 +68,7 @@ type Logger interface {
 	// Logger returns the logger instance.
 	LogrusEntry() *logrus.Entry
 
-	// SetAppId sets dapr_id field in the log. Default value is empty string.
+	// SetAppId sets app_id field in the log. Default value is empty string.
 	SetAppId(id string)
 
 	// SetOutputLevel sets the log output level.

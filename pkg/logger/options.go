@@ -75,13 +75,13 @@ func ApplyOptionsToLoggers(options *Options) error {
 		}
 	}
 
-	daprLogLevel := toLogLevel(options.OutputLevel)
-	if daprLogLevel == UndefinedLevel {
+	logLevel := toLogLevel(options.OutputLevel)
+	if logLevel == UndefinedLevel {
 		return fmt.Errorf("invalid value for --log-level: %s", options.OutputLevel)
 	}
 
 	for _, v := range internalLoggers {
-		v.SetOutputLevel(daprLogLevel)
+		v.SetOutputLevel(logLevel)
 	}
 	return nil
 }
