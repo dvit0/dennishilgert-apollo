@@ -33,7 +33,7 @@ func validate(cfg *Config) error {
 
 // firecrackerConfig returns a full configuration for a firecracker micro vm.
 func firecrackerConfig(cfg Config) firecracker.Config {
-	socket := socketPath(cfg.VmId.String())
+	socket := socketPath(cfg.VmId)
 
 	return firecracker.Config{
 		SocketPath:      socket,
@@ -70,12 +70,12 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 			},
 		}},
 		MachineCfg: models.MachineConfiguration{
-			VcpuCount:       firecracker.Int64(cfg.VCpuCount),
-			MemSizeMib:      firecracker.Int64(cfg.MemSizeMib),
+			VcpuCount:       firecracker.Int64(int64(cfg.VCpuCount)),
+			MemSizeMib:      firecracker.Int64(int64(cfg.MemSizeMib)),
 			Smt:             firecracker.Bool(cfg.Multithreading),
 			TrackDirtyPages: firecracker.Bool(false),
 		},
-		VMID: cfg.VmId.String(),
+		VMID: cfg.VmId,
 	}
 }
 

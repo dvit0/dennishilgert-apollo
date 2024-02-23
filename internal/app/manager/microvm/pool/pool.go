@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/manager/microvm/machine"
 	"github.com/dennishilgert/apollo/pkg/logger"
@@ -12,13 +11,10 @@ import (
 
 var log = logger.NewLogger("apollo.manager.pool")
 
-type Options struct {
-	WatchdogCheckInterval time.Duration
-	WatchdogWorkerCount   int
-}
-
 type Pool interface {
 	Pool() *map[string]map[string]*machine.MachineInstance
+	Lock()
+	Unlock()
 	Add(instance machine.MachineInstance) error
 	Remove(fnId string, vmId string)
 	RemoveAndDestroy(fnId string, vmId string) error
@@ -26,26 +22,25 @@ type Pool interface {
 }
 
 type vmPool struct {
-	watchdogCheckInterval time.Duration
-	watchdogWorkerCount   int
-	watchdog              Watchdog
-	pool                  map[string]map[string]*machine.MachineInstance
-	lock                  sync.Mutex
+	pool map[string]map[string]*machine.MachineInstance
+	lock sync.Mutex
 }
 
 // NewVmPool returns a new instance of vmPool.
-func NewVmPool(opts Options) Pool {
+func NewVmPool() Pool {
 	return &vmPool{
-		watchdogCheckInterval: opts.WatchdogCheckInterval,
-		watchdogWorkerCount:   opts.WatchdogWorkerCount,
-		pool:                  make(map[string]map[string]*machine.MachineInstance),
+		pool: make(map[string]map[string]*machine.MachineInstance),
 	}
 }
 
-// Init initializes a new pool by setting up its watchdog.
-func (v *vmPool) Init() error {
-	v.watchdog = NewPoolWatchdog(v)
-	return nil
+// Lock locks the vm pool.
+func (v *vmPool) Lock() {
+	v.lock.Lock()
+}
+
+// Unlock unlocks the vm pool.
+func (v *vmPool) Unlock() {
+	v.lock.Unlock()
 }
 
 // Pool returns the pool with vms inside.
@@ -58,10 +53,10 @@ func (m *vmPool) Add(instance machine.MachineInstance) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if m.pool[instance.Cfg.FnId.String()][instance.Cfg.VmId.String()] != nil {
-		return fmt.Errorf("pool already contains a machine instance with the given id: %s", instance.Cfg.VmId.String())
+	if m.pool[instance.Cfg.FnId][instance.Cfg.VmId] != nil {
+		return fmt.Errorf("pool already contains a machine instance with the given id: %s", instance.Cfg.VmId)
 	}
-	m.pool[instance.Cfg.FnId.String()][instance.Cfg.VmId.String()] = &instance
+	m.pool[instance.Cfg.FnId][instance.Cfg.VmId] = &instance
 	return nil
 }
 
@@ -98,7 +93,8 @@ func (m *vmPool) AvailableVm(fnId string) (*machine.MachineInstance, error) {
 
 	vms := m.pool[fnId]
 	if vms == nil || len(vms) < 1 {
-		return nil, fmt.Errorf("pool does not contain available machine instance for function id: %s", fnId)
+		log.Debugf("pool does not contain available machine instance for function id: %s", fnId)
+		return nil, nil
 	}
 	for _, vmInstance := range vms {
 		if vmInstance.State() == machine.VmStateReady {

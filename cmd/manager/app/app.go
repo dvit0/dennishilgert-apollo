@@ -16,8 +16,7 @@ var log = logger.NewLogger("apollo.manager")
 func Run() {
 	opts := options.New(os.Args[1:])
 
-	err := logger.ApplyOptionsToLoggers(&opts.Logger)
-	if err != nil {
+	if err := logger.ApplyOptionsToLoggers(&opts.Logger); err != nil {
 		log.Fatal(err)
 	}
 
@@ -25,7 +24,8 @@ func Run() {
 	log.Infof("log level set to: %s", opts.Logger.OutputLevel)
 
 	ctx := signals.Context()
-	manager, err := manager.NewManager(ctx, manager.Options{
+	manager, err := manager.NewManager(manager.Options{
+		ApiPort:               opts.ApiPort,
 		FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
 		WatchdogCheckInterval: time.Duration(opts.WatchdogCheckInterval) * time.Second,
 		WatchdogWorkerCount:   opts.WatchdogWorkerCount,

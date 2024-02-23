@@ -28,9 +28,9 @@ type Context struct {
 }
 
 type Event struct {
-	RequestId   string      `json:"requestId"`
-	RequestType string      `json:"requestType"`
-	Data        interface{} `json:"data"`
+	EventId   string      `json:"eventId"`
+	EventType string      `json:"eventType"`
+	Data      interface{} `json:"data"`
 }
 
 type DefaultProperties struct {
@@ -62,7 +62,7 @@ type LogLine struct {
 }
 
 type Result struct {
-	RequestId     string
+	EventId       string
 	Status        int
 	StatusMessage string
 	Duration      string
@@ -150,7 +150,7 @@ func Invoke(ctx context.Context, logger logger.Logger, fnCfg Config, fnCtx Conte
 	}
 
 	return &Result{
-		RequestId:     fnEvt.RequestId,
+		EventId:       fnEvt.EventId,
 		Status:        status,
 		StatusMessage: statusMsg,
 		Duration:      duration,
