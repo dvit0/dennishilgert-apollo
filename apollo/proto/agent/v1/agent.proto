@@ -11,40 +11,32 @@ service Agent {
 }
 
 message InvokeRequest {
+  ConfigData config = 1;
+  ContextData context = 2;
+  EventData event = 3;
+}
+
+message ConfigData {
+  string runtime_binary_path = 1;
+  repeated string runtime_binary_args = 2;
+}
+
+message ContextData {
+  string runtime = 1;
+  string runtime_version = 2;
+  string runtime_handler = 3;
+  int32 v_cpu_cores = 4;
+  int32 memory_limit = 5;
+}
+
+message EventData {
   string id = 1;
   string type = 2;
-  FunctionSpecs function = 3;
-  RuntimeSpecs runtime = 4;
-  oneof data {
-    HTTPRequestData http_data = 5;
-  }
-}
-
-message FunctionSpecs {
-  string id = 1;
-  int32 memory_limit = 2;
-  int32 vcpu_cores = 3;
-}
-
-message RuntimeSpecs {
-  string name = 1;
-  string version = 2;
-  string handler = 3;
-  string binary_path = 4;
-  repeated string binary_args = 5;
-}
-
-message HTTPRequestData {
-  string method = 1;
-  string path = 2;
-  string source_ip = 3;
-  map<string, string> headers = 4;
-  map<string, string> query_params = 5;
-  google.protobuf.Struct body = 6;
+  google.protobuf.Struct data = 3;
 }
 
 message InvokeResponse {
-  string request_id = 1;
+  string event_id = 1;
   int32 status = 2;
   string status_message = 3;
   string duration = 6;
