@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package apollo.proto.manager.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/manager/v1;manager";
+
+service Manager {
+  rpc Execute(ExecuteFunctionRequest) returns (ExecuteFunctionResponse) {}
+}
+
+message ExecuteFunctionRequest {
+  FunctionSpecs function = 3;
+  RuntimeSpecs runtime = 4;
+  EventSpecs event = 5; 
+}
+
+message FunctionSpecs {
+  string id = 1;
+  string kernel_image_path = 2;
+  string root_drive_path = 3;
+  string code_drive_path = 4;
+  int32 memory_limit = 5;
+  int32 vcpu_cores = 6;
+}
+
+message RuntimeSpecs {
+  string name = 1;
+  string version = 2;
+  string handler = 3;
+  string binary_path = 4;
+  repeated string binary_args = 5;
+}
+
+message EventSpecs {
+  string id = 1;
+  string type = 2;
+  string source_ip = 3;
+  map<string, string> params = 4;
+  google.protobuf.Struct data = 5;
+}
+
+message ExecuteFunctionResponse {
+  string event_id = 1;
+  int32 status = 2;
+  string status_message = 3;
+  google.protobuf.Struct data = 5;
+}
