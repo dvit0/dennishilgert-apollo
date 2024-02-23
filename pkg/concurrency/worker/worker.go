@@ -56,17 +56,14 @@ func NewWorkerManager(workerCount int) *WorkerManager {
 }
 
 // Run runs a specified number of workers.
-func (w *WorkerManager) Run(parentCtx context.Context) error {
-	ctx, cancel := context.WithCancel(parentCtx)
-	defer cancel()
-
+func (w *WorkerManager) Run(ctx context.Context) error {
 	for i := 0; i < w.workerCount; i++ {
 		// run each worker in its own goroutine
 		go w.worker(ctx)
 	}
 
 	// block until the context is cancelled
-	<-parentCtx.Done()
+	<-ctx.Done()
 
 	close(w.taskCh)
 	return ctx.Err()

@@ -1,6 +1,3 @@
-// This file has been reused from Dapr
-// https://github.com/dapr/kit/blob/main/concurrency/runner.go
-
 package runner
 
 import (
