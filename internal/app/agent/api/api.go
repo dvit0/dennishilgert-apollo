@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/dennishilgert/apollo/internal/app/agent/runtime"
+	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
 	"google.golang.org/grpc"
@@ -21,7 +22,7 @@ type Options struct {
 }
 
 type Server interface {
-	Run(ctx context.Context) error
+	Run(ctx context.Context, healthStatusProvider health.Provider) error
 	Ready(ctx context.Context) error
 }
 
@@ -33,14 +34,14 @@ type apiServer struct {
 	running atomic.Bool
 }
 
-func NewAPIServer(opts Options) Server {
+func NewApiServer(opts Options) Server {
 	return &apiServer{
 		port:    opts.Port,
 		readyCh: make(chan struct{}),
 	}
 }
 
-func (a *apiServer) Run(ctx context.Context) error {
+func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provider) error {
 	if !a.running.CompareAndSwap(false, true) {
 		return errors.New("api server is already running")
 	}
@@ -49,6 +50,9 @@ func (a *apiServer) Run(ctx context.Context) error {
 
 	s := grpc.NewServer()
 	agent.RegisterAgentServer(s, a)
+
+	healthServer := health.NewHealthServer(healthStatusProvider, log)
+	healthServer.Register(s)
 
 	lis, err := net.Listen("tcp", ":"+fmt.Sprint(a.port))
 	if err != nil {
@@ -83,6 +87,7 @@ func (a *apiServer) Run(ctx context.Context) error {
 	return nil
 }
 
+// Ready waits until the api server is ready or the context is cancelled due to timeout.
 func (a *apiServer) Ready(ctx context.Context) error {
 	select {
 	case <-a.readyCh:
@@ -94,20 +99,20 @@ func (a *apiServer) Ready(ctx context.Context) error {
 
 func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent.InvokeResponse, error) {
 	fnCfg := runtime.Config{
-		RuntimeBinaryPath: in.Runtime.BinaryPath,
-		RuntimeBinaryArgs: in.Runtime.BinaryArgs,
+		RuntimeBinaryPath: in.Config.RuntimeBinaryPath,
+		RuntimeBinaryArgs: in.Config.RuntimeBinaryArgs,
 	}
 	fnCtx := runtime.Context{
-		Runtime:        in.Runtime.Name,
-		RuntimeVersion: in.Runtime.Version,
-		RuntimeHandler: in.Runtime.Handler,
-		MemoryLimit:    in.Function.MemoryLimit,
-		VCpuCores:      in.Function.VcpuCores,
+		Runtime:        in.Context.Runtime,
+		RuntimeVersion: in.Context.RuntimeVersion,
+		RuntimeHandler: in.Context.RuntimeHandler,
+		MemoryLimit:    in.Context.MemoryLimit,
+		VCpuCores:      in.Context.VCpuCores,
 	}
 	fnEvt := runtime.Event{
-		RequestId:   in.Id,
-		RequestType: in.Type,
-		Data:        in.Data,
+		EventId:   in.Event.Id,
+		EventType: in.Event.Type,
+		Data:      in.Event.Data,
 	}
 
 	resultCh := make(chan *runtime.Result, 1)
@@ -149,7 +154,7 @@ func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent
 	}
 
 	response := &agent.InvokeResponse{
-		RequestId:     result.RequestId,
+		EventId:       result.EventId,
 		Status:        int32(result.Status),
 		StatusMessage: result.StatusMessage,
 		Duration:      result.Duration,
