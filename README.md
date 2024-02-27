@@ -1,26 +1,13 @@
-```
-    _             _ _     
-   /_\  _ __  ___| | |___ 
-  / _ \| '_ \/ _ \ | / _ \
- /_/ \_\ .__/\___/_|_\___/
-       |_|                
-``````
+<picture>
+   <source media="(prefers-color-scheme: dark)" srcset="docs/images/apollo-logo-text-transparent-bg-white.png">
+   <source media="(prefers-color-scheme: light)" srcset="docs/images/apollo-logo-text-transparent-bg-black.png">
+   <img alt="Apollo Logo" width="200" src="docs/images/apollo-logo-text-transparent-bg-white.png">
+</picture>
 
-Function as a service platform using Firecracker Micro-VMs
+A FaaS platform with the security of virtual machines and the light weight of containers. 
 
-## This repository contains git submodules
-A complete documentation on how to handle git submodules can be found in [the git docs](https://git-scm.com/book/fa/v2/Git-Tools-Submodules).
+Based on [Firecracker](https://github.com/firecracker-microvm/firecracker) Micro-VM's.
 
-After cloning this project, it is necessary to run the following command in the project root directory:
+## What is Apollo?
 
-```bash
-git submodule init
-git submodule update
-```
-
-To update the submodule from its remote repository, run this command in the project root directory:
-
-```bash
-git submodule update --remote <submodule-name>
-```
-
+Apollo is an open source Function as a Service (FaaS) Platform
