@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
+	"regexp"
 
 	"golang.org/x/sys/unix"
 )
@@ -52,4 +54,27 @@ func IsDir(fileInfo fs.FileInfo) bool {
 // IsSocket returns if the given file is a unix socket.
 func IsSocket(fileInfo fs.FileInfo) bool {
 	return fileInfo.Mode()&fs.ModeSocket != 0
+}
+
+// IsDirAndWritable checks if the given path exists, is a directory and is writable.
+// Important: This function uses the unix package, which only works on unix systems
+func IsDirAndWritable(path string) error {
+	pathStat, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !pathStat.IsDir() {
+		return fmt.Errorf("given file is not a directory")
+	}
+	if err := unix.Access(path, unix.W_OK); err != nil {
+		return err
+	}
+	return nil
+}
+
+// IsValidDirName checks if the given name is a valid dir name.
+func IsValidDirName(name string) bool {
+	pattern := `^(\/?)[a-zA-Z0-9_.][a-zA-Z0-9_.-]{0,254}$`
+	matched, _ := regexp.MatchString(pattern, name)
+	return matched
 }
