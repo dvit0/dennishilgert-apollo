@@ -4,6 +4,8 @@ import (
 	"os"
 
 	"github.com/dennishilgert/apollo/cmd/cli/cmd/image/build"
+	"github.com/dennishilgert/apollo/cmd/cli/cmd/image/export"
+	"github.com/dennishilgert/apollo/cmd/cli/cmd/image/push"
 	"github.com/spf13/cobra"
 )
 
@@ -19,4 +21,6 @@ var Command = &cobra.Command{
 
 func init() {
 	Command.AddCommand(build.Command)
+	Command.AddCommand(export.Command)
+	Command.AddCommand(push.Command)
 }

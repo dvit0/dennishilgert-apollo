@@ -1,4 +1,4 @@
-package build
+package push
 
 import (
 	"flag"
@@ -8,10 +8,8 @@ import (
 )
 
 type commandFlags struct {
-	SourcePath string
-	Dockerfile string
-	ImageTag   string
-	Logger     logger.Config
+	ImageTag string
+	Logger   logger.Config
 }
 
 type parsedFlags struct {
@@ -22,13 +20,11 @@ type parsedFlags struct {
 func ParseFlags() *parsedFlags {
 	var f commandFlags
 
-	fs := pflag.NewFlagSet("image-build", pflag.ExitOnError)
+	fs := pflag.NewFlagSet("image-push", pflag.ExitOnError)
 	fs.SortFlags = true
 
 	// define default values only for reference, all flags are required
-	fs.StringVar(&f.SourcePath, "source-path", ".", "Path to the source directory of the build context")
-	fs.StringVar(&f.Dockerfile, "dockerfile", "./Dockerfile", "Path to the Dockerfile inside the build context")
-	fs.StringVar(&f.ImageTag, "image-tag", "localhost:5000/apollo/baseos:bullseye", "Tag to assign to the new Docker image")
+	fs.StringVar(&f.ImageTag, "image-tag", "localhost:5000/apollo/baseos:bullseye", "Tag of the Docker image to push to the registry")
 
 	f.Logger = logger.DefaultConfig()
 	f.Logger.AttachCmdFlags(flag.StringVar, flag.BoolVar)
