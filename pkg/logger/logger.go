@@ -62,8 +62,8 @@ var (
 )
 
 type Logger interface {
-	// EnableJSONOutput enables JSON formatted output log.
-	EnableJSONOutput(enabled bool)
+	// EnableJsonOutput enables JSON formatted output log.
+	EnableJsonOutput(enabled bool)
 
 	// Logger returns the logger instance.
 	LogrusEntry() *logrus.Entry
@@ -71,14 +71,14 @@ type Logger interface {
 	// SetAppId sets app_id field in the log. Default value is empty string.
 	SetAppId(id string)
 
-	// SetOutputLevel sets the log output level.
-	SetOutputLevel(outputLevel LogLevel)
+	// SetLogLevel sets the log level.
+	SetLogLevel(logLevel LogLevel)
 
 	// SetOutput sets the destination for the logs.
 	SetOutput(dst io.Writer)
 
-	// IsOutputLevelEnabled returns true if the logger will output this LogLevel.
-	IsOutputLevelEnabled(level LogLevel) bool
+	// IsLogLevelEnabled returns true if the logger will log this LogLevel.
+	IsLogLevelEnabled(level LogLevel) bool
 
 	// WithLogType specifies the log_type field in log. Default value is LogTypeLog
 	WithLogType(logType string) Logger

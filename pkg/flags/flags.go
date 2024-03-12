@@ -1,20 +1,27 @@
-package options
+package flags
 
 import (
-	"flag"
-
-	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/spf13/pflag"
 )
 
-type Options struct {
-	ApiPort int
-	Logger  logger.Options
+type FlagParser struct {
+	flagSet *pflag.FlagSet
 }
 
-func New(origArgs []string) *Options {
-	var opts Options
+func NewFlagParser(name string) *FlagParser {
+	fs := pflag.NewFlagSet(name, pflag.ExitOnError)
+	fs.SortFlags = true
 
+	return &FlagParser{
+		flagSet: fs,
+	}
+}
+
+func (f *FlagParser) FlagSet() *pflag.FlagSet {
+	return f.flagSet
+}
+
+func (f *FlagParser) Parse(origArgs []string) {
 	// We are using pflag to parse the CLI flags
 	// pflag is a drop-in replacement for the standard library's "flag" package, however…
 	// There's one key difference: with the stdlib's "flag" package, there are no short-hand options so options can be defined with a single slash.
@@ -29,18 +36,6 @@ func New(origArgs []string) *Options {
 			args[i] = a
 		}
 	}
-
-	// create a flag set
-	fs := pflag.NewFlagSet("agent", pflag.ExitOnError)
-	fs.SortFlags = true
-
-	fs.IntVar(&opts.ApiPort, "api-port", 50051, "the port used for the api server")
-
-	opts.Logger = logger.DefaultOptions()
-	opts.Logger.AttachCmdFlags(flag.StringVar, flag.BoolVar)
-
 	// ignore errors; pflag is set for ExitOnError
-	_ = fs.Parse(args)
-
-	return &opts
+	_ = f.flagSet.Parse(args)
 }

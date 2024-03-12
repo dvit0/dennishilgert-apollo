@@ -30,13 +30,13 @@ func newApolloLogger(name string) *apolloLogger {
 		}),
 	}
 
-	al.EnableJSONOutput(defaultJSONOutput)
+	al.EnableJsonOutput(defaultJsonOutput)
 
 	return al
 }
 
-// EnableJSONOutput enables JSON formatted output logging.
-func (l *apolloLogger) EnableJSONOutput(enabled bool) {
+// EnableJsonOutput enables JSON formatted output logging.
+func (l *apolloLogger) EnableJsonOutput(enabled bool) {
 	var formatter logrus.Formatter
 
 	fieldMap := logrus.FieldMap{
@@ -93,13 +93,13 @@ func toLogrusLevel(lvl LogLevel) logrus.Level {
 	return l
 }
 
-// SetOutputLevel sets the log output level.
-func (l *apolloLogger) SetOutputLevel(outputLevel LogLevel) {
-	l.logger.Logger.SetLevel(toLogrusLevel(outputLevel))
+// SetLogLevel sets the log level.
+func (l *apolloLogger) SetLogLevel(logLevel LogLevel) {
+	l.logger.Logger.SetLevel(toLogrusLevel(logLevel))
 }
 
 // IsOutputLevelEnabled returns true if the logger will output this LogLevel.
-func (l *apolloLogger) IsOutputLevelEnabled(level LogLevel) bool {
+func (l *apolloLogger) IsLogLevelEnabled(level LogLevel) bool {
 	return l.logger.Logger.IsLevelEnabled(toLogrusLevel(level))
 }
 

@@ -1,35 +1,41 @@
 package app
 
 import (
-	"os"
 	"time"
 
-	"github.com/dennishilgert/apollo/cmd/manager/options"
+	"github.com/dennishilgert/apollo/cmd/manager/config"
 	"github.com/dennishilgert/apollo/internal/app/manager"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/signals"
+	"github.com/joho/godotenv"
 )
 
 var log = logger.NewLogger("apollo.manager")
 
 func Run() {
-	opts := options.New(os.Args[1:])
+	// load environment variables from .env file for local development
+	godotenv.Load()
 
-	if err := logger.ApplyOptionsToLoggers(&opts.Logger); err != nil {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := logger.ApplyConfigToLoggers(&cfg.Logger); err != nil {
 		log.Fatal(err)
 	}
 
 	log.Infof("starting apollo manager -- version %s", "TO_BE_IMPLEMENTED")
-	log.Infof("log level set to: %s", opts.Logger.OutputLevel)
+	log.Infof("log level set to: %s", cfg.Logger.LogLevel)
 
 	ctx := signals.Context()
 	manager, err := manager.NewManager(manager.Options{
-		ApiPort:               opts.ApiPort,
-		FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
-		WatchdogCheckInterval: time.Duration(opts.WatchdogCheckInterval) * time.Second,
-		WatchdogWorkerCount:   opts.WatchdogWorkerCount,
-		AgentApiPort:          opts.AgentApiPort,
+		ApiPort:               cfg.ApiPort,
+		FirecrackerBinaryPath: cfg.FirecrackerBinaryPath,
+		WatchdogCheckInterval: time.Duration(cfg.WatchdogCheckInterval) * time.Second,
+		WatchdogWorkerCount:   cfg.WatchdogWorkerCount,
+		AgentApiPort:          cfg.AgentApiPort,
 	})
 	if err != nil {
 		log.Fatalf("error while creating manager: %v", err)

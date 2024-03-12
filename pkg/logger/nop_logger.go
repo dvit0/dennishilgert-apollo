@@ -8,8 +8,8 @@ import (
 
 type nopLogger struct{}
 
-// EnableJSONOutput enables JSON formatted output logging.
-func (n *nopLogger) EnableJSONOutput(_ bool) {}
+// EnableJsonOutput enables JSON formatted output logging.
+func (n *nopLogger) EnableJsonOutput(_ bool) {}
 
 func (n *nopLogger) LogrusEntry() *logrus.Entry {
 	return nil
@@ -18,14 +18,14 @@ func (n *nopLogger) LogrusEntry() *logrus.Entry {
 // SetAppID sets app_id field in the log. nopLogger value is an empty string.
 func (n *nopLogger) SetAppId(_ string) {}
 
-// SetOutputLevel sets the log output level.
-func (n *nopLogger) SetOutputLevel(_ LogLevel) {}
+// SetLogLevel sets the log level.
+func (n *nopLogger) SetLogLevel(_ LogLevel) {}
 
 // SetOutput sets the destination for the logs.
 func (n *nopLogger) SetOutput(_ io.Writer) {}
 
 // IsOutputLevelEnabled returns true if the logger will output this LogLevel.
-func (n *nopLogger) IsOutputLevelEnabled(_ LogLevel) bool { return true }
+func (n *nopLogger) IsLogLevelEnabled(_ LogLevel) bool { return true }
 
 // WithLogType specify the log_type field in log. nopLogger value is LogTypeLog.
 func (n *nopLogger) WithLogType(_ string) Logger {
