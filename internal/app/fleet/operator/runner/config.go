@@ -1,4 +1,4 @@
-package machine
+package runner
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ func validate(cfg *Config) error {
 
 // firecrackerConfig returns a full configuration for a firecracker micro vm.
 func firecrackerConfig(cfg Config) firecracker.Config {
-	socket := socketPath(cfg.VmId)
+	socket := socketPath(cfg.RunnerUuid)
 
 	return firecracker.Config{
 		SocketPath:      socket,
@@ -75,12 +75,12 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 			Smt:             firecracker.Bool(cfg.Multithreading),
 			TrackDirtyPages: firecracker.Bool(false),
 		},
-		VMID: cfg.VmId,
+		VMID: cfg.RunnerUuid,
 	}
 }
 
-func socketPath(vmID string) string {
-	filename := strings.Join([]string{".firecracker.sock", strconv.Itoa(os.Getpid()), vmID}, "-")
+func socketPath(runnerUuid string) string {
+	filename := strings.Join([]string{".firecracker.sock", strconv.Itoa(os.Getpid()), runnerUuid}, "-")
 	dir := os.TempDir()
 
 	return filepath.Join(dir, filename)

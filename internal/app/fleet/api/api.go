@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/dennishilgert/apollo/internal/app/fleet/microvm"
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/manager/v1"
@@ -28,14 +28,14 @@ type Server interface {
 type apiServer struct {
 	manager.UnimplementedManagerServer
 
-	vmOperator microvm.Operator
+	vmOperator operator.Operator
 	port       int
 	readyCh    chan struct{}
 	running    atomic.Bool
 }
 
 // NewApiServer creates a new Server.
-func NewApiServer(vmOperator microvm.Operator, opts Options) Server {
+func NewApiServer(vmOperator operator.Operator, opts Options) Server {
 	return &apiServer{
 		vmOperator: vmOperator,
 		port:       opts.Port,

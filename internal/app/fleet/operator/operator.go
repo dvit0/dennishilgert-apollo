@@ -1,12 +1,12 @@
-package microvm
+package operator
 
 import (
 	"context"
 	"time"
 
-	"github.com/dennishilgert/apollo/internal/app/fleet/microvm/machine"
-	"github.com/dennishilgert/apollo/internal/app/fleet/microvm/pool"
-	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator/pool"
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator/runner"
+	taskRunner "github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
 	"github.com/dennishilgert/apollo/pkg/proto/manager/v1"
@@ -28,25 +28,25 @@ type Operator interface {
 	ExecuteFunction(ctx context.Context, request *manager.ExecuteFunctionRequest) (*manager.ExecuteFunctionResponse, error)
 }
 
-type vmOperator struct {
-	vmPool                pool.Pool
-	vmPoolWatchdog        pool.Watchdog
+type runnerOperator struct {
+	runnerPool            pool.Pool
+	runnerPoolWatchdog    pool.Watchdog
 	osArch                utils.OsArch
 	firecrackerBinaryPath string
 	agentApiPort          int
 }
 
-// NewVmOperator creates a new Operator.
-func NewVmOperator(opts Options) (Operator, error) {
-	vmPool := pool.NewVmPool()
-	vmPoolWatchdog := pool.NewVmPoolWatchdog(vmPool, pool.WatchdogOptions{
+// NewRunnerOperator creates a new Operator.
+func NewRunnerOperator(opts Options) (Operator, error) {
+	runnerPool := pool.NewRunnerPool()
+	runnerPoolWatchdog := pool.NewRunnerPoolWatchdog(runnerPool, pool.WatchdogOptions{
 		CheckInterval: opts.WatchdogCheckInterval,
 		WorkerCount:   opts.WatchdogWorkerCount,
 	})
 
-	return &vmOperator{
-		vmPool:                vmPool,
-		vmPoolWatchdog:        vmPoolWatchdog,
+	return &runnerOperator{
+		runnerPool:            runnerPool,
+		runnerPoolWatchdog:    runnerPoolWatchdog,
 		osArch:                opts.OsArch,
 		firecrackerBinaryPath: opts.FirecrackerBinaryPath,
 		agentApiPort:          opts.AgentApiPort,
@@ -54,27 +54,27 @@ func NewVmOperator(opts Options) (Operator, error) {
 }
 
 // Init initializes the vm operator.
-func (v *vmOperator) Init(ctx context.Context) error {
-	runner := runner.NewRunnerManager(
+func (v *runnerOperator) Init(ctx context.Context) error {
+	runnerManager := taskRunner.NewRunnerManager(
 		func(ctx context.Context) error {
-			log.Info("starting vm pool watchdog")
-			if err := v.vmPoolWatchdog.Run(ctx); err != nil {
-				log.Errorf("error while running pool watchdog: %v", err)
+			log.Info("starting runner pool watchdog")
+			if err := v.runnerPoolWatchdog.Run(ctx); err != nil {
+				log.Errorf("error while starting runner pool watchdog: %v", err)
 				return err
 			}
 			return nil
 		},
 	)
-	return runner.Run(ctx)
+	return runnerManager.Run(ctx)
 }
 
-func (v *vmOperator) ExecuteFunction(ctx context.Context, request *manager.ExecuteFunctionRequest) (*manager.ExecuteFunctionResponse, error) {
-	multiThreading := true
-	if v.osArch != utils.Arch_x86_64 {
-		multiThreading = false
+func (v *runnerOperator) ExecuteFunction(ctx context.Context, request *manager.ExecuteFunctionRequest) (*manager.ExecuteFunctionResponse, error) {
+	multiThreading := false
+	if v.osArch == utils.Arch_x86_64 {
+		multiThreading = true
 	}
-	cfg := &machine.Config{
-		FnId:                  request.Function.Id,
+	cfg := &runner.Config{
+		FunctionUuid:          request.Function.Id,
 		HostOsArch:            v.osArch,
 		FirecrackerBinaryPath: v.firecrackerBinaryPath,
 		KernelImagePath:       request.Function.KernelImagePath,
@@ -128,20 +128,37 @@ func (v *vmOperator) ExecuteFunction(ctx context.Context, request *manager.Execu
 }
 
 // getOrStart returns a available vm from the pool or starts a new one.
-func (v *vmOperator) getOrStartVm(ctx context.Context, cfg *machine.Config) (*machine.MachineInstance, error) {
-	instance, err := v.vmPool.AvailableVm(cfg.FnId)
+func (v *runnerOperator) getOrStartVm(ctx context.Context, cfg *runner.Config) (*runner.RunnerInstance, error) {
+	instance, err := v.runnerPool.AvailableRunner(cfg.FunctionUuid)
 	if err != nil {
 		return nil, err
 	}
 	if instance == nil {
-		log.Debugf("no instance available for function id: %s, reason: %v", cfg.FnId, err)
-		instance := machine.NewInstance(ctx, cfg)
+		log.Debugf("no instance available for function id: %s, reason: %v", cfg.FunctionUuid, err)
+		instance := runner.NewInstance(ctx, cfg)
 		if err := instance.CreateAndStart(ctx); err != nil {
-			log.Errorf("failed to create and start new firecracker machine: %s", instance.Config().VmId)
+			log.Errorf("failed to create and start new firecracker machine: %s", instance.Config().RunnerUuid)
 			return nil, err
 		}
 	}
 	// update machine status in pool
-	instance.SetState(machine.VmStateBusy)
+	instance.SetState(runner.RunnerStateBusy)
 	return instance, nil
+}
+
+func (r *runnerOperator) availableRunner(functionUuid string) (*runner.RunnerInstance, error) {
+	instance, err := r.runnerPool.AvailableRunner(functionUuid)
+	if err != nil {
+		return nil, err
+	}
+	instance.SetState(runner.RunnerStateReserved)
+	return instance, nil
+}
+
+func (r *runnerOperator) runner(functionUuid string, runnerUuid string) (*runner.RunnerInstance, error) {
+	instance, err := r.runnerPool.Get(functionUuid, runnerUuid)
+	if err != nil {
+		return nil, err
+	}
+	return instance, err
 }

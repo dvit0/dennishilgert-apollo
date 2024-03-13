@@ -18,17 +18,17 @@ type Watchdog interface {
 	Run(ctx context.Context) error
 }
 
-type vmPoolWatchdog struct {
-	vmPool        Pool
+type runnerPoolWatchdog struct {
+	runnerPool    Pool
 	worker        *worker.WorkerManager
 	checkInterval time.Duration
 	errCh         chan error
 }
 
-// NewPoolWatchdog create a new Watchdog.
-func NewVmPoolWatchdog(vmPool Pool, opts WatchdogOptions) Watchdog {
-	return &vmPoolWatchdog{
-		vmPool:        vmPool,
+// NewRunnerPoolWatchdog create a new Watchdog.
+func NewRunnerPoolWatchdog(runnerPool Pool, opts WatchdogOptions) Watchdog {
+	return &runnerPoolWatchdog{
+		runnerPool:    runnerPool,
 		worker:        worker.NewWorkerManager(opts.WorkerCount),
 		checkInterval: opts.CheckInterval,
 		errCh:         make(chan error),
@@ -36,7 +36,7 @@ func NewVmPoolWatchdog(vmPool Pool, opts WatchdogOptions) Watchdog {
 }
 
 // Run runs the health checks in a specified time interval.
-func (p *vmPoolWatchdog) Run(ctx context.Context) error {
+func (p *runnerPoolWatchdog) Run(ctx context.Context) error {
 	runner := runner.NewRunnerManager(
 		func(ctx context.Context) error {
 			if err := p.worker.Run(ctx); err != nil {
@@ -56,7 +56,7 @@ func (p *vmPoolWatchdog) Run(ctx context.Context) error {
 					return ctx.Err()
 				case <-ticker.C:
 					// check the vms health
-					p.checkVms()
+					p.checkRunners()
 				case err := <-p.errCh:
 					// log error occured while checking the health
 					if err != nil {
@@ -70,25 +70,25 @@ func (p *vmPoolWatchdog) Run(ctx context.Context) error {
 	return runner.Run(ctx)
 }
 
-// checkVms checks the health status of the vms in the pool.
-func (p *vmPoolWatchdog) checkVms() {
-	p.vmPool.Lock()
-	defer p.vmPool.Unlock()
+// checkRunners checks the health status of the runners in the pool.
+func (p *runnerPoolWatchdog) checkRunners() {
+	p.runnerPool.Lock()
+	defer p.runnerPool.Unlock()
 
-	for _, fnPool := range *p.vmPool.Pool() {
-		for _, target := range fnPool {
+	for _, runnerPool := range *p.runnerPool.Pool() {
+		for _, target := range runnerPool {
 
 			// building the task for the health check
 			task := worker.NewTask[bool](func(ctx context.Context) (bool, error) {
-				log.Debugf("checking health status of machine: %s", target.Cfg.VmId)
+				log.Debugf("checking health status of runner: %s", target.Cfg.RunnerUuid)
 
 				healthStatus, err := target.Health(ctx)
 				if err != nil {
-					log.Errorf("error while checking health status of firecracker machine %s: %v", target.Cfg.VmId, err)
+					log.Errorf("error while checking health status of runner %s: %v", target.Cfg.RunnerUuid, err)
 					return false, err
 				}
 				if *healthStatus != health.HealthStatus_HEALTHY {
-					log.Warnf("firecracker machine not healthy: %s", target.Cfg.VmId)
+					log.Warnf("runner not healthy: %s", target.Cfg.RunnerUuid)
 					return false, nil
 				}
 				return true, nil
@@ -97,8 +97,8 @@ func (p *vmPoolWatchdog) checkVms() {
 			// add a callback to handle the result of the health check
 			task.Callback(func(healthy bool, err error) {
 				if !healthy || err != nil {
-					// destroy the firecracker machine if it's not healthy
-					p.vmPool.RemoveAndDestroy(target.Cfg.FnId, target.Cfg.VmId)
+					// destroy the runner if it's not healthy
+					p.runnerPool.RemoveAndDestroy(target.Cfg.FunctionUuid, target.Cfg.RunnerUuid)
 				}
 				if err != nil {
 					p.errCh <- err

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/api"
-	"github.com/dennishilgert/apollo/internal/app/fleet/microvm"
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
@@ -28,12 +28,12 @@ type Manager interface {
 }
 
 type manager struct {
-	vmOperator microvm.Operator
-	apiServer  api.Server
+	runnerOperator operator.Operator
+	apiServer      api.Server
 }
 
 func NewManager(opts Options) (Manager, error) {
-	vmOperator, err := microvm.NewVmOperator(microvm.Options{
+	runnerOperator, err := operator.NewRunnerOperator(operator.Options{
 		OsArch:                utils.DetectArchitecture(),
 		FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
 		WatchdogCheckInterval: opts.WatchdogCheckInterval,
@@ -44,13 +44,13 @@ func NewManager(opts Options) (Manager, error) {
 		return nil, fmt.Errorf("error while creating vm operator: %v", err)
 	}
 
-	apiServer := api.NewApiServer(vmOperator, api.Options{
+	apiServer := api.NewApiServer(runnerOperator, api.Options{
 		Port: opts.ApiPort,
 	})
 
 	return &manager{
-		vmOperator: vmOperator,
-		apiServer:  apiServer,
+		runnerOperator: runnerOperator,
+		apiServer:      apiServer,
 	}, nil
 }
 
@@ -63,9 +63,9 @@ func (m *manager) Run(ctx context.Context) error {
 
 	runner := runner.NewRunnerManager(
 		func(ctx context.Context) error {
-			log.Info("initializing vm operator")
-			if err := m.vmOperator.Init(ctx); err != nil {
-				return fmt.Errorf("failed to initialize vm operator: %v", err)
+			log.Info("initializing runner operator")
+			if err := m.runnerOperator.Init(ctx); err != nil {
+				return fmt.Errorf("failed to initialize runner operator: %v", err)
 			}
 			return nil
 		},
