@@ -1,12 +1,12 @@
-package manager
+package fleet
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/dennishilgert/apollo/internal/app/manager/api"
-	"github.com/dennishilgert/apollo/internal/app/manager/microvm"
+	"github.com/dennishilgert/apollo/internal/app/fleet/api"
+	"github.com/dennishilgert/apollo/internal/app/fleet/microvm"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"

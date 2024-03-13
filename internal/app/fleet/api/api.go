@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/dennishilgert/apollo/internal/app/manager/microvm"
+	"github.com/dennishilgert/apollo/internal/app/fleet/microvm"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/manager/v1"

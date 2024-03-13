@@ -27,30 +27,9 @@ func (c *Config) SetLogLevel(level string) error {
 	return nil
 }
 
-// SetAppID sets Application ID.
-func (c *Config) SetAppID(id string) {
+// SetAppId sets application id.
+func (c *Config) SetAppId(id string) {
 	c.AppId = id
-}
-
-// AttachCmdFlags attaches log config to the command flags.
-func (c *Config) AttachCmdFlags(
-	stringVar func(p *string, name string, value string, usage string),
-	boolVar func(p *bool, name string, value bool, usage string),
-) {
-	if stringVar != nil {
-		stringVar(
-			&c.LogLevel,
-			"log-level",
-			defaultLogLevel,
-			"Options are debug, info, warn, error, or fatal (default info)")
-	}
-	if boolVar != nil {
-		boolVar(
-			&c.LogJsonOutput,
-			"log-as-json",
-			defaultJsonOutput,
-			"print log as JSON (default false)")
-	}
 }
 
 // DefaultConfig returns default configuration values.

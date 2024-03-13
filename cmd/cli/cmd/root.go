@@ -20,7 +20,15 @@ var rootCommand = &cobra.Command{
 	},
 }
 
+var logFlags = logger.ParseFlags()
+
+func initFlags() {
+	rootCommand.PersistentFlags().AddFlagSet(logFlags.FlagSet())
+}
+
 func init() {
+	initFlags()
+
 	rootCommand.AddCommand(image.Command)
 }
 

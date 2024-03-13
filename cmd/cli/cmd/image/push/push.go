@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var log = logger.NewLogger("cli")
+var log = logger.NewLogger("apollo.cli.image.push")
 
 var Command = &cobra.Command{
 	Use:   "push",
@@ -32,6 +32,7 @@ func init() {
 }
 
 func run(cobraCommand *cobra.Command, args []string) {
+	logger.ReadAndApply(cobraCommand, log)
 	os.Exit(processCommand())
 }
 

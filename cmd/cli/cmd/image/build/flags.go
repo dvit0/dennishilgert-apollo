@@ -1,9 +1,6 @@
 package build
 
 import (
-	"flag"
-
-	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/spf13/pflag"
 )
 
@@ -11,7 +8,6 @@ type commandFlags struct {
 	SourcePath string
 	Dockerfile string
 	ImageTag   string
-	Logger     logger.Config
 }
 
 type parsedFlags struct {
@@ -29,9 +25,6 @@ func ParseFlags() *parsedFlags {
 	fs.StringVar(&f.SourcePath, "source-path", ".", "Path to the source directory of the build context")
 	fs.StringVar(&f.Dockerfile, "dockerfile", "./Dockerfile", "Path to the Dockerfile inside the build context")
 	fs.StringVar(&f.ImageTag, "image-tag", "localhost:5000/apollo/baseos:bullseye", "Tag to assign to the new Docker image")
-
-	f.Logger = logger.DefaultConfig()
-	f.Logger.AttachCmdFlags(flag.StringVar, flag.BoolVar)
 
 	return &parsedFlags{
 		cmdFlags: &f,

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/dennishilgert/apollo/internal/app/manager/microvm/machine"
+	"github.com/dennishilgert/apollo/internal/app/fleet/microvm/machine"
 	"github.com/dennishilgert/apollo/pkg/logger"
 )
 

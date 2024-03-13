@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var log = logger.NewLogger("cli")
+var log = logger.NewLogger("apollo.cli.image.build")
 
 var Command = &cobra.Command{
 	Use:   "build",
@@ -33,14 +33,11 @@ func init() {
 }
 
 func run(cobraCommand *cobra.Command, args []string) {
+	logger.ReadAndApply(cobraCommand, log)
 	os.Exit(processCommand())
 }
 
 func processCommand() int {
-	if err := logger.ApplyConfigToLoggers(&cmdFlags.CommandFlags().Logger); err != nil {
-		log.Fatal(err)
-	}
-
 	sourcePathStat, err := os.Stat(cmdFlags.CommandFlags().SourcePath)
 	if err != nil {
 		log.Errorf("error while resolving --source-path path: %v", err)

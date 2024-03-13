@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/dennishilgert/apollo/internal/app/manager/microvm/machine"
-	"github.com/dennishilgert/apollo/internal/app/manager/microvm/pool"
+	"github.com/dennishilgert/apollo/internal/app/fleet/microvm/machine"
+	"github.com/dennishilgert/apollo/internal/app/fleet/microvm/pool"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"

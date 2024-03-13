@@ -1,8 +1,6 @@
 package export
 
 import (
-	"flag"
-
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/spf13/pflag"
 )
@@ -29,7 +27,6 @@ func ParseFlags() *parsedFlags {
 	fs.StringVar(&f.ImageTag, "image-tag", "localhost:5000/apollo/baseos:bullseye", "Tag of the Docker image to export")
 
 	f.Logger = logger.DefaultConfig()
-	f.Logger.AttachCmdFlags(flag.StringVar, flag.BoolVar)
 
 	return &parsedFlags{
 		cmdFlags: &f,

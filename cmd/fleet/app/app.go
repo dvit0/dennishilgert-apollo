@@ -3,8 +3,9 @@ package app
 import (
 	"time"
 
-	"github.com/dennishilgert/apollo/cmd/manager/config"
-	"github.com/dennishilgert/apollo/internal/app/manager"
+	"github.com/dennishilgert/apollo/cmd/fleet/config"
+
+	"github.com/dennishilgert/apollo/internal/app/fleet"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/signals"
@@ -30,7 +31,7 @@ func Run() {
 	log.Infof("log level set to: %s", cfg.Logger.LogLevel)
 
 	ctx := signals.Context()
-	manager, err := manager.NewManager(manager.Options{
+	manager, err := fleet.NewManager(fleet.Options{
 		ApiPort:               cfg.ApiPort,
 		FirecrackerBinaryPath: cfg.FirecrackerBinaryPath,
 		WatchdogCheckInterval: time.Duration(cfg.WatchdogCheckInterval) * time.Second,
