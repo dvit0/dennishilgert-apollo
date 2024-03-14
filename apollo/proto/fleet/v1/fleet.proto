@@ -14,9 +14,9 @@ service FleetManager {
 
 message InitializeFunctionRequest {
   string function_uuid = 1;
-  string runtime_image_tag = 2;
-  string runtime_kernel = 3;
-  string code_image_tag = 4;
+  string rootfs_image_tag = 2;
+  string code_image_tag = 3;
+  string os_kernel = 4;
 }
 
 message ExecuteFunctionRequest {
