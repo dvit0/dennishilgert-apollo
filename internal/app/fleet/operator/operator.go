@@ -9,7 +9,7 @@ import (
 	taskRunner "github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
-	"github.com/dennishilgert/apollo/pkg/proto/manager/v1"
+	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	"github.com/dennishilgert/apollo/pkg/utils"
 )
 
@@ -25,7 +25,7 @@ type Options struct {
 
 type Operator interface {
 	Init(ctx context.Context) error
-	ExecuteFunction(ctx context.Context, request *manager.ExecuteFunctionRequest) (*manager.ExecuteFunctionResponse, error)
+	ExecuteFunction(ctx context.Context, request *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error)
 }
 
 type runnerOperator struct {
@@ -68,7 +68,7 @@ func (v *runnerOperator) Init(ctx context.Context) error {
 	return runnerManager.Run(ctx)
 }
 
-func (v *runnerOperator) ExecuteFunction(ctx context.Context, request *manager.ExecuteFunctionRequest) (*manager.ExecuteFunctionResponse, error) {
+func (v *runnerOperator) ExecuteFunction(ctx context.Context, request *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error) {
 	multiThreading := false
 	if v.osArch == utils.Arch_x86_64 {
 		multiThreading = true
@@ -118,7 +118,7 @@ func (v *runnerOperator) ExecuteFunction(ctx context.Context, request *manager.E
 	// TODO: send logs to logs service via messaging
 	log.Infof("Logs for execution: %s, logs: %v", invokeResponse.EventId, invokeResponse.Logs)
 
-	executeResponse := &manager.ExecuteFunctionResponse{
+	executeResponse := &fleet.ExecuteFunctionResponse{
 		EventId:       invokeResponse.EventId,
 		Status:        invokeResponse.Status,
 		StatusMessage: invokeResponse.StatusMessage,

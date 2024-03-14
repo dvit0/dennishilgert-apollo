@@ -10,7 +10,8 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/manager/v1"
+	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
+	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
 	"google.golang.org/grpc"
 )
 
@@ -26,7 +27,7 @@ type Server interface {
 }
 
 type apiServer struct {
-	manager.UnimplementedManagerServer
+	fleet.UnimplementedFleetManagerServer
 
 	vmOperator operator.Operator
 	port       int
@@ -52,7 +53,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 	log.Infof("starting api server on port %d", a.port)
 
 	s := grpc.NewServer()
-	manager.RegisterManagerServer(s, a)
+	fleet.RegisterFleetManagerServer(s, a)
 
 	healthServer := health.NewHealthServer(healthStatusProvider, log)
 	healthServer.Register(s)
@@ -102,7 +103,11 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) Execute(ctx context.Context, in *manager.ExecuteFunctionRequest) (*manager.ExecuteFunctionResponse, error) {
+func (a *apiServer) Initialize(ctx context.Context, in *fleet.InitializeFunctionRequest) (*shared.EmptyResponse, error) {
+	return nil, fmt.Errorf("to be implemented")
+}
+
+func (a *apiServer) Execute(ctx context.Context, in *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error) {
 	result, err := a.vmOperator.ExecuteFunction(ctx, in)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute function: %v", err)

@@ -1,22 +1,31 @@
 syntax = "proto3";
 
-package apollo.proto.manager.v1;
+package apollo.proto.fleet.v1;
 
 import "google/protobuf/struct.proto";
+import "apollo/proto/shared/v1/shared.proto";
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/manager/v1;manager";
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/fleet/v1;fleet";
 
-service Manager {
+service FleetManager {
+  rpc Initialize(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc Execute(ExecuteFunctionRequest) returns (ExecuteFunctionResponse) {}
 }
 
+message InitializeFunctionRequest {
+  string function_uuid = 1;
+  string runtime_image_tag = 2;
+  string runtime_kernel = 3;
+  string code_image_tag = 4;
+}
+
 message ExecuteFunctionRequest {
-  FunctionSpecs function = 3;
+  RunnerSpecs function = 3;
   RuntimeSpecs runtime = 4;
   EventSpecs event = 5; 
 }
 
-message FunctionSpecs {
+message RunnerSpecs {
   string id = 1;
   string kernel_image_path = 2;
   string root_drive_path = 3;
