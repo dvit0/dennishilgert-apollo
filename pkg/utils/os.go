@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"regexp"
@@ -38,12 +39,12 @@ func (o OsArch) String() string {
 }
 
 // FileExists returns if the given path exists.
-func FileExists(filePath string) fs.FileInfo {
+func FileExists(filePath string) (bool, fs.FileInfo) {
 	stat, err := os.Stat(filePath)
-	if err != nil {
-		return nil
+	if os.IsNotExist(err) {
+		return false, nil
 	}
-	return stat
+	return true, stat
 }
 
 // IsDir returns if the given file is directory.
@@ -56,20 +57,39 @@ func IsSocket(fileInfo fs.FileInfo) bool {
 	return fileInfo.Mode()&fs.ModeSocket != 0
 }
 
-// IsDirAndWritable checks if the given path exists, is a directory and is writable.
-// Important: This function uses the unix package, which only works on unix systems
-func IsDirAndWritable(path string) error {
-	pathStat, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if !pathStat.IsDir() {
-		return fmt.Errorf("given file is not a directory")
-	}
+// IsWritable checks if the directory at the given path is writable.
+// Important: This function uses the unix package, which only works on unix systems.
+func IsWritable(path string) (bool, error) {
 	if err := unix.Access(path, unix.W_OK); err != nil {
-		return err
+		return false, err
 	}
-	return nil
+	return true, nil
+}
+
+// IsDirEmpty checks if a given directory is empty.
+func IsDirEmpty(path string) (bool, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+	_, err = file.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
+}
+
+// IsDirAndWritable checks if the file is a directory and is writable.
+func IsDirAndWritable(filePath string, fileInfo fs.FileInfo) (bool, error) {
+	if dir := IsDir(fileInfo); !dir {
+		return false, fmt.Errorf("given file path is not a directory: %s", filePath)
+	}
+	_, err := IsWritable(filePath)
+	if err != nil {
+		return false, fmt.Errorf("given file path is not writable: %v", err)
+	}
+	return true, nil
 }
 
 // IsValidDirName checks if the given name is a valid dir name.

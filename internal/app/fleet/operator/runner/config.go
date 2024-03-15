@@ -13,16 +13,20 @@ import (
 )
 
 func validate(cfg *Config) error {
-	if utils.FileExists(cfg.FirecrackerBinaryPath) == nil {
+	exists, _ := utils.FileExists(cfg.FirecrackerBinaryPath)
+	if !exists {
 		return fmt.Errorf("file given for the firecracker binary does not exist")
 	}
-	if utils.FileExists(cfg.KernelImagePath) == nil {
+	exists, _ = utils.FileExists(cfg.KernelImagePath)
+	if !exists {
 		return fmt.Errorf("file given for the kernel image does not exist")
 	}
-	if utils.FileExists(cfg.RootDrivePath) == nil {
+	exists, _ = utils.FileExists(cfg.RootDrivePath)
+	if !exists {
 		return fmt.Errorf("file for the root drive does not exist")
 	}
-	if utils.FileExists(cfg.CodeDrivePath) == nil {
+	exists, _ = utils.FileExists(cfg.CodeDrivePath)
+	if !exists {
 		return fmt.Errorf("file for the code drive does not exist")
 	}
 	if cfg.Multithreading && cfg.HostOsArch != utils.Arch_x86_64 {

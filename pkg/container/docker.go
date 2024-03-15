@@ -149,9 +149,14 @@ func ImageExport(ctx context.Context, client *docker.Client, opLogger logger.Log
 
 	// check if destination path is a directory and is writable.
 	opLogger.Debug("checking destination path", "dest-path", destPath)
-	err := utils.IsDirAndWritable(destPath)
-	if err != nil {
-		opLogger.Error("error while checking destination path", "reason", err)
+	exists, fileInfo := utils.FileExists(destPath)
+	if !exists {
+		opLogger.Error("destination path does not exist")
+		return fmt.Errorf("destination path does not exist")
+	}
+	ok, err := utils.IsDirAndWritable(destPath, fileInfo)
+	if !ok {
+		opLogger.Error("destination path is not a directory or not writable", "reason", err)
 		return err
 	}
 

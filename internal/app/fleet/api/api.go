@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
+	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
@@ -29,18 +30,20 @@ type Server interface {
 type apiServer struct {
 	fleet.UnimplementedFleetManagerServer
 
-	vmOperator operator.Operator
-	port       int
-	readyCh    chan struct{}
-	running    atomic.Bool
+	runnerOperator operator.Operator
+	runnerPreparer *preparer.RunnerPreparer
+	port           int
+	readyCh        chan struct{}
+	running        atomic.Bool
 }
 
 // NewApiServer creates a new Server.
-func NewApiServer(vmOperator operator.Operator, opts Options) Server {
+func NewApiServer(runnerOperator operator.Operator, runnerPreparer *preparer.RunnerPreparer, opts Options) Server {
 	return &apiServer{
-		vmOperator: vmOperator,
-		port:       opts.Port,
-		readyCh:    make(chan struct{}),
+		runnerOperator: runnerOperator,
+		runnerPreparer: runnerPreparer,
+		port:           opts.Port,
+		readyCh:        make(chan struct{}),
 	}
 }
 
@@ -104,11 +107,14 @@ func (a *apiServer) Ready(ctx context.Context) error {
 }
 
 func (a *apiServer) Initialize(ctx context.Context, in *fleet.InitializeFunctionRequest) (*shared.EmptyResponse, error) {
-	return nil, fmt.Errorf("to be implemented")
+	if err := a.runnerPreparer.InitializeFunction(in); err != nil {
+		return nil, fmt.Errorf("failed to initialize function: %v", err)
+	}
+	return &shared.EmptyResponse{}, nil
 }
 
 func (a *apiServer) Execute(ctx context.Context, in *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error) {
-	result, err := a.vmOperator.ExecuteFunction(ctx, in)
+	result, err := a.runnerOperator.ExecuteFunction(ctx, in)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute function: %v", err)
 	}

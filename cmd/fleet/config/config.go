@@ -10,6 +10,7 @@ var log = logger.NewLogger("apollo.agent.config")
 
 type Config struct {
 	ApiPort               int
+	DataPath              string
 	FirecrackerBinaryPath string
 	WatchdogCheckInterval int
 	WatchdogWorkerCount   int
@@ -29,6 +30,7 @@ func Load() (*Config, error) {
 	configuration.LoadOrDefault("Logger.LogLevel", "LOG_LEVEL", logger.DefaultConfig().LogLevel)
 
 	configuration.LoadOrDefault("ApiPort", "API_PORT", 50051)
+	configuration.LoadOrDefault("DataPath", "DATA_PATH", "/data")
 	configuration.LoadOrDefault("FirecrackerBinaryPath", "FC_BINARY_PATH", nil)
 	configuration.LoadOrDefault("WatchdogCheckInterval", "WATCHDOG_CHECK_INTERVAL", 5)
 	configuration.LoadOrDefault("WatchdogWorkerCount", "WATCHDOG_WORKER_COUNT", 10)

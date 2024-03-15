@@ -33,6 +33,7 @@ func Run() {
 	ctx := signals.Context()
 	manager, err := fleet.NewManager(fleet.Options{
 		ApiPort:               cfg.ApiPort,
+		DataPath:              cfg.DataPath,
 		FirecrackerBinaryPath: cfg.FirecrackerBinaryPath,
 		WatchdogCheckInterval: time.Duration(cfg.WatchdogCheckInterval) * time.Second,
 		WatchdogWorkerCount:   cfg.WatchdogWorkerCount,

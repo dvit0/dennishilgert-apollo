@@ -7,6 +7,7 @@ import (
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/api"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
+	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
@@ -17,6 +18,7 @@ var log = logger.NewLogger("apollo.manager")
 
 type Options struct {
 	ApiPort               int
+	DataPath              string
 	FirecrackerBinaryPath string
 	WatchdogCheckInterval time.Duration
 	WatchdogWorkerCount   int
@@ -29,6 +31,7 @@ type Manager interface {
 
 type manager struct {
 	runnerOperator operator.Operator
+	runnerPreparer *preparer.RunnerPreparer
 	apiServer      api.Server
 }
 
@@ -41,15 +44,23 @@ func NewManager(opts Options) (Manager, error) {
 		AgentApiPort:          opts.AgentApiPort,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error while creating vm operator: %v", err)
+		return nil, fmt.Errorf("error while creating runner operator: %v", err)
 	}
 
-	apiServer := api.NewApiServer(runnerOperator, api.Options{
-		Port: opts.ApiPort,
+	runnerPreparer := preparer.NewRunnerPreparer(preparer.Options{
+		DataPath: opts.DataPath,
 	})
+
+	apiServer := api.NewApiServer(
+		runnerOperator,
+		runnerPreparer,
+		api.Options{
+			Port: opts.ApiPort,
+		})
 
 	return &manager{
 		runnerOperator: runnerOperator,
+		runnerPreparer: runnerPreparer,
 		apiServer:      apiServer,
 	}, nil
 }
@@ -67,6 +78,16 @@ func (m *manager) Run(ctx context.Context) error {
 			if err := m.runnerOperator.Init(ctx); err != nil {
 				return fmt.Errorf("failed to initialize runner operator: %v", err)
 			}
+			return nil
+		},
+		func(ctx context.Context) error {
+			log.Info("preparing filesystem")
+			if err := m.runnerPreparer.PrepareDataDir(); err != nil {
+				return fmt.Errorf("failed to prepare data directory: %v", err)
+			}
+			healthStatusProvider.Ready()
+			log.Info("filesystem prepared")
+			<-ctx.Done()
 			return nil
 		},
 		func(ctx context.Context) error {
