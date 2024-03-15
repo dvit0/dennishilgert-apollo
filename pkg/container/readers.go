@@ -61,7 +61,7 @@ type dockerErrorDetail struct {
 	Message string
 }
 
-func processDockerOutput(logger logger.Logger, reader io.ReadCloser, lineReader dockerOutputExtractor) error {
+func processDockerOutput(log logger.Logger, reader io.ReadCloser, lineReader dockerOutputExtractor) error {
 	defer reader.Close()
 
 	scanner := bufio.NewScanner(reader)
@@ -70,20 +70,20 @@ func processDockerOutput(logger logger.Logger, reader io.ReadCloser, lineReader 
 		lastLine = scanner.Text()
 		printable := lineReader(lastLine)
 		if printable == nil {
-			logger.Warn("Docker output is not a stream line, skipping")
+			log.Warn("Docker output is not a stream line, skipping")
 			continue
 		}
-		logger.Debug("Docker response", "stream", strings.TrimSpace(printable.Captured()))
+		log.Debug("Docker response", "stream", strings.TrimSpace(printable.Captured()))
 	}
 
 	errLine := &dockerErrorLine{}
 	json.Unmarshal([]byte(lastLine), errLine)
 	if errLine.Error != "" {
-		logger.Error("Docker finished with an error", "reason", errLine.Error)
+		log.Error("Docker finished with an error", "reason", errLine.Error)
 		return fmt.Errorf(errLine.Error)
 	}
 	if scannerErr := scanner.Err(); scannerErr != nil {
-		logger.Error("Docker response scanner finished with an error", "reason", scannerErr)
+		log.Error("Docker response scanner finished with an error", "reason", scannerErr)
 		return scannerErr
 	}
 
