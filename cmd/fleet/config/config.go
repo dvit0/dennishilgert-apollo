@@ -9,13 +9,14 @@ import (
 var log = logger.NewLogger("apollo.agent.config")
 
 type Config struct {
-	ApiPort               int
-	DataPath              string
-	FirecrackerBinaryPath string
-	WatchdogCheckInterval int
-	WatchdogWorkerCount   int
-	AgentApiPort          int
-	Logger                logger.Config
+	ApiPort                int
+	DataPath               string
+	FirecrackerBinaryPath  string
+	DockerImageRegistryUrl string
+	WatchdogCheckInterval  int
+	WatchdogWorkerCount    int
+	AgentApiPort           int
+	Logger                 logger.Config
 }
 
 func Load() (*Config, error) {
@@ -32,6 +33,7 @@ func Load() (*Config, error) {
 	configuration.LoadOrDefault("ApiPort", "API_PORT", 50051)
 	configuration.LoadOrDefault("DataPath", "DATA_PATH", "/data")
 	configuration.LoadOrDefault("FirecrackerBinaryPath", "FC_BINARY_PATH", nil)
+	configuration.LoadOrDefault("DockerImageRegistryUrl", "DOCKER_IMAGE_REGISTRY_URL", nil)
 	configuration.LoadOrDefault("WatchdogCheckInterval", "WATCHDOG_CHECK_INTERVAL", 5)
 	configuration.LoadOrDefault("WatchdogWorkerCount", "WATCHDOG_WORKER_COUNT", 10)
 	configuration.LoadOrDefault("AgentApiPort", "AGENT_API_PORT", 50051)

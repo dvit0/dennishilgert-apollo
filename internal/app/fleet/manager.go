@@ -17,12 +17,13 @@ import (
 var log = logger.NewLogger("apollo.manager")
 
 type Options struct {
-	ApiPort               int
-	DataPath              string
-	FirecrackerBinaryPath string
-	WatchdogCheckInterval time.Duration
-	WatchdogWorkerCount   int
-	AgentApiPort          int
+	ApiPort                int
+	DataPath               string
+	FirecrackerBinaryPath  string
+	DockerImageRegistryUrl string
+	WatchdogCheckInterval  time.Duration
+	WatchdogWorkerCount    int
+	AgentApiPort           int
 }
 
 type Manager interface {
@@ -48,7 +49,8 @@ func NewManager(opts Options) (Manager, error) {
 	}
 
 	runnerPreparer := preparer.NewRunnerPreparer(preparer.Options{
-		DataPath: opts.DataPath,
+		DataPath:               opts.DataPath,
+		DockerImageRegistryUrl: opts.DockerImageRegistryUrl,
 	})
 
 	apiServer := api.NewApiServer(

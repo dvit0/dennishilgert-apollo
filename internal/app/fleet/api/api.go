@@ -107,7 +107,7 @@ func (a *apiServer) Ready(ctx context.Context) error {
 }
 
 func (a *apiServer) Initialize(ctx context.Context, in *fleet.InitializeFunctionRequest) (*shared.EmptyResponse, error) {
-	if err := a.runnerPreparer.InitializeFunction(in); err != nil {
+	if err := a.runnerPreparer.InitializeFunction(ctx, in); err != nil {
 		return nil, fmt.Errorf("failed to initialize function: %v", err)
 	}
 	return &shared.EmptyResponse{}, nil
