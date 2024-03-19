@@ -75,7 +75,7 @@ func ContainerStop(ctx context.Context, client *docker.Client, log logger.Logger
 	chanStopOk, chanStopErr := client.ContainerWait(ctx, containerId, container.WaitConditionNotRunning)
 	select {
 	case ok := <-chanStopOk:
-		log.Debugf("container stopped with exit code: %d, reason: %v", ok.StatusCode, ok.Error)
+		log.Debugf("container stopped with exit code: %d, error: %v", ok.StatusCode, ok.Error)
 	case err := <-chanStopErr:
 		log.Warnf("error while waiting for container to be stopped: %v", err)
 	}

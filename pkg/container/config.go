@@ -57,7 +57,7 @@ func DefaultConfig() Config {
 }
 
 func LoadConfig() Config {
-	var config Config
+	var config Config = DefaultConfig()
 
 	// automatically load environment variables that match
 	viper.AutomaticEnv()
