@@ -73,17 +73,17 @@ func processDockerOutput(log logger.Logger, reader io.ReadCloser, lineReader doc
 			log.Warn("Docker output is not a stream line, skipping")
 			continue
 		}
-		log.Debug("Docker response", "stream", strings.TrimSpace(printable.Captured()))
+		log.Debugf("Docker response, stream | %v", strings.TrimSpace(printable.Captured()))
 	}
 
 	errLine := &dockerErrorLine{}
 	json.Unmarshal([]byte(lastLine), errLine)
 	if errLine.Error != "" {
-		log.Error("Docker finished with an error", "reason", errLine.Error)
+		log.Errorf("Docker finished with an error: %v", errLine.Error)
 		return fmt.Errorf(errLine.Error)
 	}
 	if scannerErr := scanner.Err(); scannerErr != nil {
-		log.Error("Docker response scanner finished with an error", "reason", scannerErr)
+		log.Errorf("Docker response scanner finished with an error: %v", scannerErr)
 		return scannerErr
 	}
 

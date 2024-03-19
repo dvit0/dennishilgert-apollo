@@ -32,10 +32,10 @@ func GetDefaultClient() (*docker.Client, error) {
 
 // ContainerStart creates and starts a container and adds its stop and removal to the cleanup defers.
 func ContainerStart(ctx context.Context, client *docker.Client, log logger.Logger, cleanup defers.Defers, containerConfig container.Config, hostConfig container.HostConfig, name string, destroyAfter bool) (*string, error) {
-	log.Debug("creating container", "image-tag", containerConfig.Image)
+	log.Debugf("creating container from image: %s", containerConfig.Image)
 	containerCreateResponse, err := client.ContainerCreate(ctx, &containerConfig, &hostConfig, nil, nil, name)
 	if err != nil {
-		log.Error("failed to create Docker container", "reason", err)
+		log.Errorf("failed to create Docker container: %v", err)
 		return nil, err
 	}
 
@@ -43,7 +43,7 @@ func ContainerStart(ctx context.Context, client *docker.Client, log logger.Logge
 
 	log.Debug("starting container")
 	if err := client.ContainerStart(ctx, containerCreateResponse.ID, container.StartOptions{}); err != nil {
-		log.Error("failed to start Docker container", "reason", err)
+		log.Errorf("failed to start Docker container: %v", err)
 		return nil, err
 	}
 
@@ -64,9 +64,9 @@ func ContainerStop(ctx context.Context, client *docker.Client, log logger.Logger
 	log.Debug("stopping container")
 	go func() {
 		if err := client.ContainerStop(ctx, containerId, container.StopOptions{Timeout: &config.ContainerStopTimeout}); err != nil {
-			log.Warn("failed to stop container gracefully, killing", "reason", err)
+			log.Warnf("failed to stop container gracefully, killing: %v", err)
 			if err := client.ContainerKill(ctx, containerId, "SIGKILL"); err != nil {
-				log.Warn("failed to kill container", "reason", err)
+				log.Warnf("failed to kill container: %v", err)
 			}
 		}
 	}()
@@ -75,9 +75,9 @@ func ContainerStop(ctx context.Context, client *docker.Client, log logger.Logger
 	chanStopOk, chanStopErr := client.ContainerWait(ctx, containerId, container.WaitConditionNotRunning)
 	select {
 	case ok := <-chanStopOk:
-		log.Debug("container stopped", "exit-code", ok.StatusCode, "error-message", ok.Error)
+		log.Debugf("container stopped with exit code: %d, reason: %v", ok.StatusCode, ok.Error)
 	case err := <-chanStopErr:
-		log.Warn("error while waiting for container to be stopped", "reason", err)
+		log.Warnf("error while waiting for container to be stopped: %v", err)
 	}
 }
 
@@ -90,7 +90,7 @@ func ContainerRemove(ctx context.Context, client *docker.Client, log logger.Logg
 	}
 	go func() {
 		if err := client.ContainerRemove(ctx, containerId, containerRemoveOptions); err != nil {
-			log.Warn("failed to remove container", "reason", err)
+			log.Warnf("failed to remove container: %v", err)
 		}
 	}()
 
@@ -98,9 +98,9 @@ func ContainerRemove(ctx context.Context, client *docker.Client, log logger.Logg
 	chanRemoveOk, chanRemoveErr := client.ContainerWait(ctx, containerId, container.WaitConditionRemoved)
 	select {
 	case ok := <-chanRemoveOk:
-		log.Debug("container removed", "exit-code", ok.StatusCode, "error-message", ok.Error)
+		log.Debugf("container removed with exit code: %d, reason: %v", ok.StatusCode, ok.Error)
 	case err := <-chanRemoveErr:
-		log.Warn("error while waiting for container to be removed", "reason", err)
+		log.Warnf("error while waiting for container to be removed: %v", err)
 	}
 }
 
@@ -117,7 +117,7 @@ func FetchImageIdByTag(ctx context.Context, client *docker.Client, log logger.Lo
 			}
 		}
 	}
-	log.Error("cannot find image", "tag", imageTag, "reason", err)
+	log.Errorf("cannot find image: %s, reason: %v", imageTag, err)
 	return nil, err
 }
 
@@ -174,16 +174,16 @@ func ImageRemove(ctx context.Context, client *docker.Client, log logger.Logger, 
 	log = log.WithFields(map[string]any{"image-tag": imageTag})
 	imageId, err := FetchImageIdByTag(ctx, client, log, imageTag)
 	if err != nil {
-		log.Error("failed to fetch image id by tag", "reason", err)
+		log.Errorf("failed to fetch image id by tag: %v", err)
 		return err
 	}
 	responses, err := client.ImageRemove(ctx, *imageId, types.ImageRemoveOptions{Force: true})
 	if err != nil {
-		log.Error("failed to remove image", "reason", err)
+		log.Errorf("failed to remove image: %s, reason: %v", imageTag, err)
 		return err
 	}
 	for _, response := range responses {
-		log.Debug("docker image removal status", "image-id", imageId, "deleted", response.Deleted, "untagged", response.Untagged)
+		log.Debugf("docker image removal status: %s, deleted: %s, untagged: %s", imageId, response.Deleted, response.Untagged)
 	}
 	return nil
 }
@@ -194,11 +194,11 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 		sourcePath = fmt.Sprintf("%s%s", sourcePath, string(os.PathSeparator))
 	}
 
-	log = log.WithFields(map[string]any{"dir-context": sourcePath, "dockerfile": dockerfilePath, "image-tag": imageTag})
+	log = log.WithFields(map[string]any{"context-dir": sourcePath, "dockerfile": dockerfilePath, "image-tag": imageTag})
 
 	buildContext, err := dockerArchive.TarWithOptions(sourcePath, &dockerArchive.TarOptions{})
 	if err != nil {
-		log.Error("failed to create tar archive as Docker build context", "reason", err)
+		log.Errorf("failed to create tar archive as Docker build context: %v", err)
 		return err
 	}
 	defer buildContext.Close()
@@ -211,7 +211,7 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 		PullParent:  false, // this should be enabled in production to always use the latest version of the parent
 	})
 	if err != nil {
-		log.Error("failed to build Docker image", "reason", err)
+		log.Errorf("failed to build Docker image: %v", err)
 		return err
 	}
 
@@ -224,7 +224,7 @@ func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, 
 	defer cleanup.CallAll()
 
 	// check if destination path is a directory and is writable.
-	log.Debug("checking destination path", "dest-path", destPath)
+	log.Debugf("checking destination path: %s", destPath)
 	exists, fileInfo := utils.FileExists(destPath)
 	if !exists {
 		log.Error("destination path does not exist")
@@ -232,7 +232,7 @@ func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, 
 	}
 	ok, err := utils.IsDirAndWritable(destPath, fileInfo)
 	if !ok {
-		log.Error("destination path is not a directory or not writable", "reason", err)
+		log.Errorf("destination path is not a directory or not writable: %v", err)
 		return err
 	}
 
@@ -274,18 +274,18 @@ func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, 
 func ContainerExec(ctx context.Context, client *docker.Client, log logger.Logger, containerId string, execConfig types.ExecConfig) (*types.HijackedResponse, error) {
 	createResponse, err := client.ContainerExecCreate(ctx, containerId, execConfig)
 	if err != nil {
-		log.Error("failed to create command exec", "reason", err)
+		log.Errorf("failed to create command exec: %v", err)
 		return nil, err
 	}
 
 	attachResponse, err := client.ContainerExecAttach(ctx, createResponse.ID, types.ExecStartCheck{})
 	if err != nil {
-		log.Error("failed to attach to command exec", "reason", err)
+		log.Errorf("failed to attach to command exec: %v", err)
 		return nil, err
 	}
 
 	if err := client.ContainerExecStart(ctx, createResponse.ID, types.ExecStartCheck{}); err != nil {
-		log.Error("failed to start command exec", "reason", err)
+		log.Errorf("failed to start command exec: %v", err)
 		return nil, err
 	}
 
@@ -321,7 +321,7 @@ func DebugOutput(log logger.Logger, reader *bufio.Reader) {
 
 // ContainerCopy copies a file inside a container.
 func ContainerCopy(ctx context.Context, client *docker.Client, log logger.Logger, containerId string, srcPath string, dstPath string) error {
-	log.Debug("copying", "src", srcPath, "dst", dstPath)
+	log.Debugf("copying %s to %s", srcPath, dstPath)
 	execConfig := types.ExecConfig{
 		Cmd:          []string{"cp", "-r", srcPath, dstPath},
 		AttachStdout: true,
@@ -341,7 +341,7 @@ func ContainerCopy(ctx context.Context, client *docker.Client, log logger.Logger
 
 // ContainerMount mounts an image file to an directory inside a container.
 func ContainerMount(ctx context.Context, client *docker.Client, log logger.Logger, containerId *string, srcPath string, targetPath string) error {
-	log.Debug("mounting", "src-path", srcPath, "target-path", targetPath)
+	log.Debugf("mounting %s to %s", srcPath, targetPath)
 	execConfig := types.ExecConfig{
 		Cmd: []string{
 			"/bin/sh", "-c",
@@ -365,7 +365,7 @@ func ContainerMount(ctx context.Context, client *docker.Client, log logger.Logge
 
 // ContainerUnmount unmounts a directory inside a container.
 func ContainerUnmount(ctx context.Context, client *docker.Client, log logger.Logger, containerId *string, targetPath string) error {
-	log.Debug("unmounting", "target-path", targetPath)
+	log.Debugf("unmounting %s", targetPath)
 	execConfig := types.ExecConfig{
 		Cmd:          []string{"umount", targetPath},
 		AttachStdout: true,
@@ -484,20 +484,20 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 
 	findExecLines, err := ParseExecOutput(findExecResponse.Reader)
 	if err != nil {
-		log.Error("error while parsing find command exec output", "reason", err)
+		log.Errorf("error while parsing find command exec output: %v", err)
 		return err
 	}
 
 	// iterate over the discovered filesystem directories and copy them to the rootfs image.
 	log.Debug("copying directories")
 	for _, dir := range findExecLines {
-		log.Debug("handling directory", "dir", dir)
+		log.Debugf("handling directory: %s", dir)
 		if slices.Contains([]string{config.ContainerDestMountTarget, config.ContainerImageMountTarget}, dir) {
-			log.Debug("directory is working directory", "dir", dir)
+			log.Debugf("directory is working directory: %s", dir)
 			continue
 		}
 		if !strings.HasPrefix(dir, "/") || !utils.IsValidDirName(dir) {
-			log.Debug("directory is not a valid directory", "dir", dir)
+			log.Debugf("directory is not a valid directory: %s", dir)
 			continue
 		}
 		// only create empty directory on the rootfs image.
