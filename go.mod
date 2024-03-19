@@ -7,7 +7,7 @@ replace github.com/firecracker-microvm/firecracker-go-sdk => ./third_party/firec
 replace github.com/firecracker-microvm/firecracker-go-sdk/client/models => ./third_party/firecracker-go-sdk/client/models
 
 require (
-	github.com/docker/docker v25.0.3+incompatible
+	github.com/docker/docker v25.0.4+incompatible
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/sirupsen/logrus v1.9.3

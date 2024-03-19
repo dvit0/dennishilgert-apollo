@@ -2,11 +2,13 @@ package export
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/dennishilgert/apollo/pkg/container"
 	"github.com/dennishilgert/apollo/pkg/defers"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -33,45 +35,57 @@ func init() {
 
 func run(cobraCommand *cobra.Command, args []string) {
 	logger.ReadAndApply(cobraCommand, log)
-	os.Exit(processCommand())
+	os.Exit(processCommand(cobraCommand.Context()))
 }
 
-func processCommand() int {
-	if err := logger.ApplyConfigToLoggers(&cmdFlags.CommandFlags().Logger); err != nil {
-		log.Fatal(err)
-	}
-
+func processCommand(ctx context.Context) int {
 	cleanup := defers.NewDefers()
 	defer cleanup.CallAll()
 
 	distPathStat, err := os.Stat(cmdFlags.CommandFlags().DistPath)
 	if err != nil {
-		log.Errorf("error while resolving --dist-path path: %v", err)
-		return 1
+		log.Fatalf("error while resolving dist path: %v", err)
 	}
 	if !distPathStat.IsDir() {
-		log.Error("value of --dist-path does not point to a directory")
-		return 1
+		log.Fatalf("dist path does not point to a directory: %s", cmdFlags.CommandFlags().DistPath)
+	}
+
+	if cmdFlags.CommandFlags().ImageTag != "" {
+		if !utils.IsValidTag(cmdFlags.CommandFlags().ImageTag) {
+			log.Fatalf("given image tag is invalid: %s", cmdFlags.CommandFlags().ImageTag)
+		}
+	}
+
+	var imageRegistryAddress string
+	if cmdFlags.CommandFlags().ImageRegistryAddress != "host:port" {
+		imageRegistryAddress = cmdFlags.CommandFlags().ImageRegistryAddress
+	} else if os.Getenv("APOLLO_IMAGE_REGISTRY_ADDRESS") != "" {
+		imageRegistryAddress = os.Getenv("APOLLO_IMAGE_REGISTRY_ADDRESS")
+	}
+	if imageRegistryAddress == "" {
+		log.Fatalf("neither image registry address flag nor env variable APOLLO_IMAGE_REGISTRY_ADDRESS is set")
+	}
+	if !utils.IsValidRegistryAddress(imageRegistryAddress) {
+		log.Fatalf("image registry address is invalid")
 	}
 
 	dockerClient, err := container.GetDefaultClient()
 	if err != nil {
-		log.Errorf("failed to get default Docker client: %v", err)
-		return 1
+		log.Fatalf("failed to get default Docker client: %v", err)
 	}
 
-	_, err = container.FetchImageIdByTag(context.Background(), dockerClient, log, cmdFlags.CommandFlags().ImageTag)
+	imageTag := fmt.Sprintf("%s/apollo/%s", imageRegistryAddress, cmdFlags.CommandFlags().ImageTag)
+
+	_, err = container.FetchImageIdByTag(ctx, dockerClient, log, imageTag)
 	if err != nil {
-		log.Error("specified image does not exist")
-		return 1
+		log.Fatalf("image does not exist: %s", imageTag)
 	}
 
-	if err := container.ImageExport(context.Background(), dockerClient, log, cmdFlags.CommandFlags().DistPath, cmdFlags.CommandFlags().ImageTag); err != nil {
-		log.Error("failed to export Docker image")
-		return 1
+	log.Infof("exporting image: %s", imageTag)
+	if err := container.ImageExport(ctx, dockerClient, log, cmdFlags.CommandFlags().DistPath, imageTag); err != nil {
+		log.Fatalf("failed to export Docker image: %v", err)
 	}
 
 	log.Info("image exported successfully")
-
 	return 0
 }

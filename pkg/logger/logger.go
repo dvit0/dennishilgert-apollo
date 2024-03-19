@@ -61,6 +61,8 @@ var (
 	defaultOpLogger   = &nopLogger{}
 )
 
+var config Config = LoadConfig()
+
 type Logger interface {
 	// EnableJsonOutput enables JSON formatted output log.
 	EnableJsonOutput(enabled bool)
@@ -73,6 +75,9 @@ type Logger interface {
 
 	// SetLogLevel sets the log level.
 	SetLogLevel(logLevel LogLevel)
+
+	// LogLevel returns the log level of the logger.
+	LogLevel() string
 
 	// SetOutput sets the destination for the logs.
 	SetOutput(dst io.Writer)
@@ -135,22 +140,16 @@ func NewLogger(name string) Logger {
 	logger, ok := globalLoggers[name]
 	if !ok {
 		logger = newApolloLogger(name)
+
+		// apply logger config
+		logger.SetAppId(config.AppId)
+		logger.SetLogLevel(toLogLevel(config.LogLevel))
+		logger.EnableJsonOutput(config.LogJsonOutput)
+
 		globalLoggers[name] = logger
 	}
 
 	return logger
-}
-
-func getLoggers() map[string]Logger {
-	globalLoggersLock.RLock()
-	defer globalLoggersLock.RUnlock()
-
-	l := map[string]Logger{}
-	for k, v := range globalLoggers {
-		l[k] = v
-	}
-
-	return l
 }
 
 // NewContext returns a new Context, derived from ctx, which carries the

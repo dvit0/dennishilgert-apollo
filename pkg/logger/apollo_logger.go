@@ -98,6 +98,11 @@ func (l *apolloLogger) SetLogLevel(logLevel LogLevel) {
 	l.logger.Logger.SetLevel(toLogrusLevel(logLevel))
 }
 
+// LogLevel returns the log level of the logger.
+func (l *apolloLogger) LogLevel() string {
+	return l.logger.Logger.GetLevel().String()
+}
+
 // IsOutputLevelEnabled returns true if the logger will output this LogLevel.
 func (l *apolloLogger) IsLogLevelEnabled(level LogLevel) bool {
 	return l.logger.Logger.IsLevelEnabled(toLogrusLevel(level))

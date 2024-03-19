@@ -5,9 +5,10 @@ import (
 )
 
 type commandFlags struct {
-	SourcePath string
-	Dockerfile string
-	ImageTag   string
+	SourcePath           string
+	Dockerfile           string
+	ImageTag             string
+	ImageRegistryAddress string
 }
 
 type parsedFlags struct {
@@ -24,7 +25,8 @@ func ParseFlags() *parsedFlags {
 	// define default values only for reference, all flags are required
 	fs.StringVar(&f.SourcePath, "source-path", ".", "Path to the source directory of the build context")
 	fs.StringVar(&f.Dockerfile, "dockerfile", "./Dockerfile", "Path to the Dockerfile inside the build context")
-	fs.StringVar(&f.ImageTag, "image-tag", "localhost:5000/apollo/baseos:bullseye", "Tag to assign to the new Docker image")
+	fs.StringVar(&f.ImageTag, "image-tag", "image:tag", "Tag to assign to the new Docker image")
+	fs.StringVar(&f.ImageRegistryAddress, "image-registry-address", "host:port", "Network address of the image registry - optional with APOLLO_IMAGE_REGISTRY_ADDRESS set")
 
 	return &parsedFlags{
 		cmdFlags: &f,

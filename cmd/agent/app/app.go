@@ -20,12 +20,8 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	if err = logger.ApplyConfigToLoggers(&cfg.Logger); err != nil {
-		log.Fatal(err)
-	}
-
 	log.Infof("starting apollo agent -- version %s", "TO_BE_IMPLEMENTED")
-	log.Infof("log level set to: %s", cfg.Logger.LogLevel)
+	log.Infof("log level set to: %s", log.LogLevel())
 
 	ctx := signals.Context()
 	agent, err := agent.NewAgent(ctx, agent.Options{

@@ -1,13 +1,12 @@
 package push
 
 import (
-	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/spf13/pflag"
 )
 
 type commandFlags struct {
-	ImageTag string
-	Logger   logger.Config
+	ImageTag             string
+	ImageRegistryAddress string
 }
 
 type parsedFlags struct {
@@ -23,8 +22,7 @@ func ParseFlags() *parsedFlags {
 
 	// define default values only for reference, all flags are required
 	fs.StringVar(&f.ImageTag, "image-tag", "localhost:5000/apollo/baseos:bullseye", "Tag of the Docker image to push to the registry")
-
-	f.Logger = logger.DefaultConfig()
+	fs.StringVar(&f.ImageRegistryAddress, "image-registry-address", "host:port", "Network address of the image registry - optional with APOLLO_IMAGE_REGISTRY_ADDRESS set")
 
 	return &parsedFlags{
 		cmdFlags: &f,

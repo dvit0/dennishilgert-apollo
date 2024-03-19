@@ -1,6 +1,12 @@
 package logger
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+
+	"github.com/dennishilgert/apollo/pkg/configuration"
+	"github.com/spf13/viper"
+)
 
 const (
 	defaultJsonOutput = false
@@ -19,19 +25,6 @@ type Config struct {
 	LogLevel string
 }
 
-func (c *Config) SetLogLevel(level string) error {
-	if toLogLevel(level) == UndefinedLevel {
-		return fmt.Errorf("undefined Log Output Level: %s", level)
-	}
-	c.LogLevel = level
-	return nil
-}
-
-// SetAppId sets application id.
-func (c *Config) SetAppId(id string) {
-	c.AppId = id
-}
-
 // DefaultConfig returns default configuration values.
 func DefaultConfig() Config {
 	return Config{
@@ -41,26 +34,23 @@ func DefaultConfig() Config {
 	}
 }
 
-// ApplyConfigToLoggers applys options to all registered loggers.
-func ApplyConfigToLoggers(config *Config) error {
-	internalLoggers := getLoggers()
+func LoadConfig() Config {
+	var config Config
 
-	// apply formatting options first
-	for _, v := range internalLoggers {
-		v.EnableJsonOutput(config.LogJsonOutput)
+	// automatically load environment variables that match
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("APOLLO")
 
-		if config.AppId != undefinedAppId {
-			v.SetAppId(config.AppId)
-		}
+	// loading the values from the environment or use default values
+	configuration.LoadOrDefault("AppId", "APOLLO_LOG_APP_ID", DefaultConfig().AppId)
+	configuration.LoadOrDefault("LogJsonOutput", "APOLLO_LOG_FORMAT_JSON", DefaultConfig().LogJsonOutput)
+	configuration.LoadOrDefault("LogLevel", "APOLLO_LOG_LEVEL", DefaultConfig().LogLevel)
+
+	// unmarshalling the Config struct
+	if err := viper.Unmarshal(&config); err != nil {
+		fmt.Printf("unable to unmarshal logger config: %v\n", err)
+		os.Exit(1)
 	}
 
-	logLevel := toLogLevel(config.LogLevel)
-	if logLevel == UndefinedLevel {
-		return fmt.Errorf("invalid value for --log-level: %s", config.LogLevel)
-	}
-
-	for _, v := range internalLoggers {
-		v.SetLogLevel(logLevel)
-	}
-	return nil
+	return config
 }

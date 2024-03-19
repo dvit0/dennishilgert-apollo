@@ -1,11 +1,11 @@
 package configuration
 
 import (
-	"github.com/dennishilgert/apollo/pkg/logger"
+	"fmt"
+	"os"
+
 	"github.com/spf13/viper"
 )
-
-var log = logger.NewLogger("apollo.config")
 
 func LoadOrDefault(configVar string, envVar string, defaultVal any) {
 	if defaultVal != nil {
@@ -14,7 +14,8 @@ func LoadOrDefault(configVar string, envVar string, defaultVal any) {
 	viper.BindEnv(configVar, envVar)
 	if defaultVal == nil {
 		if !viper.IsSet(configVar) {
-			log.Fatalf("required environment variable %s is not set", envVar)
+			fmt.Printf("required environment variable is not set: %s\n", envVar)
+			os.Exit(1)
 		}
 	}
 }

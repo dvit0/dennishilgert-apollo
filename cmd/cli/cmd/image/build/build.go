@@ -2,6 +2,7 @@ package build
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/dennishilgert/apollo/pkg/container"
@@ -34,49 +35,63 @@ func init() {
 
 func run(cobraCommand *cobra.Command, args []string) {
 	logger.ReadAndApply(cobraCommand, log)
-	os.Exit(processCommand())
+	os.Exit(processCommand(cobraCommand.Context()))
 }
 
-func processCommand() int {
+func processCommand(ctx context.Context) int {
 	sourcePathStat, err := os.Stat(cmdFlags.CommandFlags().SourcePath)
 	if err != nil {
-		log.Errorf("error while resolving --source-path path: %v", err)
-		return 1
+		log.Fatalf("error while resolving source path: %v", err)
 	}
 	if !sourcePathStat.IsDir() {
-		log.Error("value of --source-path does not point to a directory")
-		return 1
+		log.Fatalf("source path does not point to a directory: %s", cmdFlags.CommandFlags().SourcePath)
 	}
 
 	dockerfileStat, err := os.Stat(cmdFlags.CommandFlags().Dockerfile)
 	if err != nil {
-		log.Errorf("error while resolving --dockerfile path: %v", err)
-		return 1
+		log.Fatalf("error while resolving dockerfile path: %v", err)
 	}
 	if dockerfileStat.IsDir() {
-		log.Error("value of --dockerfile points to a directory")
-		return 1
+		log.Fatalf("dockerfile points to a directory: %s", cmdFlags.CommandFlags().Dockerfile)
 	}
 
 	if cmdFlags.CommandFlags().ImageTag != "" {
 		if !utils.IsValidTag(cmdFlags.CommandFlags().ImageTag) {
-			log.Error("value of --image-tag is not a valid Docker image tag")
-			return 1
+			log.Fatalf("given image tag is invalid: %s", cmdFlags.CommandFlags().ImageTag)
 		}
+	}
+
+	var imageRegistryAddress string
+	if cmdFlags.CommandFlags().ImageRegistryAddress != "host:port" {
+		imageRegistryAddress = cmdFlags.CommandFlags().ImageRegistryAddress
+	} else if os.Getenv("APOLLO_IMAGE_REGISTRY_ADDRESS") != "" {
+		imageRegistryAddress = os.Getenv("APOLLO_IMAGE_REGISTRY_ADDRESS")
+	}
+	if imageRegistryAddress == "" {
+		log.Fatalf("neither image registry address flag nor env variable APOLLO_IMAGE_REGISTRY_ADDRESS is set")
+	}
+	if !utils.IsValidRegistryAddress(imageRegistryAddress) {
+		log.Fatalf("image registry address is invalid")
 	}
 
 	dockerClient, err := container.GetDefaultClient()
 	if err != nil {
-		log.Errorf("failed to get default Docker client: %v", err)
-		return 1
+		log.Fatalf("failed to get default Docker client: %v", err)
 	}
 
-	if err := container.ImageBuild(context.Background(), dockerClient, log, cmdFlags.CommandFlags().SourcePath, cmdFlags.CommandFlags().Dockerfile, cmdFlags.CommandFlags().ImageTag); err != nil {
-		log.Errorf("failed to build Docker image: %v", err)
-		return 1
+	imageTag := fmt.Sprintf("%s/apollo/%s", imageRegistryAddress, cmdFlags.CommandFlags().ImageTag)
+
+	log.Infof("building image: %s", imageTag)
+	if err := container.ImageBuild(
+		ctx, dockerClient,
+		log,
+		cmdFlags.CommandFlags().SourcePath,
+		cmdFlags.CommandFlags().Dockerfile,
+		imageTag,
+	); err != nil {
+		log.Fatalf("failed to build Docker image: %v", err)
 	}
 
 	log.Info("image built successfully")
-
 	return 0
 }

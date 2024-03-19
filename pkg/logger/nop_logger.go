@@ -21,6 +21,11 @@ func (n *nopLogger) SetAppId(_ string) {}
 // SetLogLevel sets the log level.
 func (n *nopLogger) SetLogLevel(_ LogLevel) {}
 
+// LogLevel returns the log level of the logger.
+func (n *nopLogger) LogLevel() string {
+	return ""
+}
+
 // SetOutput sets the destination for the logs.
 func (n *nopLogger) SetOutput(_ io.Writer) {}
 
