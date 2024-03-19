@@ -27,6 +27,7 @@ func initFlags() {
 	Command.Flags().AddFlagSet(cmdFlags.FlagSet())
 	Command.MarkFlagRequired("dist-path")
 	Command.MarkFlagRequired("image-tag")
+	Command.MarkFlagRequired("image-file-name")
 }
 
 func init() {
@@ -82,7 +83,7 @@ func processCommand(ctx context.Context) int {
 	}
 
 	log.Infof("exporting image: %s", imageTag)
-	if err := container.ImageExport(ctx, dockerClient, log, cmdFlags.CommandFlags().DistPath, imageTag); err != nil {
+	if err := container.ImageExport(ctx, dockerClient, log, cmdFlags.CommandFlags().DistPath, imageTag, cmdFlags.CommandFlags().ImageFileName); err != nil {
 		log.Fatalf("failed to export Docker image: %v", err)
 	}
 
