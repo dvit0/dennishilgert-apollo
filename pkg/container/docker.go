@@ -33,20 +33,24 @@ func GetDefaultClient() (*docker.Client, error) {
 // ContainerStart creates and starts a container and adds its stop and removal to the cleanup defers.
 func ContainerStart(ctx context.Context, client *docker.Client, log logger.Logger, cleanup defers.Defers, containerConfig container.Config, hostConfig container.HostConfig, name string, destroyAfter bool) (*string, error) {
 	log.Debugf("creating container from image: %s", containerConfig.Image)
+	_, err := FetchImageIdByTag(ctx, client, log, containerConfig.Image)
+	if err != nil {
+		log.Debugf("image for container is not available locally - pulling: %s", containerConfig.Image)
+		if err := ImagePull(ctx, client, log, containerConfig.Image); err != nil {
+			return nil, fmt.Errorf("failed to pull docker image: %v", err)
+		}
+	}
 	containerCreateResponse, err := client.ContainerCreate(ctx, &containerConfig, &hostConfig, nil, nil, name)
 	if err != nil {
-		log.Errorf("failed to create Docker container: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create docker container: %v", err)
 	}
 
 	log = log.WithFields(map[string]any{"container-id": containerCreateResponse.ID[:12]})
 
 	log.Debug("starting container")
 	if err := client.ContainerStart(ctx, containerCreateResponse.ID, container.StartOptions{}); err != nil {
-		log.Errorf("failed to start Docker container: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to start docker container: %v", err)
 	}
-
 	if destroyAfter {
 		cleanup.Add(func() {
 			ContainerRemove(context.Background(), client, log, containerCreateResponse.ID)
@@ -55,7 +59,6 @@ func ContainerStart(ctx context.Context, client *docker.Client, log logger.Logge
 			ContainerStop(context.Background(), client, log, containerCreateResponse.ID)
 		})
 	}
-
 	return &containerCreateResponse.ID, nil
 }
 
@@ -75,7 +78,7 @@ func ContainerStop(ctx context.Context, client *docker.Client, log logger.Logger
 	chanStopOk, chanStopErr := client.ContainerWait(ctx, containerId, container.WaitConditionNotRunning)
 	select {
 	case ok := <-chanStopOk:
-		log.Debugf("container stopped with exit code: %d, error: %v", ok.StatusCode, ok.Error)
+		log.Debugf("container stopped with exit code: %d - error: %v", ok.StatusCode, ok.Error)
 	case err := <-chanStopErr:
 		log.Warnf("error while waiting for container to be stopped: %v", err)
 	}
@@ -98,7 +101,7 @@ func ContainerRemove(ctx context.Context, client *docker.Client, log logger.Logg
 	chanRemoveOk, chanRemoveErr := client.ContainerWait(ctx, containerId, container.WaitConditionRemoved)
 	select {
 	case ok := <-chanRemoveOk:
-		log.Debugf("container removed with exit code: %d, reason: %v", ok.StatusCode, ok.Error)
+		log.Debugf("container removed with exit code: %d - reason: %v", ok.StatusCode, ok.Error)
 	case err := <-chanRemoveErr:
 		log.Warnf("error while waiting for container to be removed: %v", err)
 	}
@@ -117,8 +120,7 @@ func FetchImageIdByTag(ctx context.Context, client *docker.Client, log logger.Lo
 			}
 		}
 	}
-	log.Errorf("cannot find image: %s, reason: %v", imageTag, err)
-	return nil, err
+	return nil, fmt.Errorf("cannot find image: %s - reason: %v", imageTag, err)
 }
 
 // ImagePush pushes an image to the docker image registry.
@@ -139,10 +141,8 @@ func ImagePush(ctx context.Context, client *docker.Client, log logger.Logger, im
 	if err != nil {
 		return err
 	}
-	if err := processDockerOutput(log, response, dockerReaderStream()); err != nil {
-		return err
-	}
-	return nil
+
+	return processDockerOutput(log, response, dockerReaderStream())
 }
 
 // ImagePull pulls an image from the docker image registry.
@@ -163,10 +163,8 @@ func ImagePull(ctx context.Context, client *docker.Client, log logger.Logger, re
 	if err != nil {
 		return err
 	}
-	if err := processDockerOutput(log, response, dockerReaderStatus()); err != nil {
-		return err
-	}
-	return nil
+
+	return processDockerOutput(log, response, dockerReaderStatus())
 }
 
 // ImageRemove removes an image from the Docker host.
@@ -174,16 +172,14 @@ func ImageRemove(ctx context.Context, client *docker.Client, log logger.Logger, 
 	log = log.WithFields(map[string]any{"image-tag": imageTag})
 	imageId, err := FetchImageIdByTag(ctx, client, log, imageTag)
 	if err != nil {
-		log.Errorf("failed to fetch image id by tag: %v", err)
-		return err
+		return fmt.Errorf("failed to fetch image id by tag: %v", err)
 	}
 	responses, err := client.ImageRemove(ctx, *imageId, types.ImageRemoveOptions{Force: true})
 	if err != nil {
-		log.Errorf("failed to remove image: %s, reason: %v", imageTag, err)
-		return err
+		return fmt.Errorf("failed to remove image: %s - reason: %v", imageTag, err)
 	}
 	for _, response := range responses {
-		log.Debugf("docker image removal status: %s, deleted: %s, untagged: %s", imageId, response.Deleted, response.Untagged)
+		log.Debugf("docker image removal status: %s - deleted: %s - untagged: %s", imageId, response.Deleted, response.Untagged)
 	}
 	return nil
 }
@@ -198,8 +194,7 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 
 	buildContext, err := dockerArchive.TarWithOptions(sourcePath, &dockerArchive.TarOptions{})
 	if err != nil {
-		log.Errorf("failed to create tar archive as Docker build context: %v", err)
-		return err
+		return fmt.Errorf("failed to create tar archive as Docker build context: %v", err)
 	}
 	defer buildContext.Close()
 
@@ -211,8 +206,7 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 		PullParent:  false, // this should be enabled in production to always use the latest version of the parent
 	})
 	if err != nil {
-		log.Errorf("failed to build Docker image: %v", err)
-		return err
+		return fmt.Errorf("failed to build docker image: %v", err)
 	}
 
 	return processDockerOutput(log, buildResponse.Body, dockerReaderStream())
@@ -223,50 +217,28 @@ func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, 
 	cleanup := defers.NewDefers()
 	defer cleanup.CallAll()
 
-	// check if destination path is a directory and is writable.
-	log.Debugf("checking destination path: %s", destPath)
-	exists, fileInfo := utils.FileExists(destPath)
-	if !exists {
-		log.Error("destination path does not exist")
-		return fmt.Errorf("destination path does not exist")
-	}
-	ok, err := utils.IsDirAndWritable(destPath, fileInfo)
-	if !ok {
-		log.Errorf("destination path is not a directory or not writable: %v", err)
-		return err
-	}
-
 	imgFilePath := strings.Join([]string{config.ContainerDestMountTarget, config.RootFsImageFileName}, string(os.PathSeparator))
 
 	log.Info("creating empty image ...")
 	workerContainerId, err := createImage(ctx, client, log, destPath, imgFilePath)
 	if err != nil {
-		log.Error("error while creating image file")
-		return err
+		return fmt.Errorf("error while creating image file: %v", err)
 	}
-
 	log.Info("copying rootfs from container to image ...")
 	if err := copyRootFsToImage(ctx, client, log, destPath, imgFilePath, imageTag); err != nil {
-		log.Error("error while copying rootfs to image file")
-		return err
+		return fmt.Errorf("error while copying rootfs to image file: %v", err)
 	}
-
 	log.Info("finalizing image ...")
 	if err := finalizeImage(ctx, client, log, workerContainerId, imgFilePath); err != nil {
-		log.Error("error while finalizing image file")
-		return err
+		return fmt.Errorf("error while finalizing image file: %v", err)
 	}
-
 	log.Info("resizing image to minimum size ...")
 	if err := resizeImage(ctx, client, log, workerContainerId, imgFilePath); err != nil {
-		log.Error("error while resizing image file")
-		return err
+		return fmt.Errorf("error while resizing image file: %v", err)
 	}
-
 	cleanup.Add(func() {
 		ContainerStop(ctx, client, log, *workerContainerId)
 	})
-
 	return nil
 }
 
@@ -274,21 +246,15 @@ func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, 
 func ContainerExec(ctx context.Context, client *docker.Client, log logger.Logger, containerId string, execConfig types.ExecConfig) (*types.HijackedResponse, error) {
 	createResponse, err := client.ContainerExecCreate(ctx, containerId, execConfig)
 	if err != nil {
-		log.Errorf("failed to create command exec: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create command exec: %v", err)
 	}
-
 	attachResponse, err := client.ContainerExecAttach(ctx, createResponse.ID, types.ExecStartCheck{})
 	if err != nil {
-		log.Errorf("failed to attach to command exec: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to attach to command exec: %v", err)
 	}
-
 	if err := client.ContainerExecStart(ctx, createResponse.ID, types.ExecStartCheck{}); err != nil {
-		log.Errorf("failed to start command exec: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to start command exec: %v", err)
 	}
-
 	return &attachResponse, nil
 }
 
@@ -329,8 +295,7 @@ func ContainerCopy(ctx context.Context, client *docker.Client, log logger.Logger
 	}
 	execResponse, err := ContainerExec(ctx, client, log, containerId, execConfig)
 	if err != nil {
-		log.Error("error while executing copy to image command")
-		return err
+		return fmt.Errorf("error while executing copy to image command: %v", err)
 	}
 	defer execResponse.Close()
 
@@ -353,8 +318,7 @@ func ContainerMount(ctx context.Context, client *docker.Client, log logger.Logge
 	}
 	execResponse, err := ContainerExec(ctx, client, log, *containerId, execConfig)
 	if err != nil {
-		log.Error("error while executing mount command")
-		return err
+		return fmt.Errorf("error while executing mount command: %v", err)
 	}
 	defer execResponse.Close()
 
@@ -373,8 +337,7 @@ func ContainerUnmount(ctx context.Context, client *docker.Client, log logger.Log
 	}
 	execResponse, err := ContainerExec(ctx, client, log, *containerId, execConfig)
 	if err != nil {
-		log.Error("error while executing umount command")
-		return err
+		return fmt.Errorf("error while executing umount command: %v", err)
 	}
 	defer execResponse.Close()
 
@@ -403,8 +366,7 @@ func createImage(ctx context.Context, client *docker.Client, log logger.Logger, 
 	}
 	containerId, err := ContainerStart(ctx, client, log, nil, containerConfig, hostConfig, "", false)
 	if err != nil {
-		log.Error("error while starting builder Docker container")
-		return nil, err
+		return nil, fmt.Errorf("error while starting builder docker container: %v", err)
 	}
 
 	log.Debug("creating empty rootfs image")
@@ -419,8 +381,7 @@ func createImage(ctx context.Context, client *docker.Client, log logger.Logger, 
 	}
 	imgExecResponse, err := ContainerExec(ctx, client, log, *containerId, imgExecConfig)
 	if err != nil {
-		log.Error("error while creating empty rootfs image")
-		return containerId, err
+		return containerId, fmt.Errorf("error while creating empty rootfs image: %v", err)
 	}
 	defer imgExecResponse.Close()
 
@@ -452,19 +413,17 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 	}
 	containerId, err := ContainerStart(ctx, client, log, cleanup, rootfsContainerConfig, rootfsHostConfig, "", true)
 	if err != nil {
-		log.Error("error while starting export Docker container")
-		return err
+		return fmt.Errorf("error while starting export docker container: %v", err)
 	}
 
 	log.Debug("mounting rootfs image")
 	if err := ContainerMount(ctx, client, log, containerId, imgFilePath, config.ContainerImageMountTarget); err != nil {
-		log.Error("error while mounting rootfs image")
 		return err
 	}
 	cleanup.Add(func() {
 		log.Debug("unmounting rootfs image")
 		if err := ContainerUnmount(ctx, client, log, containerId, config.ContainerImageMountTarget); err != nil {
-			log.Error("error while unmounting rootfs image")
+			log.Errorf("error while unmounting rootfs image: %v", err)
 			return
 		}
 	})
@@ -477,15 +436,13 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 	}
 	findExecResponse, err := ContainerExec(ctx, client, log, *containerId, findExecConfig)
 	if err != nil {
-		log.Error("error while executing find command")
-		return err
+		return fmt.Errorf("error while executing find command: %v", err)
 	}
 	defer findExecResponse.Close()
 
 	findExecLines, err := ParseExecOutput(findExecResponse.Reader)
 	if err != nil {
-		log.Errorf("error while parsing find command exec output: %v", err)
-		return err
+		return fmt.Errorf("error while parsing find command exec output: %v", err)
 	}
 
 	// iterate over the discovered filesystem directories and copy them to the rootfs image.
@@ -511,15 +468,13 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 			}
 			mkdirExecResponse, err := ContainerExec(ctx, client, log, *containerId, mkdirExecConfig)
 			if err != nil {
-				log.Error("error while executing mkdir command")
-				return err
+				return fmt.Errorf("error while executing mkdir command: %v", err)
 			}
 			defer mkdirExecResponse.Close()
 		} else {
 			// copy the whole directory to the rootfs image.
 			if err := ContainerCopy(ctx, client, log, *containerId, dir, config.ContainerImageMountTarget+dir); err != nil {
-				log.Error("error while copying to image file")
-				return err
+				return fmt.Errorf("error while copying to image file: %v", err)
 			}
 		}
 	}
@@ -534,13 +489,12 @@ func finalizeImage(ctx context.Context, client *docker.Client, log logger.Logger
 
 	log.Debug("mounting rootfs image")
 	if err := ContainerMount(ctx, client, log, containerId, imgFilePath, config.ContainerImageMountTarget); err != nil {
-		log.Error("error while mounting rootfs image")
-		return err
+		return fmt.Errorf("error while mounting rootfs image: %v", err)
 	}
 	cleanup.Add(func() {
 		log.Debug("unmounting rootfs image")
 		if err := ContainerUnmount(ctx, client, log, containerId, config.ContainerImageMountTarget); err != nil {
-			log.Error("error while unmounting rootfs image")
+			log.Errorf("error while unmounting rootfs image: %v", err)
 			return
 		}
 	})
@@ -565,8 +519,7 @@ func finalizeImage(ctx context.Context, client *docker.Client, log logger.Logger
 	}
 	rmExecResponse, err := ContainerExec(ctx, client, log, *containerId, rmExecConfig)
 	if err != nil {
-		log.Error("error while removing unnecessary files")
-		return err
+		return fmt.Errorf("error while removing unnecessary files: %v", err)
 	}
 	defer rmExecResponse.Close()
 
@@ -580,8 +533,7 @@ func finalizeImage(ctx context.Context, client *docker.Client, log logger.Logger
 	}
 	wrkExecResponse, err := ContainerExec(ctx, client, log, *containerId, wrkExecConfig)
 	if err != nil {
-		log.Error("error while creating workspace directory")
-		return err
+		return fmt.Errorf("error while creating workspace directory: %v", err)
 	}
 	defer wrkExecResponse.Close()
 
@@ -599,8 +551,7 @@ func finalizeImage(ctx context.Context, client *docker.Client, log logger.Logger
 	}
 	resExecResponse, err := ContainerExec(ctx, client, log, *containerId, resExecConfig)
 	if err != nil {
-		log.Error("error while applying network configuration")
-		return err
+		return fmt.Errorf("error while applying network configuration: %v", err)
 	}
 	defer resExecResponse.Close()
 
@@ -623,8 +574,7 @@ func resizeImage(ctx context.Context, client *docker.Client, log logger.Logger, 
 	}
 	execResponse, err := ContainerExec(ctx, client, log, *containerId, execConfig)
 	if err != nil {
-		log.Error("error while executing image resize command")
-		return err
+		return fmt.Errorf("error while executing image resize command: %v", err)
 	}
 	defer execResponse.Close()
 

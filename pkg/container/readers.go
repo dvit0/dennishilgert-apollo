@@ -79,12 +79,12 @@ func processDockerOutput(log logger.Logger, reader io.ReadCloser, lineReader doc
 	errLine := &dockerErrorLine{}
 	json.Unmarshal([]byte(lastLine), errLine)
 	if errLine.Error != "" {
-		log.Errorf("Docker finished with an error: %v", errLine.Error)
+		log.Errorf("docker finished with an error: %v", errLine.Error)
 		return fmt.Errorf(errLine.Error)
 	}
-	if scannerErr := scanner.Err(); scannerErr != nil {
-		log.Errorf("Docker response scanner finished with an error: %v", scannerErr)
-		return scannerErr
+	if err := scanner.Err(); err != nil {
+		log.Errorf("docker response scanner finished with an error: %v", err)
+		return err
 	}
 
 	return nil
