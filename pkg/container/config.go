@@ -10,9 +10,6 @@ import (
 )
 
 type Config struct {
-	// Name of the rootfs image file.
-	RootFsImageFileName string
-
 	// Specifies the directories whose content is excluded from export.
 	RootFsExcludeDirs []string
 
@@ -43,7 +40,6 @@ type Config struct {
 
 func DefaultConfig() Config {
 	return Config{
-		RootFsImageFileName:       "rootfs.ext4",
 		RootFsExcludeDirs:         []string{"/boot", "/opt", "/proc", "/run", "/srv", "/sys", "/tmp"},
 		RootFsCopyTimeout:         time.Duration(time.Second * 15),
 		BuilderContainerImageTag:  "debian:stable",
@@ -64,7 +60,6 @@ func LoadConfig() Config {
 	viper.SetEnvPrefix("APOLLO")
 
 	// loading the values from the environment or use default values
-	configuration.LoadOrDefault("RootFsImageFileName", "APOLLO_ROOTFS_IMAGE_NAME", DefaultConfig().RootFsImageFileName)
 	configuration.LoadOrDefault("BuilderContainerImageTag", "APOLLO_BUILDER_CONTAINER_IMAGE_TAG", DefaultConfig().BuilderContainerImageTag)
 	configuration.LoadOrDefault("ContainerDestMountTarget", "APOLLO_CONTAINER_DEST_MOUNT_TARGET", DefaultConfig().ContainerDestMountTarget)
 	configuration.LoadOrDefault("ContainerImageMountTarget", "APOLLO_CONTAINER_IMAGE_MOUNT_TARGET", DefaultConfig().ContainerImageMountTarget)

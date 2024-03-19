@@ -213,11 +213,11 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 }
 
 // exports rootfs from the container to the rootfs image file.
-func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, destPath string, imageTag string) error {
+func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, destPath string, imageTag string, imageFileName string) error {
 	cleanup := defers.NewDefers()
 	defer cleanup.CallAll()
 
-	imgFilePath := strings.Join([]string{config.ContainerDestMountTarget, config.RootFsImageFileName}, string(os.PathSeparator))
+	imgFilePath := strings.Join([]string{config.ContainerDestMountTarget, imageFileName}, string(os.PathSeparator))
 
 	log.Info("creating empty image ...")
 	workerContainerId, err := createImage(ctx, client, log, destPath, imgFilePath)
