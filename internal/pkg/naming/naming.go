@@ -1,6 +1,8 @@
 package naming
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func ImageNameRootFs(functionUuid string) string {
 	return fmt.Sprintf("%s-rootfs", functionUuid)
@@ -14,6 +16,6 @@ func ImagePrefix() string {
 	return "apollo"
 }
 
-func ImageRefStr(imageName string, imageTag string) string {
-	return fmt.Sprintf("%s/%s:%s", ImagePrefix(), imageName, imageTag)
+func ImageRefStr(imageRegistryAddress string, imageName string, imageTag string) string {
+	return fmt.Sprintf("%s/%s/%s:%s", imageRegistryAddress, ImagePrefix(), imageName, imageTag)
 }
