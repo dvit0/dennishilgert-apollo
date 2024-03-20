@@ -54,16 +54,15 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 	}
 
 	log.Infof("starting api server on port %d", a.port)
-
-	s := grpc.NewServer()
-	fleet.RegisterFleetManagerServer(s, a)
+	server := grpc.NewServer()
+	fleet.RegisterFleetManagerServer(server, a)
 
 	healthServer := health.NewHealthServer(healthStatusProvider, log)
-	healthServer.Register(s)
+	healthServer.Register(server)
 
-	lis, err := net.Listen("tcp", ":"+fmt.Sprint(a.port))
-	if err != nil {
-		return fmt.Errorf("error while starting tcp listener: %w", err)
+	lis, lErr := net.Listen("tcp", ":"+fmt.Sprint(a.port))
+	if lErr != nil {
+		return fmt.Errorf("error while starting tcp listener: %w", lErr)
 	}
 	// close the ready channel to signalize that the api server is ready
 	close(a.readyCh)
@@ -72,28 +71,32 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 	go func() {
 		defer close(errCh) // ensure channel is closed to avoid goroutine leak
 
-		if err := s.Serve(lis); err != nil {
+		if err := server.Serve(lis); err != nil {
 			errCh <- fmt.Errorf("error while serving api server: %w", err)
 			return
 		}
 		errCh <- nil
 	}()
 
-	// block until the context is done
-	<-ctx.Done()
-
-	log.Info("shutting down api server")
-	s.GracefulStop()
-	err = <-errCh
-	if err != nil {
-		return err
-	}
-	err = lis.Close()
-	if err != nil && !errors.Is(err, net.ErrClosed) {
-		return fmt.Errorf("error while closing api server listener: %w", err)
+	// block until the context is done or an error occurs
+	var serveErr error
+	select {
+	case <-ctx.Done():
+		log.Info("shutting down api server")
+	case err := <-errCh: // Handle errors that might have occurred during Serve
+		if err != nil {
+			serveErr = err
+			log.Errorf("error while listening for requests: %v", err)
+		}
 	}
 
-	return nil
+	// perform graceful shutdown and close the listener regardless of the select outcome
+	server.GracefulStop()
+	if cErr := lis.Close(); cErr != nil && !errors.Is(cErr, net.ErrClosed) && serveErr == nil {
+		return fmt.Errorf("error while closing api server listener: %w", cErr)
+	}
+
+	return serveErr
 }
 
 // Ready waits until the api server is ready or the context is cancelled due to timeout.
