@@ -16,19 +16,19 @@ import (
 var log = logger.NewLogger("apollo.manager.preparer")
 
 type Options struct {
-	DataPath               string
-	DockerImageRegistryUrl string
+	DataPath             string
+	ImageRegistryAddress string
 }
 
 type RunnerPreparer struct {
-	dataPath               string
-	dockerImageRegistryUrl string
+	dataPath             string
+	imageRegistryAddress string
 }
 
 func NewRunnerPreparer(opts Options) *RunnerPreparer {
 	return &RunnerPreparer{
-		dataPath:               opts.DataPath,
-		dockerImageRegistryUrl: opts.DockerImageRegistryUrl,
+		dataPath:             opts.DataPath,
+		imageRegistryAddress: opts.ImageRegistryAddress,
 	}
 }
 
@@ -75,8 +75,8 @@ func (r *RunnerPreparer) InitializeFunction(ctx context.Context, request *fleet.
 		return err
 	}
 
-	refStrRootFs := naming.ImageRefStr(naming.ImageNameRootFs(request.FunctionUuid), request.RootfsImageTag)
-	refStrCode := naming.ImageRefStr(naming.ImageNameCode(request.FunctionUuid), request.CodeImageTag)
+	refStrRootFs := naming.ImageRefStr(r.imageRegistryAddress, naming.ImageNameRootFs(request.FunctionUuid), request.RootfsImageTag)
+	refStrCode := naming.ImageRefStr(r.imageRegistryAddress, naming.ImageNameCode(request.FunctionUuid), request.CodeImageTag)
 
 	log.Infof("pulling rootfs image: %s", refStrRootFs)
 	if err := container.ImagePull(ctx, dockerClient, log, refStrRootFs); err != nil {
@@ -85,7 +85,7 @@ func (r *RunnerPreparer) InitializeFunction(ctx context.Context, request *fleet.
 	}
 
 	log.Infof("exporting rootfs image: %s", refStrRootFs)
-	if err := container.ImageExport(ctx, dockerClient, log, path, refStrRootFs); err != nil {
+	if err := container.ImageExport(ctx, dockerClient, log, path, refStrRootFs, strings.Join([]string{request.FunctionUuid, "rootfs.ext4"}, "-")); err != nil {
 		return err
 	}
 
@@ -95,7 +95,7 @@ func (r *RunnerPreparer) InitializeFunction(ctx context.Context, request *fleet.
 	}
 
 	log.Infof("exporting code image: %s", refStrCode)
-	if err := container.ImageExport(ctx, dockerClient, log, path, refStrCode); err != nil {
+	if err := container.ImageExport(ctx, dockerClient, log, path, refStrCode, strings.Join([]string{request.FunctionUuid, "code.ext4"}, "-")); err != nil {
 		return err
 	}
 
