@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/api"
+	"github.com/dennishilgert/apollo/internal/app/fleet/messaging"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
@@ -17,13 +18,15 @@ import (
 var log = logger.NewLogger("apollo.manager")
 
 type Options struct {
-	ApiPort               int
-	DataPath              string
-	FirecrackerBinaryPath string
-	ImageRegistryAddress  string
-	WatchdogCheckInterval time.Duration
-	WatchdogWorkerCount   int
-	AgentApiPort          int
+	ApiPort                   int
+	AgentApiPort              int
+	DataPath                  string
+	FirecrackerBinaryPath     string
+	ImageRegistryAddress      string
+	MessagingBootstrapServers string
+	MessagingWorkerCount      int
+	WatchdogCheckInterval     time.Duration
+	WatchdogWorkerCount       int
 }
 
 type Manager interface {
@@ -31,18 +34,19 @@ type Manager interface {
 }
 
 type manager struct {
-	runnerOperator operator.Operator
-	runnerPreparer *preparer.RunnerPreparer
-	apiServer      api.Server
+	runnerOperator   operator.RunnerOperator
+	runnerPreparer   preparer.RunnerPreparer
+	apiServer        api.Server
+	messagingService messaging.MessagingService
 }
 
 func NewManager(opts Options) (Manager, error) {
 	runnerOperator, err := operator.NewRunnerOperator(operator.Options{
+		AgentApiPort:          opts.AgentApiPort,
 		OsArch:                utils.DetectArchitecture(),
 		FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
 		WatchdogCheckInterval: opts.WatchdogCheckInterval,
 		WatchdogWorkerCount:   opts.WatchdogWorkerCount,
-		AgentApiPort:          opts.AgentApiPort,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error while creating runner operator: %v", err)
@@ -58,12 +62,25 @@ func NewManager(opts Options) (Manager, error) {
 		runnerPreparer,
 		api.Options{
 			Port: opts.ApiPort,
-		})
+		},
+	)
+
+	messagingService, err := messaging.NewMessagingService(
+		runnerPreparer,
+		messaging.Options{
+			BootstrapServers: opts.MessagingBootstrapServers,
+			WorkerCount:      opts.MessagingWorkerCount,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating messaging service: %v", err)
+	}
 
 	return &manager{
-		runnerOperator: runnerOperator,
-		runnerPreparer: runnerPreparer,
-		apiServer:      apiServer,
+		runnerOperator:   runnerOperator,
+		runnerPreparer:   runnerPreparer,
+		apiServer:        apiServer,
+		messagingService: messagingService,
 	}, nil
 }
 
@@ -71,7 +88,7 @@ func (m *manager) Run(ctx context.Context) error {
 	log.Info("apollo manager is starting")
 
 	healthStatusProvider := health.NewHealthStatusProvider(health.ProviderOptions{
-		Targets: 1,
+		Targets: 2,
 	})
 
 	runner := runner.NewRunnerManager(
@@ -97,6 +114,10 @@ func (m *manager) Run(ctx context.Context) error {
 			if err := m.apiServer.Run(ctx, healthStatusProvider); err != nil {
 				return fmt.Errorf("failed to start api server: %v", err)
 			}
+			return nil
+		},
+		func(ctx context.Context) error {
+
 			return nil
 		},
 		func(ctx context.Context) error {

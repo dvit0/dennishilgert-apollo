@@ -30,15 +30,15 @@ type Server interface {
 type apiServer struct {
 	fleet.UnimplementedFleetManagerServer
 
-	runnerOperator operator.Operator
-	runnerPreparer *preparer.RunnerPreparer
+	runnerOperator operator.RunnerOperator
+	runnerPreparer preparer.RunnerPreparer
 	port           int
 	readyCh        chan struct{}
 	running        atomic.Bool
 }
 
 // NewApiServer creates a new Server.
-func NewApiServer(runnerOperator operator.Operator, runnerPreparer *preparer.RunnerPreparer, opts Options) Server {
+func NewApiServer(runnerOperator operator.RunnerOperator, runnerPreparer preparer.RunnerPreparer, opts Options) Server {
 	return &apiServer{
 		runnerOperator: runnerOperator,
 		runnerPreparer: runnerPreparer,

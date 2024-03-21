@@ -42,21 +42,26 @@ func (t *Task[T]) Execute(ctx context.Context) {
 	}
 }
 
-type WorkerManager struct {
+type WorkerManager interface {
+	Run(ctx context.Context) error
+	Add(task TaskExecutor)
+}
+
+type workerManager struct {
 	workerCount int
 	taskCh      chan TaskExecutor
 }
 
 // NewWorkerManager create a new WorkerManager.
-func NewWorkerManager(workerCount int) *WorkerManager {
-	return &WorkerManager{
+func NewWorkerManager(workerCount int) WorkerManager {
+	return &workerManager{
 		workerCount: workerCount,
 		taskCh:      make(chan TaskExecutor),
 	}
 }
 
 // Run runs a specified number of workers.
-func (w *WorkerManager) Run(ctx context.Context) error {
+func (w *workerManager) Run(ctx context.Context) error {
 	for i := 0; i < w.workerCount; i++ {
 		// run each worker in its own goroutine
 		go w.worker(ctx)
@@ -70,12 +75,12 @@ func (w *WorkerManager) Run(ctx context.Context) error {
 }
 
 // Add adds a task to the task channel.
-func (w *WorkerManager) Add(task TaskExecutor) {
+func (w *workerManager) Add(task TaskExecutor) {
 	w.taskCh <- task
 }
 
 // worker starts a
-func (w *WorkerManager) worker(parentCtx context.Context) {
+func (w *workerManager) worker(parentCtx context.Context) {
 	for {
 		select {
 		case <-parentCtx.Done():

@@ -14,19 +14,19 @@ type WatchdogOptions struct {
 	WorkerCount   int
 }
 
-type Watchdog interface {
+type RunnerPoolWatchdog interface {
 	Run(ctx context.Context) error
 }
 
 type runnerPoolWatchdog struct {
-	runnerPool    Pool
-	worker        *worker.WorkerManager
+	runnerPool    RunnerPool
+	worker        worker.WorkerManager
 	checkInterval time.Duration
 	errCh         chan error
 }
 
 // NewRunnerPoolWatchdog create a new Watchdog.
-func NewRunnerPoolWatchdog(runnerPool Pool, opts WatchdogOptions) Watchdog {
+func NewRunnerPoolWatchdog(runnerPool RunnerPool, opts WatchdogOptions) RunnerPoolWatchdog {
 	return &runnerPoolWatchdog{
 		runnerPool:    runnerPool,
 		worker:        worker.NewWorkerManager(opts.WorkerCount),

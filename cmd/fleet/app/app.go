@@ -28,13 +28,15 @@ func Run() {
 
 	ctx := signals.Context()
 	manager, err := fleet.NewManager(fleet.Options{
-		ApiPort:               cfg.ApiPort,
-		DataPath:              cfg.DataPath,
-		FirecrackerBinaryPath: cfg.FirecrackerBinaryPath,
-		ImageRegistryAddress:  cfg.ImageRegistryAddress,
-		WatchdogCheckInterval: time.Duration(cfg.WatchdogCheckInterval) * time.Second,
-		WatchdogWorkerCount:   cfg.WatchdogWorkerCount,
-		AgentApiPort:          cfg.AgentApiPort,
+		ApiPort:                   cfg.ApiPort,
+		AgentApiPort:              cfg.AgentApiPort,
+		DataPath:                  cfg.DataPath,
+		FirecrackerBinaryPath:     cfg.FirecrackerBinaryPath,
+		ImageRegistryAddress:      cfg.ImageRegistryAddress,
+		MessagingBootstrapServers: cfg.MessagingBootstrapServers,
+		MessagingWorkerCount:      cfg.MessagingWorkerCount,
+		WatchdogCheckInterval:     time.Duration(cfg.WatchdogCheckInterval) * time.Second,
+		WatchdogWorkerCount:       cfg.WatchdogWorkerCount,
 	})
 	if err != nil {
 		log.Fatalf("error while creating manager: %v", err)

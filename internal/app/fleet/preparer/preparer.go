@@ -20,19 +20,24 @@ type Options struct {
 	ImageRegistryAddress string
 }
 
-type RunnerPreparer struct {
+type RunnerPreparer interface {
+	PrepareDataDir() error
+	InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error
+}
+
+type runnerPreparer struct {
 	dataPath             string
 	imageRegistryAddress string
 }
 
-func NewRunnerPreparer(opts Options) *RunnerPreparer {
-	return &RunnerPreparer{
+func NewRunnerPreparer(opts Options) RunnerPreparer {
+	return &runnerPreparer{
 		dataPath:             opts.DataPath,
 		imageRegistryAddress: opts.ImageRegistryAddress,
 	}
 }
 
-func (r *RunnerPreparer) PrepareDataDir() error {
+func (r *runnerPreparer) PrepareDataDir() error {
 	exists, fileInfo := utils.FileExists(r.dataPath)
 	if !exists {
 		if err := os.MkdirAll(r.dataPath, 0777); err != nil {
@@ -47,7 +52,7 @@ func (r *RunnerPreparer) PrepareDataDir() error {
 	return nil
 }
 
-func (r *RunnerPreparer) InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error {
+func (r *runnerPreparer) InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error {
 	path := strings.Join([]string{r.dataPath, request.FunctionUuid}, string(os.PathSeparator))
 	log.Infof("initializing function at: %s", path)
 

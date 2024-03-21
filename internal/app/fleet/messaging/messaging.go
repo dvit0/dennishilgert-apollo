@@ -5,7 +5,10 @@ import (
 	"fmt"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/handler"
+	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
+	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
 	"github.com/dennishilgert/apollo/pkg/logger"
 )
 
@@ -13,17 +16,21 @@ var log = logger.NewLogger("apollo.manager.messaging")
 
 type Options struct {
 	BootstrapServers string
+	WorkerCount      int
 }
 
-type Service interface {
+type MessagingService interface {
 	Start(ctx context.Context) error
 }
 
 type messagingService struct {
-	consumer *kafka.Consumer
+	runnerPreparer preparer.RunnerPreparer
+	worker         worker.WorkerManager
+	consumer       *kafka.Consumer
+	handlers       map[string]func(msg *kafka.Message)
 }
 
-func NewMessagingService(opts Options) (Service, error) {
+func NewMessagingService(runnerPreparer preparer.RunnerPreparer, opts Options) (MessagingService, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,
 		"group.id":          "fleet_manager_group",
@@ -33,8 +40,14 @@ func NewMessagingService(opts Options) (Service, error) {
 		return nil, fmt.Errorf("failed to create messaging consumer: %v", err)
 	}
 
+	messagingHandler := handler.NewMessagingHandler(runnerPreparer)
+	messagingHandler.RegisterAll()
+
 	return &messagingService{
-		consumer: consumer,
+		runnerPreparer: runnerPreparer,
+		worker:         worker.NewWorkerManager(opts.WorkerCount),
+		consumer:       consumer,
+		handlers:       messagingHandler.Handlers(),
 	}, nil
 }
 
@@ -48,26 +61,31 @@ func (m *messagingService) Start(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		defer close(errCh) // ensure channel is closed to avoid goroutine leak
+		if err := m.worker.Run(ctx); err != nil {
+			errCh <- fmt.Errorf("failed to run worker manager: %v", err)
+		}
+	}()
+
+	go func() {
+		defer close(errCh) // Ensure channel is closed to avoid goroutine leak.
 
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug("stop listening for messages")
-				errCh <- nil // signal no error on graceful shutdown
+				errCh <- nil // Signal no error on graceful shutdown.
 				return
 			default:
-				// Poll for a message
+				// Poll for a message.
 				msg, err := m.consumer.ReadMessage(-1)
 				if err != nil {
 					switch errType := err.(type) {
 					case kafka.Error:
-						// Kafka error that isn't a fatal error
 						if errType.IsFatal() {
 							errCh <- err
 							return
 						} else {
-							// log non fatal kafka errors and continue
+							// Log non fatal kafka errors and continue.
 							log.Warnf("kafka error while reading message: %v", err)
 							continue
 						}
@@ -77,13 +95,25 @@ func (m *messagingService) Start(ctx context.Context) error {
 					}
 				}
 
-				// handle received message
-				log.Infof("received message on %s: %s", msg.TopicPartition, string(msg.Value))
+				// Handle received message.
+				handler := m.handlers[*msg.TopicPartition.Topic]
+				if handler == nil {
+					errCh <- fmt.Errorf("failed to find handler for topic: %s", *msg.TopicPartition.Topic)
+					return
+				}
+
+				// Executing a task resulting from a message can take a lot of computing time (like initializing a function).
+				// To avoid blocking the receive routine, each message is handled by a worker.
+				task := worker.NewTask[struct{}](func(ctx context.Context) (struct{}, error) {
+					handler(msg)
+					return struct{}{}, nil
+				})
+				m.worker.Add(task)
 			}
 		}
 	}()
 
-	// block until the context is done or an error occurs
+	// Block until the context is done or an error occurs.
 	var serveErr error
 	select {
 	case <-ctx.Done():

@@ -12,24 +12,29 @@ var ErrManagerAlreadyStarted = errors.New("runner manager already started")
 // Runner is a function that runs a task.
 type Runner func(ctx context.Context) error
 
+type RunnerManager interface {
+	Add(runner ...Runner) error
+	Run(ctx context.Context) error
+}
+
 // RunnerManager is a manager for runners. It runs all runners in parallel and
 // waits for all runners to finish. If any runner returns, the RunnerManager
 // will stop all other runners and return any error.
-type RunnerManager struct {
+type runnerManager struct {
 	runners []Runner
 	lock    sync.Mutex
 	running atomic.Bool
 }
 
 // NewRunnerManager creates a new RunnerManager.
-func NewRunnerManager(runners ...Runner) *RunnerManager {
-	return &RunnerManager{
+func NewRunnerManager(runners ...Runner) RunnerManager {
+	return &runnerManager{
 		runners: runners,
 	}
 }
 
 // Add adds a new runner to the RunnerManager.
-func (r *RunnerManager) Add(runner ...Runner) error {
+func (r *runnerManager) Add(runner ...Runner) error {
 	if r.running.Load() {
 		return ErrManagerAlreadyStarted
 	}
@@ -42,7 +47,7 @@ func (r *RunnerManager) Add(runner ...Runner) error {
 // Run runs all runners in parallel and waits for all runners to finish. If any
 // runner returns, the RunnerManager will stop all other runners and return any
 // error.
-func (r *RunnerManager) Run(ctx context.Context) error {
+func (r *runnerManager) Run(ctx context.Context) error {
 	if !r.running.CompareAndSwap(false, true) {
 		return ErrManagerAlreadyStarted
 	}

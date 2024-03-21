@@ -16,28 +16,28 @@ import (
 var log = logger.NewLogger("apollo.manager.operator")
 
 type Options struct {
+	AgentApiPort          int
 	OsArch                utils.OsArch
 	FirecrackerBinaryPath string
 	WatchdogCheckInterval time.Duration
 	WatchdogWorkerCount   int
-	AgentApiPort          int
 }
 
-type Operator interface {
+type RunnerOperator interface {
 	Init(ctx context.Context) error
 	ExecuteFunction(ctx context.Context, request *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error)
 }
 
 type runnerOperator struct {
-	runnerPool            pool.Pool
-	runnerPoolWatchdog    pool.Watchdog
+	runnerPool            pool.RunnerPool
+	runnerPoolWatchdog    pool.RunnerPoolWatchdog
 	osArch                utils.OsArch
 	firecrackerBinaryPath string
 	agentApiPort          int
 }
 
 // NewRunnerOperator creates a new Operator.
-func NewRunnerOperator(opts Options) (Operator, error) {
+func NewRunnerOperator(opts Options) (RunnerOperator, error) {
 	runnerPool := pool.NewRunnerPool()
 	runnerPoolWatchdog := pool.NewRunnerPoolWatchdog(runnerPool, pool.WatchdogOptions{
 		CheckInterval: opts.WatchdogCheckInterval,

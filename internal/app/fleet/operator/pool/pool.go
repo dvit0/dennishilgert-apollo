@@ -11,7 +11,7 @@ import (
 
 var log = logger.NewLogger("apollo.manager.pool")
 
-type Pool interface {
+type RunnerPool interface {
 	Pool() *map[string]map[string]*runner.RunnerInstance
 	Lock()
 	Unlock()
@@ -28,7 +28,7 @@ type runnerPool struct {
 }
 
 // NewRunnerPool returns a new instance of runnerPool.
-func NewRunnerPool() Pool {
+func NewRunnerPool() RunnerPool {
 	return &runnerPool{
 		pool: make(map[string]map[string]*runner.RunnerInstance),
 	}
