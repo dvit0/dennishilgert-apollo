@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/dennishilgert/apollo/cmd/cli/cmd/image"
+	"github.com/dennishilgert/apollo/cmd/cli/cmd/messaging"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,7 @@ func init() {
 	initFlags()
 
 	rootCommand.AddCommand(image.Command)
+	rootCommand.AddCommand(messaging.Command)
 }
 
 func Run() {
