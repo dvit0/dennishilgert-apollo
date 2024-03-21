@@ -29,18 +29,18 @@ type Options struct {
 	WatchdogWorkerCount       int
 }
 
-type Manager interface {
+type FleetManager interface {
 	Run(ctx context.Context) error
 }
 
-type manager struct {
+type fleetManager struct {
 	runnerOperator   operator.RunnerOperator
 	runnerPreparer   preparer.RunnerPreparer
 	apiServer        api.Server
 	messagingService messaging.MessagingService
 }
 
-func NewManager(opts Options) (Manager, error) {
+func NewManager(opts Options) (FleetManager, error) {
 	runnerOperator, err := operator.NewRunnerOperator(operator.Options{
 		AgentApiPort:          opts.AgentApiPort,
 		OsArch:                utils.DetectArchitecture(),
@@ -76,7 +76,7 @@ func NewManager(opts Options) (Manager, error) {
 		return nil, fmt.Errorf("error while creating messaging service: %v", err)
 	}
 
-	return &manager{
+	return &fleetManager{
 		runnerOperator:   runnerOperator,
 		runnerPreparer:   runnerPreparer,
 		apiServer:        apiServer,
@@ -84,7 +84,7 @@ func NewManager(opts Options) (Manager, error) {
 	}, nil
 }
 
-func (m *manager) Run(ctx context.Context) error {
+func (m *fleetManager) Run(ctx context.Context) error {
 	log.Info("apollo manager is starting")
 
 	healthStatusProvider := health.NewHealthStatusProvider(health.ProviderOptions{
@@ -117,7 +117,10 @@ func (m *manager) Run(ctx context.Context) error {
 			return nil
 		},
 		func(ctx context.Context) error {
-
+			log.Info("starting messaging service")
+			if err := m.messagingService.Start(ctx); err != nil {
+				return fmt.Errorf("failed to start messaging service: %v", err)
+			}
 			return nil
 		},
 		func(ctx context.Context) error {
