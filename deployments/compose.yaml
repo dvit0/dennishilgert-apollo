@@ -41,6 +41,18 @@ services:
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
 
+  minio:
+    container_name: minio
+    image: bitnami/minio:latest
+    volumes:
+      - "minio_data:/bitnami/minio/data"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=root
+      - MINIO_ROOT_PASSWORD=7dbcf34172f78a6719f410a64bdb94fc
+
 volumes:
   image_registry_data:
     driver: local
