@@ -21,7 +21,7 @@ services:
     container_name: image-registry-ui
     image: konradkleine/docker-registry-frontend:v2
     ports:
-      - "8080:80"
+      - "5001:80"
     restart: always
     environment:
       - ENV_DOCKER_REGISTRY_HOST=image-registry
