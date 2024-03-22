@@ -24,7 +24,7 @@ type messagingProducer struct {
 	producer *kafka.Producer
 }
 
-func NewMessagingProducer(opts Options) (MessagingProducer, error) {
+func NewMessagingProducer(ctx context.Context, opts Options) (MessagingProducer, error) {
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,
 	})
@@ -32,6 +32,28 @@ func NewMessagingProducer(opts Options) (MessagingProducer, error) {
 		log.Error("failed to create messaging producer")
 		return nil, err
 	}
+
+	// Start a goroutine to listen for delivery reports.
+	// Handling the delivery reports prevent the producer flush
+	// from reporting the sent messages as not sent.
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case e := <-producer.Events():
+				switch event := e.(type) {
+				case *kafka.Message:
+					if event.TopicPartition.Error != nil {
+						log.Errorf("failed to deliver message: %v", event.TopicPartition.Error)
+					} else {
+						log.Debugf("successfully delivered message to topic %s [%d] at offset %v", *event.TopicPartition.Topic, event.TopicPartition.Partition, event.TopicPartition.Offset)
+					}
+				}
+			}
+		}
+	}()
+
 	return &messagingProducer{
 		producer: producer,
 	}, nil
@@ -54,6 +76,7 @@ func (m *messagingProducer) Publish(ctx context.Context, topic string, message i
 
 func (m *messagingProducer) Close() error {
 	unsentMessages := m.producer.Flush(1000 * 5)
+	m.producer.Close()
 	if unsentMessages > 0 {
 		return fmt.Errorf("failed to flush unsent messages: %d", unsentMessages)
 	}

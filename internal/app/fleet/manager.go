@@ -46,7 +46,7 @@ type fleetManager struct {
 	messagingConsumer consumer.MessagingConsumer
 }
 
-func NewManager(opts Options) (FleetManager, error) {
+func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	runnerOperator, err := operator.NewRunnerOperator(operator.Options{
 		AgentApiPort:          opts.AgentApiPort,
 		OsArch:                utils.DetectArchitecture(),
@@ -75,9 +75,12 @@ func NewManager(opts Options) (FleetManager, error) {
 		},
 	)
 
-	messagingProducer, err := producer.NewMessagingProducer(producer.Options{
-		BootstrapServers: opts.MessagingBootstrapServers,
-	})
+	messagingProducer, err := producer.NewMessagingProducer(
+		ctx,
+		producer.Options{
+			BootstrapServers: opts.MessagingBootstrapServers,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating messaging producer: %v", err)
 	}

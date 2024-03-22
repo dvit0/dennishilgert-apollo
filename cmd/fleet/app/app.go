@@ -27,20 +27,23 @@ func Run() {
 	log.Infof("log level set to: %s", log.LogLevel())
 
 	ctx := signals.Context()
-	manager, err := fleet.NewManager(fleet.Options{
-		ApiPort:                   cfg.ApiPort,
-		AgentApiPort:              cfg.AgentApiPort,
-		DataPath:                  cfg.DataPath,
-		FirecrackerBinaryPath:     cfg.FirecrackerBinaryPath,
-		ImageRegistryAddress:      cfg.ImageRegistryAddress,
-		MessagingBootstrapServers: cfg.MessagingBootstrapServers,
-		MessagingWorkerCount:      cfg.MessagingWorkerCount,
-		StorageEndpoint:           cfg.StorageEndpoint,
-		StorageAccessKeyId:        cfg.StorageAccessKeyId,
-		StorageSecretAccessKey:    cfg.StorageSecretAccessKey,
-		WatchdogCheckInterval:     time.Duration(cfg.WatchdogCheckInterval) * time.Second,
-		WatchdogWorkerCount:       cfg.WatchdogWorkerCount,
-	})
+	manager, err := fleet.NewManager(
+		ctx,
+		fleet.Options{
+			ApiPort:                   cfg.ApiPort,
+			AgentApiPort:              cfg.AgentApiPort,
+			DataPath:                  cfg.DataPath,
+			FirecrackerBinaryPath:     cfg.FirecrackerBinaryPath,
+			ImageRegistryAddress:      cfg.ImageRegistryAddress,
+			MessagingBootstrapServers: cfg.MessagingBootstrapServers,
+			MessagingWorkerCount:      cfg.MessagingWorkerCount,
+			StorageEndpoint:           cfg.StorageEndpoint,
+			StorageAccessKeyId:        cfg.StorageAccessKeyId,
+			StorageSecretAccessKey:    cfg.StorageSecretAccessKey,
+			WatchdogCheckInterval:     time.Duration(cfg.WatchdogCheckInterval) * time.Second,
+			WatchdogWorkerCount:       cfg.WatchdogWorkerCount,
+		},
+	)
 	if err != nil {
 		log.Fatalf("error while creating manager: %v", err)
 	}
