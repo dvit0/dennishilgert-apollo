@@ -1,4 +1,4 @@
-package messaging
+package consumer
 
 import (
 	"context"
@@ -13,38 +13,39 @@ import (
 	"github.com/dennishilgert/apollo/pkg/logger"
 )
 
-var log = logger.NewLogger("apollo.manager.messaging")
+var log = logger.NewLogger("apollo.manager.messaging.consumer")
 
 type Options struct {
 	BootstrapServers string
 	WorkerCount      int
 }
 
-type MessagingService interface {
+type MessagingConsumer interface {
 	Start(ctx context.Context) error
 }
 
-type messagingService struct {
+type messagingConsumer struct {
 	runnerPreparer preparer.RunnerPreparer
 	worker         worker.WorkerManager
 	consumer       *kafka.Consumer
 	handlers       map[string]func(msg *kafka.Message)
 }
 
-func NewMessagingService(runnerPreparer preparer.RunnerPreparer, opts Options) (MessagingService, error) {
+func NewMessagingConsumer(runnerPreparer preparer.RunnerPreparer, opts Options) (MessagingConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,
 		"group.id":          "fleet_manager_group",
 		"auto.offset.reset": "earliest",
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create messaging consumer: %v", err)
+		log.Error("failed to create messaging consumer")
+		return nil, err
 	}
 
 	messagingHandler := handler.NewMessagingHandler(runnerPreparer)
 	messagingHandler.RegisterAll()
 
-	return &messagingService{
+	return &messagingConsumer{
 		runnerPreparer: runnerPreparer,
 		worker:         worker.NewWorkerManager(opts.WorkerCount),
 		consumer:       consumer,
@@ -52,18 +53,20 @@ func NewMessagingService(runnerPreparer preparer.RunnerPreparer, opts Options) (
 	}, nil
 }
 
-func (m *messagingService) Start(ctx context.Context) error {
+func (m *messagingConsumer) Start(ctx context.Context) error {
 	subscribedTopics := []string{
-		naming.MessagingFunctionInitializationTopic,
+		naming.MessagingFunctionStatusUpdateTopic,
 	}
-	if sErr := m.consumer.SubscribeTopics(subscribedTopics, nil); sErr != nil {
-		return fmt.Errorf("failed to subscribe to topics: %v", sErr)
+	if err := m.consumer.SubscribeTopics(subscribedTopics, nil); err != nil {
+		log.Error("failed to subscribe to topics")
+		return err
 	}
 
 	runner := runner.NewRunnerManager(
 		func(ctx context.Context) error {
 			if err := m.worker.Run(ctx); err != nil {
-				return fmt.Errorf("failed to run worker manager: %v", err)
+				log.Error("failed to run worker manager")
+				return err
 			}
 			return nil
 		},
@@ -77,8 +80,7 @@ func (m *messagingService) Start(ctx context.Context) error {
 			for {
 				select {
 				case <-ctx.Done():
-					// context cancelled, return the reason
-					log.Info("stopping messaging service")
+					log.Info("shutting down messaging consumer")
 					return ctx.Err()
 				default:
 					// Poll for a message.
@@ -102,14 +104,16 @@ func (m *messagingService) Start(ctx context.Context) error {
 						log.Debugf("no more kafka messages to read at the moment")
 						// There are no more messages to read at the moment.
 					case kafka.Error:
-						return fmt.Errorf("error while polling for kafka messages: %v", event)
+						log.Error("error while polling for kafka messages")
+						return event
 					default:
-						log.Debugf("ignored kafka event: %v", e)
+						if e != nil {
+							log.Debugf("ignored kafka event: %v", e)
+						}
 					}
 				}
 			}
 		},
 	)
-
 	return runner.Run(ctx)
 }

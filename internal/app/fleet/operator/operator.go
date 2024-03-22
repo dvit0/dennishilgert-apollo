@@ -59,7 +59,7 @@ func (v *runnerOperator) Init(ctx context.Context) error {
 		func(ctx context.Context) error {
 			log.Info("starting runner pool watchdog")
 			if err := v.runnerPoolWatchdog.Run(ctx); err != nil {
-				log.Errorf("error while starting runner pool watchdog: %v", err)
+				log.Error("error while starting runner pool watchdog")
 				return err
 			}
 			return nil

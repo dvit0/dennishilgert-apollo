@@ -35,6 +35,9 @@ func Run() {
 		ImageRegistryAddress:      cfg.ImageRegistryAddress,
 		MessagingBootstrapServers: cfg.MessagingBootstrapServers,
 		MessagingWorkerCount:      cfg.MessagingWorkerCount,
+		StorageEndpoint:           cfg.StorageEndpoint,
+		StorageAccessKeyId:        cfg.StorageAccessKeyId,
+		StorageSecretAccessKey:    cfg.StorageSecretAccessKey,
 		WatchdogCheckInterval:     time.Duration(cfg.WatchdogCheckInterval) * time.Second,
 		WatchdogWorkerCount:       cfg.WatchdogWorkerCount,
 	})

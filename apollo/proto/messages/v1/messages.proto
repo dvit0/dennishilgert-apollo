@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package apollo.proto.messages.v1;
+
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/messages/v1;messages";
+
+message FunctionInitialized {
+  string function_uuid = 1;
+  string worker_uuid = 2;
+}
+
+message FunctionInitializationFailed {
+  string function_uuid = 1;
+  string worker_uuid = 2;
+  string reason = 3;
+}

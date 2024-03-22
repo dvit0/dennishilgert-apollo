@@ -96,7 +96,7 @@ func (m *RunnerInstance) CreateAndStart(ctx context.Context) error {
 
 	log.Debugf("validating machine configuration for machine with id: %s", m.Cfg.RunnerUuid)
 	if err := validate(m.Cfg); err != nil {
-		log.Errorf("failed to validate machine configuration: %v", err)
+		log.Error("failed to validate machine configuration")
 		return err
 	}
 	fcCfg := firecrackerConfig(*m.Cfg)
@@ -120,12 +120,12 @@ func (m *RunnerInstance) CreateAndStart(ctx context.Context) error {
 	log.Debugf("creating new firecracker machine with id: %s", fcCfg.VMID)
 	machine, err := firecracker.NewMachine(m.Ctx, fcCfg, machineOpts...)
 	if err != nil {
-		log.Errorf("failed to create a new firecracker machine: %v", err)
+		log.Error("failed to create a new firecracker machine")
 		return err
 	}
 	log.Debugf("starting firecracker machine with id: %s", fcCfg.VMID)
 	if err := machine.Start(m.Ctx); err != nil {
-		log.Errorf("failed to start firecracker machine: %v", err)
+		log.Error("failed to start firecracker machine")
 		return err
 	}
 	m.Machine = machine
@@ -164,7 +164,7 @@ func (m *RunnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
 			log.Debugf("force stopping runner: %s", m.Cfg.RunnerUuid)
 
 			if err := m.Machine.StopVMM(); err != nil {
-				log.Errorf("failed to force stop the runner: %v", err)
+				log.Error("failed to force stop the runner")
 				return err
 			} else {
 				log.Warnf("runner has been stopped forcefully: %s", m.Cfg.RunnerUuid)

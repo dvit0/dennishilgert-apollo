@@ -51,7 +51,6 @@ func (p *runnerPoolWatchdog) Run(ctx context.Context) error {
 			for {
 				select {
 				case <-ctx.Done():
-					// context cancelled, return the reason
 					log.Info("shutting down pool watchdog")
 					return ctx.Err()
 				case <-ticker.C:
@@ -66,7 +65,6 @@ func (p *runnerPoolWatchdog) Run(ctx context.Context) error {
 			}
 		},
 	)
-
 	return runner.Run(ctx)
 }
 

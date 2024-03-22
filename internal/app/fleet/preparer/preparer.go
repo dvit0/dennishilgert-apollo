@@ -10,6 +10,7 @@ import (
 	"github.com/dennishilgert/apollo/pkg/container"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
+	"github.com/dennishilgert/apollo/pkg/storage"
 	"github.com/dennishilgert/apollo/pkg/utils"
 )
 
@@ -26,12 +27,14 @@ type RunnerPreparer interface {
 }
 
 type runnerPreparer struct {
+	storageService       storage.StorageService
 	dataPath             string
 	imageRegistryAddress string
 }
 
-func NewRunnerPreparer(opts Options) RunnerPreparer {
+func NewRunnerPreparer(storageService storage.StorageService, opts Options) RunnerPreparer {
 	return &runnerPreparer{
+		storageService:       storageService,
 		dataPath:             opts.DataPath,
 		imageRegistryAddress: opts.ImageRegistryAddress,
 	}
@@ -93,8 +96,8 @@ func (r *runnerPreparer) PrepareFunction(ctx context.Context, request *fleet.Pre
 }
 
 func (r *runnerPreparer) prepareKernel(ctx context.Context, kernelName string, kernelVersion string) error {
-	kernel := strings.Join([]string{kernelName, kernelVersion}, "_")
-	path := strings.Join([]string{r.dataPath, "kernels", kernelName}, string(os.PathSeparator))
+	kernel := strings.Join([]string{kernelName, kernelVersion}, "-")
+	path := strings.Join([]string{r.dataPath, "kernels", kernel}, string(os.PathSeparator))
 
 	log.Debugf("check if kernel is already prepared")
 	exists, _ := utils.FileExists(strings.Join([]string{path, kernel}, string(os.PathSeparator)))
@@ -107,15 +110,15 @@ func (r *runnerPreparer) prepareKernel(ctx context.Context, kernelName string, k
 	if err := prepareTargetDirectory(path); err != nil {
 		return err
 	}
-
-	// download kernel from object storage
-	log.Warn("kernel download not implemented yet")
+	if err := r.storageService.DownloadObject(ctx, naming.StorageKernelBucketName, kernel, strings.Join([]string{path, kernel}, string(os.PathSeparator))); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func (r *runnerPreparer) prepareRuntime(ctx context.Context, runtimeName string, runtimeVersion string) error {
-	runtime := strings.Join([]string{runtimeName, runtimeVersion}, "_")
+	runtime := strings.Join([]string{runtimeName, runtimeVersion}, "-")
 	path := strings.Join([]string{r.dataPath, "runtimes", runtime}, string(os.PathSeparator))
 	filename := strings.Join([]string{runtime, "ext4"}, ".")
 

@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -71,7 +72,12 @@ func (w *workerManager) Run(ctx context.Context) error {
 	<-ctx.Done()
 
 	close(w.taskCh)
-	return ctx.Err()
+
+	err := ctx.Err()
+	if errors.Is(err, context.Canceled) {
+		return nil
+	}
+	return err
 }
 
 // Add adds a task to the task channel.

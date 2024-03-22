@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/pkg/proto/messages/v1"
 )
 
 var log = logger.NewLogger("apollo.manager.messaging.handler")
@@ -32,8 +34,12 @@ func NewMessagingHandler(runnerPreparer preparer.RunnerPreparer) MessagingHandle
 // RegisterAll registrates all handlers for the subscribed topics in the handler map.
 func (m *messagingHandler) RegisterAll() {
 	// Handling MessagingFunctionInitializationTopic messages
-	m.add(naming.MessagingFunctionInitializationTopic, func(msg *kafka.Message) {
-		log.Infof("NOT IMPLEMENTED: handling message in topic: %s - value: %v", *msg.TopicPartition.Topic, string(msg.Value))
+	m.add(naming.MessagingFunctionStatusUpdateTopic, func(msg *kafka.Message) {
+		var message messages.FunctionInitialized
+		if err := json.Unmarshal(msg.Value, &message); err != nil {
+			log.Errorf("failed to unmarshal kafka message: %v", err)
+		}
+		log.Infof("NOT IMPLEMENTED: handling message in topic: %s - value: %v", *msg.TopicPartition.Topic, &message)
 	})
 }
 
