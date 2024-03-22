@@ -28,7 +28,9 @@ init-proto:
 define genProtoc
 .PHONY: gen-proto-$(notdir $(1))
 gen-proto-$(notdir $(1)):
-	$(PROTOC) --go_out=. --go_opt=module=$(PROTO_PREFIX) --go-grpc_out=. --go-grpc_opt=require_unimplemented_servers=false,module=$(PROTO_PREFIX) $(1)/v1/*.proto
+	$(PROTOC) --go_out=. --go_opt=module=$(PROTO_PREFIX) \
+		--go-grpc_out=. --go-grpc_opt=require_unimplemented_servers=false,module=$(PROTO_PREFIX) \
+		$(1)/v1/*.proto
 endef
 
 $(foreach ITEM,$(GRPC_PROTOS),$(eval $(call genProtoc,$(ITEM))))
