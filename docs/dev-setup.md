@@ -37,7 +37,7 @@ make init-proto
 
 Add go path to the system's path environment variable
 ```bash
-PATH=/home/user/go:$PATH
+export PATH=/home/user/go/bin:$PATH
 ```
 
 Generate stubs from the .proto files
