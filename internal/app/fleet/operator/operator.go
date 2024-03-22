@@ -25,7 +25,7 @@ type Options struct {
 
 type RunnerOperator interface {
 	Init(ctx context.Context) error
-	ExecuteFunction(ctx context.Context, request *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error)
+	InvokeFunction(ctx context.Context, request *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error)
 }
 
 type runnerOperator struct {
@@ -68,7 +68,7 @@ func (v *runnerOperator) Init(ctx context.Context) error {
 	return runnerManager.Run(ctx)
 }
 
-func (v *runnerOperator) ExecuteFunction(ctx context.Context, request *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error) {
+func (v *runnerOperator) InvokeFunction(ctx context.Context, request *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error) {
 	multiThreading := false
 	if v.osArch == utils.Arch_x86_64 {
 		multiThreading = true
@@ -118,7 +118,7 @@ func (v *runnerOperator) ExecuteFunction(ctx context.Context, request *fleet.Exe
 	// TODO: send logs to logs service via messaging
 	log.Infof("Logs for execution: %s, logs: %v", invokeResponse.EventId, invokeResponse.Logs)
 
-	executeResponse := &fleet.ExecuteFunctionResponse{
+	executeResponse := &fleet.InvokeFunctionResponse{
 		EventId:       invokeResponse.EventId,
 		Status:        invokeResponse.Status,
 		StatusMessage: invokeResponse.StatusMessage,

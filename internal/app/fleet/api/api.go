@@ -109,15 +109,15 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) Initialize(ctx context.Context, in *fleet.InitializeFunctionRequest) (*shared.EmptyResponse, error) {
-	if err := a.runnerPreparer.InitializeFunction(ctx, in); err != nil {
+func (a *apiServer) Prepare(ctx context.Context, req *fleet.PrepareRunnerRequest) (*shared.EmptyResponse, error) {
+	if err := a.runnerPreparer.PrepareFunction(ctx, req); err != nil {
 		return nil, fmt.Errorf("failed to initialize function: %v", err)
 	}
 	return &shared.EmptyResponse{}, nil
 }
 
-func (a *apiServer) Execute(ctx context.Context, in *fleet.ExecuteFunctionRequest) (*fleet.ExecuteFunctionResponse, error) {
-	result, err := a.runnerOperator.ExecuteFunction(ctx, in)
+func (a *apiServer) Invoke(ctx context.Context, req *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error) {
+	result, err := a.runnerOperator.InvokeFunction(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute function: %v", err)
 	}

@@ -22,7 +22,7 @@ type Options struct {
 
 type RunnerPreparer interface {
 	PrepareDataDir() error
-	InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error
+	PrepareFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error
 }
 
 type runnerPreparer struct {
@@ -52,10 +52,104 @@ func (r *runnerPreparer) PrepareDataDir() error {
 	return nil
 }
 
-func (r *runnerPreparer) InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error {
-	path := strings.Join([]string{r.dataPath, request.FunctionUuid}, string(os.PathSeparator))
-	log.Infof("initializing function at: %s", path)
+func (r *runnerPreparer) PrepareFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error {
+	path := strings.Join([]string{r.dataPath, "functions", request.FunctionUuid}, string(os.PathSeparator))
+	filename := strings.Join([]string{request.FunctionUuid, "ext4"}, ".")
 
+	log.Debugf("check if function is already prepared")
+	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
+	if exists {
+		log.Infof("function is already prepared: %s", request.FunctionUuid)
+		return nil
+	}
+	if err := r.prepareKernel(ctx, request.KernelName, request.KernelVersion); err != nil {
+		return err
+	}
+	if err := r.prepareRuntime(ctx, request.RuntimeName, request.RuntimeVersion); err != nil {
+		return err
+	}
+
+	log.Infof("preparing function: %s", request.FunctionUuid)
+	if err := prepareTargetDirectory(path); err != nil {
+		return err
+	}
+	dockerClient, err := container.GetDefaultClient()
+	if err != nil {
+		return err
+	}
+	refString := naming.ImageRefStr(r.imageRegistryAddress, request.FunctionUuid, "latest")
+
+	log.Infof("pulling function image: %s", refString)
+	if err := container.ImagePull(ctx, dockerClient, log, refString); err != nil {
+		log.Errorf("failed to pull function image: %v", err)
+		return err
+	}
+	log.Infof("exporting function image: %s", refString)
+	if err := container.ImageExport(ctx, dockerClient, log, path, refString, filename); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *runnerPreparer) prepareKernel(ctx context.Context, kernelName string, kernelVersion string) error {
+	kernel := strings.Join([]string{kernelName, kernelVersion}, "_")
+	path := strings.Join([]string{r.dataPath, "kernels", kernelName}, string(os.PathSeparator))
+
+	log.Debugf("check if kernel is already prepared")
+	exists, _ := utils.FileExists(strings.Join([]string{path, kernel}, string(os.PathSeparator)))
+	if exists {
+		log.Infof("kernel is already prepared: %s", kernel)
+		return nil
+	}
+
+	log.Infof("preparing kernel: %s", kernel)
+	if err := prepareTargetDirectory(path); err != nil {
+		return err
+	}
+
+	// download kernel from object storage
+	log.Warn("kernel download not implemented yet")
+
+	return nil
+}
+
+func (r *runnerPreparer) prepareRuntime(ctx context.Context, runtimeName string, runtimeVersion string) error {
+	runtime := strings.Join([]string{runtimeName, runtimeVersion}, "_")
+	path := strings.Join([]string{r.dataPath, "runtimes", runtime}, string(os.PathSeparator))
+	filename := strings.Join([]string{runtime, "ext4"}, ".")
+
+	log.Debugf("check if runtime is already prepared")
+	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
+	if exists {
+		log.Infof("runtime is already prepared: %s", runtime)
+		return nil
+	}
+
+	log.Infof("preparing runtime: %s", runtime)
+	if err := prepareTargetDirectory(path); err != nil {
+		return err
+	}
+	dockerClient, err := container.GetDefaultClient()
+	if err != nil {
+		return err
+	}
+	refString := naming.ImageRefStr(r.imageRegistryAddress, runtimeName, runtimeVersion)
+
+	log.Infof("pulling runtime image: %s", refString)
+	if err := container.ImagePull(ctx, dockerClient, log, refString); err != nil {
+		log.Errorf("failed to pull runtime image: %v", err)
+		return err
+	}
+	log.Infof("exporting runtime image: %s", refString)
+	if err := container.ImageExport(ctx, dockerClient, log, path, refString, strings.Join([]string{runtime, "ext4"}, ".")); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func prepareTargetDirectory(path string) error {
 	exists, fileInfo := utils.FileExists(path)
 	if exists {
 		ok, err := utils.IsDirAndWritable(path, fileInfo)
@@ -74,35 +168,5 @@ func (r *runnerPreparer) InitializeFunction(ctx context.Context, request *fleet.
 			return fmt.Errorf("failed to create target directory: %v", err)
 		}
 	}
-
-	dockerClient, err := container.GetDefaultClient()
-	if err != nil {
-		return err
-	}
-
-	refStrRootFs := naming.ImageRefStr(r.imageRegistryAddress, naming.ImageNameRootFs(request.FunctionUuid), request.RootfsImageTag)
-	refStrCode := naming.ImageRefStr(r.imageRegistryAddress, naming.ImageNameCode(request.FunctionUuid), request.CodeImageTag)
-
-	log.Infof("pulling rootfs image: %s", refStrRootFs)
-	if err := container.ImagePull(ctx, dockerClient, log, refStrRootFs); err != nil {
-		log.Errorf("failed to pull rootfs image: %v", err)
-		return err
-	}
-
-	log.Infof("exporting rootfs image: %s", refStrRootFs)
-	if err := container.ImageExport(ctx, dockerClient, log, path, refStrRootFs, strings.Join([]string{request.FunctionUuid, "rootfs.ext4"}, "-")); err != nil {
-		return err
-	}
-
-	log.Infof("pullung code image: %s", refStrCode)
-	if err := container.ImagePull(ctx, dockerClient, log, refStrCode); err != nil {
-		return err
-	}
-
-	log.Infof("exporting code image: %s", refStrCode)
-	if err := container.ImageExport(ctx, dockerClient, log, path, refStrCode, strings.Join([]string{request.FunctionUuid, "code.ext4"}, "-")); err != nil {
-		return err
-	}
-
 	return nil
 }

@@ -8,21 +8,22 @@ import "apollo/proto/shared/v1/shared.proto";
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/fleet/v1;fleet";
 
 service FleetManager {
-  rpc Initialize(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
-  rpc Execute(ExecuteFunctionRequest) returns (ExecuteFunctionResponse) {}
+  rpc Prepare(PrepareRunnerRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc Invoke(InvokeFunctionRequest) returns (InvokeFunctionResponse) {}
 }
 
-message InitializeFunctionRequest {
-  string function_uuid = 1;
-  string rootfs_image_tag = 2;
-  string code_image_tag = 3;
-  string os_kernel = 4;
+message PrepareRunnerRequest {
+  string kernel_name = 1;
+  string kernel_version = 2;
+  string runtime_name = 3;
+  string runtime_version = 4;
+  string function_uuid = 5;
 }
 
-message ExecuteFunctionRequest {
-  RunnerSpecs function = 3;
-  RuntimeSpecs runtime = 4;
-  EventSpecs event = 5; 
+message InvokeFunctionRequest {
+  RunnerSpecs function = 1;
+  RuntimeSpecs runtime = 2;
+  EventSpecs event = 3; 
 }
 
 message RunnerSpecs {
@@ -50,7 +51,7 @@ message EventSpecs {
   google.protobuf.Struct data = 5;
 }
 
-message ExecuteFunctionResponse {
+message InvokeFunctionResponse {
   string event_id = 1;
   int32 status = 2;
   string status_message = 3;
