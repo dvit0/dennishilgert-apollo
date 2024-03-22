@@ -6,7 +6,6 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/handler"
-	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
@@ -25,13 +24,12 @@ type MessagingConsumer interface {
 }
 
 type messagingConsumer struct {
-	runnerPreparer preparer.RunnerPreparer
-	worker         worker.WorkerManager
-	consumer       *kafka.Consumer
-	handlers       map[string]func(msg *kafka.Message)
+	worker   worker.WorkerManager
+	consumer *kafka.Consumer
+	handlers map[string]func(msg *kafka.Message)
 }
 
-func NewMessagingConsumer(runnerPreparer preparer.RunnerPreparer, opts Options) (MessagingConsumer, error) {
+func NewMessagingConsumer(opts Options) (MessagingConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,
 		"group.id":          "fleet_manager_group",
@@ -42,14 +40,13 @@ func NewMessagingConsumer(runnerPreparer preparer.RunnerPreparer, opts Options) 
 		return nil, err
 	}
 
-	messagingHandler := handler.NewMessagingHandler(runnerPreparer)
+	messagingHandler := handler.NewMessagingHandler()
 	messagingHandler.RegisterAll()
 
 	return &messagingConsumer{
-		runnerPreparer: runnerPreparer,
-		worker:         worker.NewWorkerManager(opts.WorkerCount),
-		consumer:       consumer,
-		handlers:       messagingHandler.Handlers(),
+		worker:   worker.NewWorkerManager(opts.WorkerCount),
+		consumer: consumer,
+		handlers: messagingHandler.Handlers(),
 	}, nil
 }
 

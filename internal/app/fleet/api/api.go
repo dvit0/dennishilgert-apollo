@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dennishilgert/apollo/internal/app/fleet/initializer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/producer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
-	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
@@ -35,7 +35,7 @@ type apiServer struct {
 	fleet.UnimplementedFleetManagerServer
 
 	runnerOperator    operator.RunnerOperator
-	runnerPreparer    preparer.RunnerPreparer
+	runnerInitializer initializer.RunnerInitializer
 	messagingProducer producer.MessagingProducer
 	port              int
 	readyCh           chan struct{}
@@ -46,13 +46,13 @@ type apiServer struct {
 // NewApiServer creates a new Server.
 func NewApiServer(
 	runnerOperator operator.RunnerOperator,
-	runnerPreparer preparer.RunnerPreparer,
+	runnerInitializer initializer.RunnerInitializer,
 	messagingProducer producer.MessagingProducer,
 	opts Options,
 ) Server {
 	return &apiServer{
 		runnerOperator:    runnerOperator,
-		runnerPreparer:    runnerPreparer,
+		runnerInitializer: runnerInitializer,
 		messagingProducer: messagingProducer,
 		port:              opts.Port,
 		readyCh:           make(chan struct{}),
@@ -133,7 +133,7 @@ func (a *apiServer) Prepare(ctx context.Context, req *fleet.PrepareRunnerRequest
 		bgCtx, cancel := context.WithTimeout(a.appCtx, time.Minute*10)
 		defer cancel()
 
-		if err := a.runnerPreparer.PrepareFunction(bgCtx, req); err != nil {
+		if err := a.runnerInitializer.InitializeFunction(bgCtx, req); err != nil {
 			log.Errorf("failed to prepare function: %v", err)
 			message := &messages.FunctionInitializationFailed{
 				FunctionUuid: req.FunctionUuid,

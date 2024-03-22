@@ -1,4 +1,4 @@
-package preparer
+package initializer
 
 import (
 	"context"
@@ -14,33 +14,33 @@ import (
 	"github.com/dennishilgert/apollo/pkg/utils"
 )
 
-var log = logger.NewLogger("apollo.manager.preparer")
+var log = logger.NewLogger("apollo.manager.initializer")
 
 type Options struct {
 	DataPath             string
 	ImageRegistryAddress string
 }
 
-type RunnerPreparer interface {
-	PrepareDataDir() error
-	PrepareFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error
+type RunnerInitializer interface {
+	InitializeDataDir() error
+	InitializeFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error
 }
 
-type runnerPreparer struct {
+type runnerInitializer struct {
 	storageService       storage.StorageService
 	dataPath             string
 	imageRegistryAddress string
 }
 
-func NewRunnerPreparer(storageService storage.StorageService, opts Options) RunnerPreparer {
-	return &runnerPreparer{
+func NewRunnerInitializer(storageService storage.StorageService, opts Options) RunnerInitializer {
+	return &runnerInitializer{
 		storageService:       storageService,
 		dataPath:             opts.DataPath,
 		imageRegistryAddress: opts.ImageRegistryAddress,
 	}
 }
 
-func (r *runnerPreparer) PrepareDataDir() error {
+func (r *runnerInitializer) InitializeDataDir() error {
 	exists, fileInfo := utils.FileExists(r.dataPath)
 	if !exists {
 		if err := os.MkdirAll(r.dataPath, 0777); err != nil {
@@ -55,24 +55,24 @@ func (r *runnerPreparer) PrepareDataDir() error {
 	return nil
 }
 
-func (r *runnerPreparer) PrepareFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error {
+func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error {
 	path := strings.Join([]string{r.dataPath, "functions", request.FunctionUuid}, string(os.PathSeparator))
 	filename := strings.Join([]string{request.FunctionUuid, "ext4"}, ".")
 
-	log.Debugf("check if function is already prepared")
+	log.Debugf("check if function is already initialized")
 	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
 	if exists {
-		log.Infof("function is already prepared: %s", request.FunctionUuid)
+		log.Infof("function is already initialized: %s", request.FunctionUuid)
 		return nil
 	}
-	if err := r.prepareKernel(ctx, request.KernelName, request.KernelVersion); err != nil {
+	if err := r.initializeKernel(ctx, request.KernelName, request.KernelVersion); err != nil {
 		return err
 	}
-	if err := r.prepareRuntime(ctx, request.RuntimeName, request.RuntimeVersion); err != nil {
+	if err := r.initializeRuntime(ctx, request.RuntimeName, request.RuntimeVersion); err != nil {
 		return err
 	}
 
-	log.Infof("preparing function: %s", request.FunctionUuid)
+	log.Infof("initializing function: %s", request.FunctionUuid)
 	if err := prepareTargetDirectory(path); err != nil {
 		return err
 	}
@@ -95,18 +95,18 @@ func (r *runnerPreparer) PrepareFunction(ctx context.Context, request *fleet.Pre
 	return nil
 }
 
-func (r *runnerPreparer) prepareKernel(ctx context.Context, kernelName string, kernelVersion string) error {
+func (r *runnerInitializer) initializeKernel(ctx context.Context, kernelName string, kernelVersion string) error {
 	kernel := strings.Join([]string{kernelName, kernelVersion}, "-")
 	path := strings.Join([]string{r.dataPath, "kernels", kernel}, string(os.PathSeparator))
 
-	log.Debugf("check if kernel is already prepared")
+	log.Debugf("check if kernel is already initialized")
 	exists, _ := utils.FileExists(strings.Join([]string{path, kernel}, string(os.PathSeparator)))
 	if exists {
-		log.Infof("kernel is already prepared: %s", kernel)
+		log.Infof("kernel is already initialized: %s", kernel)
 		return nil
 	}
 
-	log.Infof("preparing kernel: %s", kernel)
+	log.Infof("initializing kernel: %s", kernel)
 	if err := prepareTargetDirectory(path); err != nil {
 		return err
 	}
@@ -117,19 +117,19 @@ func (r *runnerPreparer) prepareKernel(ctx context.Context, kernelName string, k
 	return nil
 }
 
-func (r *runnerPreparer) prepareRuntime(ctx context.Context, runtimeName string, runtimeVersion string) error {
+func (r *runnerInitializer) initializeRuntime(ctx context.Context, runtimeName string, runtimeVersion string) error {
 	runtime := strings.Join([]string{runtimeName, runtimeVersion}, "-")
 	path := strings.Join([]string{r.dataPath, "runtimes", runtime}, string(os.PathSeparator))
 	filename := strings.Join([]string{runtime, "ext4"}, ".")
 
-	log.Debugf("check if runtime is already prepared")
+	log.Debugf("check if runtime is already initialized")
 	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
 	if exists {
-		log.Infof("runtime is already prepared: %s", runtime)
+		log.Infof("runtime is already initialized: %s", runtime)
 		return nil
 	}
 
-	log.Infof("preparing runtime: %s", runtime)
+	log.Infof("initializing runtime: %s", runtime)
 	if err := prepareTargetDirectory(path); err != nil {
 		return err
 	}

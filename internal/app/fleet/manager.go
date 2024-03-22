@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/api"
+	"github.com/dennishilgert/apollo/internal/app/fleet/initializer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/consumer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/producer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
-	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
@@ -40,7 +40,7 @@ type FleetManager interface {
 
 type fleetManager struct {
 	runnerOperator    operator.RunnerOperator
-	runnerPreparer    preparer.RunnerPreparer
+	runnerInitializer initializer.RunnerInitializer
 	apiServer         api.Server
 	messagingProducer producer.MessagingProducer
 	messagingConsumer consumer.MessagingConsumer
@@ -67,9 +67,9 @@ func NewManager(opts Options) (FleetManager, error) {
 		return nil, fmt.Errorf("error while creating storage service: %v", err)
 	}
 
-	runnerPreparer := preparer.NewRunnerPreparer(
+	runnerInitializer := initializer.NewRunnerInitializer(
 		storageService,
-		preparer.Options{
+		initializer.Options{
 			DataPath:             opts.DataPath,
 			ImageRegistryAddress: opts.ImageRegistryAddress,
 		},
@@ -82,20 +82,17 @@ func NewManager(opts Options) (FleetManager, error) {
 		return nil, fmt.Errorf("error while creating messaging producer: %v", err)
 	}
 
-	messagingConsumer, err := consumer.NewMessagingConsumer(
-		runnerPreparer,
-		consumer.Options{
-			BootstrapServers: opts.MessagingBootstrapServers,
-			WorkerCount:      opts.MessagingWorkerCount,
-		},
-	)
+	messagingConsumer, err := consumer.NewMessagingConsumer(consumer.Options{
+		BootstrapServers: opts.MessagingBootstrapServers,
+		WorkerCount:      opts.MessagingWorkerCount,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("error while creating messaging consumer: %v", err)
 	}
 
 	apiServer := api.NewApiServer(
 		runnerOperator,
-		runnerPreparer,
+		runnerInitializer,
 		messagingProducer,
 		api.Options{
 			Port: opts.ApiPort,
@@ -104,7 +101,7 @@ func NewManager(opts Options) (FleetManager, error) {
 
 	return &fleetManager{
 		runnerOperator:    runnerOperator,
-		runnerPreparer:    runnerPreparer,
+		runnerInitializer: runnerInitializer,
 		apiServer:         apiServer,
 		messagingProducer: messagingProducer,
 		messagingConsumer: messagingConsumer,
@@ -136,12 +133,12 @@ func (m *fleetManager) Run(ctx context.Context) error {
 		},
 		func(ctx context.Context) error {
 			log.Info("preparing filesystem")
-			if err := m.runnerPreparer.PrepareDataDir(); err != nil {
-				log.Error("failed to prepare data directory")
+			if err := m.runnerInitializer.InitializeDataDir(); err != nil {
+				log.Error("failed to initialize data directory")
 				return err
 			}
 			healthStatusProvider.Ready()
-			log.Info("filesystem prepared")
+			log.Info("filesystem initialized")
 			<-ctx.Done()
 			return nil
 		},

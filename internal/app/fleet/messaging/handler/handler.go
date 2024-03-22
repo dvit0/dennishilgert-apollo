@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/dennishilgert/apollo/internal/app/fleet/preparer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/messages/v1"
@@ -19,15 +18,13 @@ type MessagingHandler interface {
 }
 
 type messagingHandler struct {
-	runnerPreparer preparer.RunnerPreparer
-	handlers       map[string]func(msg *kafka.Message)
-	lock           sync.Mutex
+	handlers map[string]func(msg *kafka.Message)
+	lock     sync.Mutex
 }
 
-func NewMessagingHandler(runnerPreparer preparer.RunnerPreparer) MessagingHandler {
+func NewMessagingHandler() MessagingHandler {
 	return &messagingHandler{
-		runnerPreparer: runnerPreparer,
-		handlers:       map[string]func(msg *kafka.Message){},
+		handlers: map[string]func(msg *kafka.Message){},
 	}
 }
 
