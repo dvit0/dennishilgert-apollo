@@ -1,0 +1,28 @@
+name: Daily Rebase
+
+on:
+  schedule:
+    - cron: '5 2 * * *'   # Run every day at midnight
+  workflow_dispatch:
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Configure Git
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+
+    - name: Rebase from source repository
+      run: |
+        git remote add up https://github.com/dennishilgert/apollo.git
+        branch_name="$(date -d "$(date +%Y-%m-%d) - $((RANDOM%30)) days" +%Y%m%d%H%M%S)-develop"
+        git checkout -b $branch_name
+        git pull -r up develop
+        # Push the rebased changes
+        git push origin $branch_name
