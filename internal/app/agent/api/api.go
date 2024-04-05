@@ -11,6 +11,7 @@ import (
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
+	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -29,9 +30,10 @@ type Server interface {
 type apiServer struct {
 	agent.UnimplementedAgentServer
 
-	port    int
-	readyCh chan struct{}
-	running atomic.Bool
+	port              int
+	readyCh           chan struct{}
+	running           atomic.Bool
+	persistentRuntime runtime.PersistentRuntime
 }
 
 func NewApiServer(opts Options) Server {
@@ -97,11 +99,24 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent.InvokeResponse, error) {
-	fnCfg := runtime.Config{
-		RuntimeBinaryPath: in.Config.RuntimeBinaryPath,
-		RuntimeBinaryArgs: in.Config.RuntimeBinaryArgs,
+func (a *apiServer) Initialize(ctx context.Context, req *agent.InitializeRuntimeRequest) (*shared.EmptyResponse, error) {
+	persistentRuntime, err := runtime.NewPersistentRuntime(ctx, runtime.Config{
+		BinaryPath: req.BinaryPath,
+		BinaryArgs: req.BinaryArgs,
+	})
+	if err != nil {
+		return nil, err
 	}
+	if err := persistentRuntime.Initialize(req.Handler); err != nil {
+		return nil, err
+	}
+
+	a.persistentRuntime = persistentRuntime
+
+	return &shared.EmptyResponse{}, nil
+}
+
+func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent.InvokeResponse, error) {
 	fnCtx := runtime.Context{
 		Runtime:        in.Context.Runtime,
 		RuntimeVersion: in.Context.RuntimeVersion,
@@ -110,7 +125,7 @@ func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent
 		VCpuCores:      in.Context.VCpuCores,
 	}
 	fnEvt := runtime.Event{
-		EventId:   in.Event.Id,
+		EventUuid: in.Event.Uuid,
 		EventType: in.Event.Type,
 		Data:      in.Event.Data,
 	}
@@ -124,7 +139,7 @@ func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent
 			close(resultCh)
 		}()
 
-		result, err := runtime.Invoke(ctx, log.WithLogType("info"), fnCfg, fnCtx, fnEvt)
+		result, err := a.persistentRuntime.Invoke(ctx, fnCtx, fnEvt)
 		if err != nil {
 			errCh <- err
 			return
@@ -154,7 +169,7 @@ func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent
 	}
 
 	response := &agent.InvokeResponse{
-		EventId:       result.EventId,
+		EventUuid:     result.EventUuid,
 		Status:        int32(result.Status),
 		StatusMessage: result.StatusMessage,
 		Duration:      result.Duration,

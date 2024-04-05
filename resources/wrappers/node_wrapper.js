@@ -1,8 +1,10 @@
 import { fileURLToPath } from 'url'
 import { join, dirname } from 'path'
 
-// Helper function to get __dirname equivalent in ES module
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+let handlerFile = ''
+let handlerFunctionName = ''
 
 const origConsoleLog = console.log
 
@@ -13,7 +15,7 @@ function logJson(level, message) {
 
 function errorJson(error) {
   const timestamp = Date.now()
-  origConsoleLog('error', JSON.stringify({ timestamp, 'type': 'error', 'properties': { 'code': error.code, 'message': error.message, 'cause': error.cause, 'stack': error.stack } }))
+  origConsoleLog(JSON.stringify({ timestamp, 'type': 'error', 'properties': { 'code': error.code, 'message': error.message, 'cause': error.cause, 'stack': error.stack } }))
 }
 
 function resultJson(data) {
@@ -21,43 +23,66 @@ function resultJson(data) {
   origConsoleLog(JSON.stringify({ timestamp, "type": "result", 'properties': { data } }))
 }
 
-// Override console.log and console.error
 console.log = (message) => logJson('info', message)
 console.error = (message) => logJson('error', message)
 
-let rawData = ''
+process.stdin.setEncoding('utf8')
+
+let initializationComplete = false
+let buffer = ''
+
 process.stdin.on('data', (chunk) => {
-  rawData += chunk
+  buffer += chunk
+  let boundary = buffer.indexOf('\n')
+  while (boundary !== -1) {
+    let data = buffer.substring(0, boundary)
+    buffer = buffer.substring(boundary + 1)
+    if (!initializationComplete) {
+      // Process the initialization data
+      let initData
+      try {
+        initData = JSON.parse(data)
+        const handlerParts = initData.handler.split('.')
+        handlerFile = handlerParts[0]
+        handlerFunctionName = handlerParts[1]
+        initializationComplete = true
+      } catch (error) {
+        errorJson(error)
+        process.exit(1)
+      }
+    } else {
+      processRequest(data)
+    }
+    boundary = buffer.indexOf('\n')
+  }
 });
 
-process.stdin.on('end', async () => {
+async function processRequest(data) {
+  if (!initializationComplete) {
+    errorJson(new Error("Runtime not initialized"))
+    return
+  }
   let inputData
   try {
-    inputData = JSON.parse(rawData)
+    inputData = JSON.parse(data)
+    const { context, event } = inputData
+    const indexFile = join(__dirname, `${handlerFile}.mjs`)
+
+    const indexModule = await import(indexFile)
+    const handlerFunction = indexModule[handlerFunctionName]
+
+    if (typeof handlerFunction === 'function') {
+      await handlerFunction(context, event)
+        .then((result) => {
+          resultJson(result)
+        })
+        .catch((error) => {
+          errorJson(error)
+        });
+    } else {
+      errorJson(new Error(`Specified handler function does not exist: ${handlerFunctionName}`))
+    }
   } catch (error) {
     errorJson(error)
-    process.exit(1)
   }
-
-  const { context, event } = inputData
-
-  const handlerParts = context.runtimeHandler.split('.')
-  const index = handlerParts[0]
-  const handler = handlerParts[1]
-  const indexFile = join(__dirname, index + '.mjs')
-  
-  const indexModule = await import(indexFile)
-  const handlerFunction = indexModule[handler]
-
-  if (typeof handlerFunction === 'function') {
-    await handlerFunction(context, event)
-      .then((result) => {
-        resultJson(result)
-      })
-      .catch((error) => {
-        errorJson(error)
-      })
-  } else {
-    errorJson(new Error('specified handler function does not exist: ' + context.Handler))
-  }
-})
+}
