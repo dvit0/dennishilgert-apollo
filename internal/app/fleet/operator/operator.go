@@ -118,6 +118,12 @@ func (r *runnerOperator) AvailableRunner(request *fleet.AvailableRunnerRequest) 
 func (v *runnerOperator) ProvisionRunner(ctx context.Context, request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
 	runnerUuid := uuid.New().String()
 
+	if err := v.runnerInitializer.InitializeRunner(ctx, runnerUuid); err != nil {
+		// We don't care if the runner storage removal throws an error as this is just for cleanup
+		v.runnerInitializer.RemoveRunner(ctx, runnerUuid)
+		return nil, err
+	}
+
 	multiThreading := false
 	if v.osArch == utils.Arch_x86_64 {
 		multiThreading = true

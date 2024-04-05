@@ -74,6 +74,11 @@ func (r *runnerInitializer) InitializeRunner(ctx context.Context, runnerUuid str
 }
 
 func (r *runnerInitializer) RemoveRunner(ctx context.Context, runnerUuid string) error {
+	path := naming.RunnerStoragePath(r.dataPath, runnerUuid)
+
+	if err := os.RemoveAll(path); err != nil {
+		return err
+	}
 
 	return nil
 }
