@@ -8,34 +8,23 @@ import "apollo/proto/shared/v1/shared.proto";
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/fleet/v1;fleet";
 
 service FleetManager {
-  rpc Prepare(PrepareRunnerRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc Initialize(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc Available(AvailableRunnerRequest) returns (AvailableRunnerResponse) {}
+  rpc Provision(ProvisionRunnerRequest) returns (ProvisionRunnerResponse) {}
   rpc Invoke(InvokeFunctionRequest) returns (InvokeFunctionResponse) {}
 }
 
-message PrepareRunnerRequest {
-  string kernel_name = 1;
-  string kernel_version = 2;
-  string runtime_name = 3;
-  string runtime_version = 4;
-  string function_uuid = 5;
-}
-
-message InvokeFunctionRequest {
-  RunnerSpecs function = 1;
-  RuntimeSpecs runtime = 2;
-  EventSpecs event = 3; 
-}
-
-message RunnerSpecs {
-  string id = 1;
-  string kernel_image_path = 2;
-  string root_drive_path = 3;
-  string code_drive_path = 4;
-  int32 memory_limit = 5;
-  int32 vcpu_cores = 6;
+message KernelSpecs {
+  string name = 1;
+  string version = 2;
 }
 
 message RuntimeSpecs {
+  string name = 1;
+  string version = 2;
+}
+
+message RuntimeExecutionSpecs {
   string name = 1;
   string version = 2;
   string handler = 3;
@@ -43,17 +32,54 @@ message RuntimeSpecs {
   repeated string binary_args = 5;
 }
 
+message MachineSpecs {
+  int32 memory_limit = 1;
+  int32 vcpu_cores = 2;
+  int32 idle_ttl = 3;
+}
+
 message EventSpecs {
-  string id = 1;
+  string uuid = 1;
   string type = 2;
   string source_ip = 3;
   map<string, string> params = 4;
   google.protobuf.Struct data = 5;
 }
 
+message InitializeFunctionRequest {
+  string function_uuid = 1;
+  KernelSpecs kernel = 2;
+  RuntimeSpecs runtime = 3;
+}
+
+message AvailableRunnerRequest {
+  string function_uuid = 1;
+}
+
+message AvailableRunnerResponse {
+  string runner_uuid = 1;
+}
+
+message ProvisionRunnerRequest {
+  string function_uuid = 1;
+  KernelSpecs kernel = 2;
+  RuntimeExecutionSpecs runtime = 3;
+  MachineSpecs machine = 4;
+}
+
+message ProvisionRunnerResponse {
+  string runner_uuid = 1;
+}
+
+message InvokeFunctionRequest {
+  string runner_uuid = 1;
+  string function_uuid = 2;
+  EventSpecs event = 3; 
+}
+
 message InvokeFunctionResponse {
-  string event_id = 1;
+  string event_uuid = 1;
   int32 status = 2;
   string status_message = 3;
-  google.protobuf.Struct data = 5;
+  google.protobuf.Struct data = 4;
 }
