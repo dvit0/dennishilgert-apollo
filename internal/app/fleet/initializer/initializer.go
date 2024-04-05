@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator/runner"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/container"
 	"github.com/dennishilgert/apollo/pkg/logger"
@@ -24,7 +25,7 @@ type Options struct {
 type RunnerInitializer interface {
 	DataPath() string
 	InitializeDataDir() error
-	InitializeRunner(ctx context.Context, runnerUuid string) error
+	InitializeRunner(ctx context.Context, cfg *runner.Config) error
 	RemoveRunner(ctx context.Context, runnerUuid string) error
 	InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error
 }
@@ -62,11 +63,24 @@ func (r *runnerInitializer) InitializeDataDir() error {
 	return nil
 }
 
-func (r *runnerInitializer) InitializeRunner(ctx context.Context, runnerUuid string) error {
-	path := naming.RunnerStoragePath(r.dataPath, runnerUuid)
+func (r *runnerInitializer) InitializeRunner(ctx context.Context, cfg *runner.Config) error {
+	path := naming.RunnerStoragePath(r.dataPath, cfg.RunnerUuid)
 
-	log.Debugf("initializing runner: %s", runnerUuid)
+	log.Debugf("initializing runner: %s", cfg.RunnerUuid)
 	if err := prepareTargetDirectory(path); err != nil {
+		return err
+	}
+
+	_, err := os.Create(cfg.LogFilePath)
+	if err != nil {
+		return err
+	}
+	_, err = os.Create(cfg.StdOutFilePath)
+	if err != nil {
+		return err
+	}
+	_, err = os.Create(cfg.StdErrFilePath)
+	if err != nil {
 		return err
 	}
 

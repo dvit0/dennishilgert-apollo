@@ -64,14 +64,21 @@ type runnerInstance struct {
 }
 
 // NewInstance creates a new RunnerInstance.
-func NewInstance(ctx context.Context, cfg *Config) RunnerInstance {
+func NewInstance(ctx context.Context, cfg *Config) (RunnerInstance, error) {
+	log.Debugf("validating machine configuration for machine with id: %s", cfg.RunnerUuid)
+	if err := validate(cfg); err != nil {
+		log.Error("failed to validate machine configuration")
+		return nil, err
+	}
+
 	fnCtx, fnCtxCancel := context.WithCancel(ctx)
+
 	return &runnerInstance{
 		cfg:       cfg,
 		ctx:       fnCtx,
 		ctxCancel: fnCtxCancel,
 		lastUsed:  time.Now(),
-	}
+	}, nil
 }
 
 // Config returns the configuration of the runner.
@@ -93,25 +100,32 @@ func (r *runnerInstance) SetState(state RunnerState) {
 func (r *runnerInstance) CreateAndStart(ctx context.Context) error {
 	log = log.WithFields(map[string]any{"runner": r.cfg.RunnerUuid})
 
-	log.Debugf("validating machine configuration for machine with id: %s", r.cfg.RunnerUuid)
-	if err := validate(r.cfg); err != nil {
-		log.Error("failed to validate machine configuration")
-		return err
-	}
 	fcCfg := firecrackerConfig(*r.cfg)
 
 	machineOpts := []firecracker.Opt{
 		firecracker.WithLogger(log.LogrusEntry()),
 	}
+
+	// Stdout will be directed to this file.
+	stdout, err := os.OpenFile(r.cfg.StdOutFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(fmt.Errorf("failed to create stdout file: %v", err))
+	}
+
+	// Stderr will be directed to this file.
+	stderr, err := os.OpenFile(r.cfg.StdErrFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(fmt.Errorf("failed to create stderr file: %v", err))
+	}
+
 	// If the jailer is used, the final command will be built in firecracker.NewMachine(...).
 	// If not, the final command is built here.
 	if fcCfg.JailerCfg == nil {
 		cmd := firecracker.VMCommandBuilder{}.
 			WithBin(r.cfg.FirecrackerBinaryPath).
 			WithSocketPath(fcCfg.SocketPath).
-			WithStdin(os.Stdin).
-			WithStdout(os.Stdout).
-			WithStderr(os.Stderr).
+			WithStdout(stdout).
+			WithStderr(stderr).
 			Build(ctx)
 
 		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))

@@ -61,10 +61,18 @@ func RunnerStoragePath(dataPath string, runnerUuid string) string {
 	return fmt.Sprintf("%s/runners/%s", dataPath, runnerUuid)
 }
 
-func RunnerLogFileName(runnerUuid string) string {
-	return fmt.Sprintf("%s.fc.log", runnerUuid)
+func RunnerLogFileName() string {
+	return "firecracker.log"
 }
 
-func RunnerSocketFileName(runnerUuid string) string {
-	return fmt.Sprintf("%s.%s.fc.sock", runnerUuid, strconv.Itoa(os.Getpid()))
+func RunnerStdOutFileName() string {
+	return "stdout.log"
+}
+
+func RunnerStdErrFileName() string {
+	return "stderr.log"
+}
+
+func RunnerSocketFileName() string {
+	return fmt.Sprintf("%s_fc.sock", strconv.Itoa(os.Getpid()))
 }

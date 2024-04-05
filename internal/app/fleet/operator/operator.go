@@ -118,12 +118,6 @@ func (r *runnerOperator) AvailableRunner(request *fleet.AvailableRunnerRequest) 
 func (v *runnerOperator) ProvisionRunner(ctx context.Context, request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
 	runnerUuid := uuid.New().String()
 
-	if err := v.runnerInitializer.InitializeRunner(ctx, runnerUuid); err != nil {
-		// We don't care if the runner storage removal throws an error as this is just for cleanup
-		v.runnerInitializer.RemoveRunner(ctx, runnerUuid)
-		return nil, err
-	}
-
 	multiThreading := false
 	if v.osArch == utils.Arch_x86_64 {
 		multiThreading = true
@@ -160,14 +154,28 @@ func (v *runnerOperator) ProvisionRunner(ctx context.Context, request *fleet.Pro
 		SocketPath: strings.Join(
 			[]string{
 				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
-				naming.RunnerSocketFileName(runnerUuid),
+				naming.RunnerSocketFileName(),
 			},
 			string(os.PathSeparator),
 		),
 		LogFilePath: strings.Join(
 			[]string{
 				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
-				naming.RunnerLogFileName(runnerUuid),
+				naming.RunnerLogFileName(),
+			},
+			string(os.PathSeparator),
+		),
+		StdOutFilePath: strings.Join(
+			[]string{
+				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
+				naming.RunnerStdOutFileName(),
+			},
+			string(os.PathSeparator),
+		),
+		StdErrFilePath: strings.Join(
+			[]string{
+				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
+				naming.RunnerStdErrFileName(),
 			},
 			string(os.PathSeparator),
 		),
@@ -178,8 +186,17 @@ func (v *runnerOperator) ProvisionRunner(ctx context.Context, request *fleet.Pro
 		AgentApiPort:   v.agentApiPort,
 	}
 
+	if err := v.runnerInitializer.InitializeRunner(ctx, cfg); err != nil {
+		// We don't care if the runner storage removal throws an error as this is just for cleanup
+		v.runnerInitializer.RemoveRunner(ctx, runnerUuid)
+		return nil, err
+	}
+
 	// Create and start new runner instance.
-	instance := runner.NewInstance(ctx, cfg)
+	instance, err := runner.NewInstance(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
 	if err := instance.CreateAndStart(ctx); err != nil {
 		return nil, err
 	}
