@@ -89,7 +89,7 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 				DriveID:      firecracker.String("2"),
 				PathOnHost:   firecracker.String(cfg.FunctionDrivePath),
 				IsRootDevice: firecracker.Bool(false),
-				IsReadOnly:   firecracker.Bool(false),
+				IsReadOnly:   firecracker.Bool(true),
 			},
 		},
 		NetworkInterfaces: []firecracker.NetworkInterface{{
