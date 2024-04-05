@@ -24,7 +24,7 @@ type Options struct {
 type RunnerInitializer interface {
 	DataPath() string
 	InitializeDataDir() error
-	InitializeRunner(ctx context.Context, runnerUuid string) (*string, error)
+	InitializeRunner(ctx context.Context, runnerUuid string) error
 	RemoveRunner(ctx context.Context, runnerUuid string) error
 	InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error
 }
@@ -62,15 +62,15 @@ func (r *runnerInitializer) InitializeDataDir() error {
 	return nil
 }
 
-func (r *runnerInitializer) InitializeRunner(ctx context.Context, runnerUuid string) (*string, error) {
+func (r *runnerInitializer) InitializeRunner(ctx context.Context, runnerUuid string) error {
 	path := naming.RunnerStoragePath(r.dataPath, runnerUuid)
 
 	log.Debugf("initializing runner: %s", runnerUuid)
 	if err := prepareTargetDirectory(path); err != nil {
-		return nil, err
+		return err
 	}
 
-	return &path, nil
+	return nil
 }
 
 func (r *runnerInitializer) RemoveRunner(ctx context.Context, runnerUuid string) error {

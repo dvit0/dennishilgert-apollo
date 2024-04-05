@@ -46,10 +46,10 @@ func validate(cfg *Config) error {
 	if !exists {
 		return fmt.Errorf("given function drive does not exist")
 	}
-	exists, _ = utils.FileExists(cfg.LogFilePath)
-	if !exists {
-		return fmt.Errorf("given function log file does not exist")
-	}
+	// exists, _ = utils.FileExists(cfg.LogFilePath)
+	// if !exists {
+	// 	return fmt.Errorf("given function log file does not exist")
+	// }
 	if cfg.Multithreading && cfg.HostOsArch != utils.Arch_x86_64 {
 		log.Debugf("multithreading is not supported on the host architecture: %s", cfg.HostOsArch.String())
 	}
