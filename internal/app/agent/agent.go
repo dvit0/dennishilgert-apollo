@@ -26,7 +26,7 @@ type agent struct {
 	apiServer api.Server
 }
 
-func NewAgent(ctx context.Context, opts Options) (Agent, error) {
+func NewAgent(opts Options) (Agent, error) {
 	return &agent{
 		apiServer: api.NewApiServer(api.Options{
 			Port: opts.ApiPort,

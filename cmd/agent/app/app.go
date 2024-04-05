@@ -24,7 +24,7 @@ func Run() {
 	log.Infof("log level set to: %s", log.LogLevel())
 
 	ctx := signals.Context()
-	agent, err := agent.NewAgent(ctx, agent.Options{
+	agent, err := agent.NewAgent(agent.Options{
 		ApiPort: cfg.ApiPort,
 	})
 	if err != nil {
