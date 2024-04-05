@@ -13,7 +13,7 @@ import (
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
 	"github.com/dennishilgert/apollo/pkg/proto/health/v1"
-	"github.com/dennishilgert/apollo/pkg/utils"
+	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
 	"github.com/firecracker-microvm/firecracker-go-sdk"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -33,73 +33,72 @@ const (
 	RunnerStateShutdown
 )
 
-type Config struct {
-	FunctionUuid          string
-	RunnerUuid            string
-	HostOsArch            utils.OsArch
-	FirecrackerBinaryPath string
-	KernelImagePath       string
-	RootDrivePath         string
-	CodeDrivePath         string
-	VCpuCount             int
-	MemSizeMib            int
-	Multithreading        bool
-	AgentApiPort          int
+type TeardownParams struct {
+	FunctionUuid string
+	RunnerUuid   string
 }
 
-type Instance interface {
+type RunnerInstance interface {
 	Config() Config
 	State() RunnerState
 	SetState(state RunnerState)
 	CreateAndStart(ctx context.Context) error
 	ShutdownAndDestroy(ctx context.Context) error
+	Invoke(ctx context.Context, request *agent.InvokeRequest) (*agent.InvokeResponse, error)
+	Health(ctx context.Context) (*health.HealthStatus, error)
+	Ready(ctx context.Context) error
+	IsRunning() bool
+	ConnectionAlive() bool
+	Idle() time.Duration
 }
 
-type RunnerInstance struct {
-	Cfg        *Config
-	Ctx        context.Context
-	CtxCancel  context.CancelFunc
-	Machine    *firecracker.Machine
-	Ip         net.IP
-	ClientConn *grpc.ClientConn
+type runnerInstance struct {
+	cfg        *Config
+	ctx        context.Context
+	ctxCancel  context.CancelFunc
+	machine    *firecracker.Machine
+	ip         net.IP
+	lastUsed   time.Time
+	clientConn *grpc.ClientConn
 	state      atomic.Value
 }
 
-// NewInstance create a new RunnerInstance.
-func NewInstance(ctx context.Context, cfg *Config) Instance {
+// NewInstance creates a new RunnerInstance.
+func NewInstance(ctx context.Context, cfg *Config) RunnerInstance {
 	fnCtx, fnCtxCancel := context.WithCancel(ctx)
-	return &RunnerInstance{
-		Cfg:       cfg,
-		Ctx:       fnCtx,
-		CtxCancel: fnCtxCancel,
+	return &runnerInstance{
+		cfg:       cfg,
+		ctx:       fnCtx,
+		ctxCancel: fnCtxCancel,
+		lastUsed:  time.Now(),
 	}
 }
 
 // Config returns the configuration of the runner.
-func (m *RunnerInstance) Config() Config {
-	return *m.Cfg
+func (r *runnerInstance) Config() Config {
+	return *r.cfg
 }
 
 // State returns the state of the runner.
-func (m *RunnerInstance) State() RunnerState {
-	return m.state.Load().(RunnerState)
+func (r *runnerInstance) State() RunnerState {
+	return r.state.Load().(RunnerState)
 }
 
 // SetState sets the state of the runner.
-func (m *RunnerInstance) SetState(state RunnerState) {
-	m.state.Store(state)
+func (r *runnerInstance) SetState(state RunnerState) {
+	r.state.Store(state)
 }
 
 // CreateAndStart creates and starts a new firecracker machine.
-func (m *RunnerInstance) CreateAndStart(ctx context.Context) error {
-	log = log.WithFields(map[string]any{"runner": m.Cfg.RunnerUuid})
+func (r *runnerInstance) CreateAndStart(ctx context.Context) error {
+	log = log.WithFields(map[string]any{"runner": r.cfg.RunnerUuid})
 
-	log.Debugf("validating machine configuration for machine with id: %s", m.Cfg.RunnerUuid)
-	if err := validate(m.Cfg); err != nil {
+	log.Debugf("validating machine configuration for machine with id: %s", r.cfg.RunnerUuid)
+	if err := validate(r.cfg); err != nil {
 		log.Error("failed to validate machine configuration")
 		return err
 	}
-	fcCfg := firecrackerConfig(*m.Cfg)
+	fcCfg := firecrackerConfig(*r.cfg)
 
 	machineOpts := []firecracker.Opt{
 		firecracker.WithLogger(log.LogrusEntry()),
@@ -108,7 +107,7 @@ func (m *RunnerInstance) CreateAndStart(ctx context.Context) error {
 	// If not, the final command is built here.
 	if fcCfg.JailerCfg == nil {
 		cmd := firecracker.VMCommandBuilder{}.
-			WithBin(m.Cfg.FirecrackerBinaryPath).
+			WithBin(r.cfg.FirecrackerBinaryPath).
 			WithSocketPath(fcCfg.SocketPath).
 			WithStdin(os.Stdin).
 			WithStdout(os.Stdout).
@@ -118,31 +117,31 @@ func (m *RunnerInstance) CreateAndStart(ctx context.Context) error {
 		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
 	}
 	log.Debugf("creating new firecracker machine with id: %s", fcCfg.VMID)
-	machine, err := firecracker.NewMachine(m.Ctx, fcCfg, machineOpts...)
+	machine, err := firecracker.NewMachine(r.ctx, fcCfg, machineOpts...)
 	if err != nil {
 		log.Error("failed to create a new firecracker machine")
 		return err
 	}
 	log.Debugf("starting firecracker machine with id: %s", fcCfg.VMID)
-	if err := machine.Start(m.Ctx); err != nil {
+	if err := machine.Start(r.ctx); err != nil {
 		log.Error("failed to start firecracker machine")
 		return err
 	}
-	m.Machine = machine
-	m.Ip = machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr.IP
+	r.machine = machine
+	r.ip = machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr.IP
 
-	m.SetState(RunnerStateCreated)
+	r.SetState(RunnerStateCreated)
 
 	return nil
 }
 
 // ShutdownAndDestroy shuts a firecracker machine down and destroys it afterwards.
-func (m *RunnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
-	log.Debugf("shutting down runner: %s", m.Cfg.RunnerUuid)
+func (r *runnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
+	log.Debugf("shutting down runner: %s", r.cfg.RunnerUuid)
 
-	m.SetState(RunnerStateShutdown)
+	r.SetState(RunnerStateShutdown)
 
-	if err := m.Machine.Shutdown(parentCtx); err != nil {
+	if err := r.machine.Shutdown(parentCtx); err != nil {
 		return err
 	}
 	timeout := 3 * time.Second
@@ -156,56 +155,46 @@ func (m *RunnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			if !m.IsRunning() {
-				log.Debugf("runner has been shut down gracefully: %s", m.Cfg.RunnerUuid)
+			if !r.IsRunning() {
+				log.Debugf("runner has been shut down gracefully: %s", r.cfg.RunnerUuid)
 				return nil
 			}
 		case <-ctx.Done():
-			log.Debugf("force stopping runner: %s", m.Cfg.RunnerUuid)
+			log.Debugf("force stopping runner: %s", r.cfg.RunnerUuid)
 
-			if err := m.Machine.StopVMM(); err != nil {
+			if err := r.machine.StopVMM(); err != nil {
 				log.Error("failed to force stop the runner")
 				return err
 			} else {
-				log.Warnf("runner has been stopped forcefully: %s", m.Cfg.RunnerUuid)
+				log.Warnf("runner has been stopped forcefully: %s", r.cfg.RunnerUuid)
 				return nil
 			}
 		}
 	}
 }
 
-// Ready makes sure the runner is ready.
-func (m *RunnerInstance) Ready(ctx context.Context) error {
-	if err := m.establishConnection(ctx); err != nil {
-		return err
+// Initialize initializes and executes the runtime inside the runner.
+func (r *runnerInstance) Initialize(ctx context.Context, request *agent.InitializeRuntimeRequest) (*shared.EmptyResponse, error) {
+	if !r.ConnectionAlive() {
+		return nil, fmt.Errorf("connection dead - failed to connect to agent in runner: %s", r.cfg.RunnerUuid)
 	}
-
-	m.SetState(RunnerStateReady)
-	return nil
-}
-
-// IsRunning returns if a firecracker machine is running.
-func (m *RunnerInstance) IsRunning() bool {
-	// to check if the machine is running, try to establish a connection via the unix socket
-	conn, err := net.Dial("unix", m.Machine.Cfg.SocketPath)
+	apiClient := agent.NewAgentClient(r.clientConn)
+	initResponse, err := apiClient.Initialize(ctx, request)
 	if err != nil {
-		return false
+		return nil, err
 	}
-	conn.Close()
-	return true
-}
-
-// ConnectionAlive returns if a grpc client connection is still alive.
-func (m *RunnerInstance) ConnectionAlive() bool {
-	return (m.ClientConn.GetState() == connectivity.Ready || m.ClientConn.GetState() == connectivity.Idle)
+	return initResponse, nil
 }
 
 // Invoke invokes the function inside the runner through the agent.
-func (m *RunnerInstance) Invoke(ctx context.Context, request *agent.InvokeRequest) (*agent.InvokeResponse, error) {
-	if !m.ConnectionAlive() {
-		return nil, fmt.Errorf("connection dead - failed to connecto to agent in runner: %s", m.Cfg.RunnerUuid)
+func (r *runnerInstance) Invoke(ctx context.Context, request *agent.InvokeRequest) (*agent.InvokeResponse, error) {
+	if !r.ConnectionAlive() {
+		return nil, fmt.Errorf("connection dead - failed to connect to agent in runner: %s", r.cfg.RunnerUuid)
 	}
-	apiClient := agent.NewAgentClient(m.ClientConn)
+
+	r.lastUsed = time.Now()
+
+	apiClient := agent.NewAgentClient(r.clientConn)
 	invokeResponse, err := apiClient.Invoke(ctx, request)
 	if err != nil {
 		return nil, err
@@ -214,11 +203,11 @@ func (m *RunnerInstance) Invoke(ctx context.Context, request *agent.InvokeReques
 }
 
 // Health checks the health status of an agent and returns the result.
-func (m *RunnerInstance) Health(ctx context.Context) (*health.HealthStatus, error) {
-	if !m.ConnectionAlive() {
-		return nil, fmt.Errorf("connection dead - failed to connect to agent in runner: %s", m.Cfg.RunnerUuid)
+func (r *runnerInstance) Health(ctx context.Context) (*health.HealthStatus, error) {
+	if !r.ConnectionAlive() {
+		return nil, fmt.Errorf("connection dead - failed to connect to agent in runner: %s", r.cfg.RunnerUuid)
 	}
-	apiClient := health.NewHealthClient(m.ClientConn)
+	apiClient := health.NewHealthClient(r.clientConn)
 	healthStatus, err := apiClient.Status(ctx, &health.HealthStatusRequest{})
 	if err != nil {
 		return nil, err
@@ -226,20 +215,59 @@ func (m *RunnerInstance) Health(ctx context.Context) (*health.HealthStatus, erro
 	return &healthStatus.Status, nil
 }
 
-// establishConnection establishs a connection to the agent api inside the runner.
-func (m *RunnerInstance) establishConnection(ctx context.Context) error {
-	log.Debugf("establishing a connection to agent in runner: %s", m.Cfg.RunnerUuid)
+// Ready makes sure the runner is ready.
+func (r *runnerInstance) Ready(ctx context.Context) error {
+	if err := r.establishConnection(ctx); err != nil {
+		return err
+	}
+	_, err := r.Initialize(ctx, &agent.InitializeRuntimeRequest{
+		Handler:    r.cfg.RuntimeHandler,
+		BinaryPath: r.cfg.RuntimeBinaryPath,
+		BinaryArgs: r.cfg.RuntimeBinaryArgs,
+	})
+	if err != nil {
+		log.Errorf("error while initializing runtime in runner: %s", r.cfg.RunnerUuid)
+		return err
+	}
+	r.SetState(RunnerStateReady)
+	return nil
+}
 
-	if m.ClientConn != nil {
-		if m.ConnectionAlive() {
-			log.Infof("connection alive - no need to establish a new connection to agent in runner: %s", m.Cfg.RunnerUuid)
+// IsRunning returns if a firecracker machine is running.
+func (r *runnerInstance) IsRunning() bool {
+	// to check if the machine is running, try to establish a connection via the unix socket
+	conn, err := net.Dial("unix", r.machine.Cfg.SocketPath)
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+	return true
+}
+
+// ConnectionAlive returns if a grpc client connection is still alive.
+func (r *runnerInstance) ConnectionAlive() bool {
+	return (r.clientConn.GetState() == connectivity.Ready || r.clientConn.GetState() == connectivity.Idle)
+}
+
+// Idle returns for how long the instance is idling.
+func (r *runnerInstance) Idle() time.Duration {
+	return time.Since(r.lastUsed)
+}
+
+// establishConnection establishs a connection to the agent api inside the runner.
+func (r *runnerInstance) establishConnection(ctx context.Context) error {
+	log.Debugf("establishing a connection to agent in runner: %s", r.cfg.RunnerUuid)
+
+	if r.clientConn != nil {
+		if r.ConnectionAlive() {
+			log.Infof("connection alive - no need to establish a new connection to agent in runner: %s", r.cfg.RunnerUuid)
 			return nil
 		}
 		// try to close the existing conenction and ignore the possible error
-		m.ClientConn.Close()
+		r.clientConn.Close()
 	}
 
-	addr := strings.Join([]string{m.Ip.String(), fmt.Sprint(m.Cfg.AgentApiPort)}, ":")
+	addr := strings.Join([]string{r.ip.String(), fmt.Sprint(r.cfg.AgentApiPort)}, ":")
 	log.Debugf("connecting to agent with address: %s", addr)
 
 	// As there are frequent requests made to the agent api, a keep-alive connection for the whole vm time-to-live is used.
@@ -255,13 +283,15 @@ func (m *RunnerInstance) establishConnection(ctx context.Context) error {
 	for i := 0; i < (retrySeconds * retriesPerSecond); i++ {
 		conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithKeepaliveParams(keepAliveParams))
 		if err == nil {
-			m.ClientConn = conn
-			return err
+			r.clientConn = conn
+			return nil
+		} else {
+			log.Debugf("failed to establish agent connection in runner: %s - reason: %v", r.cfg.RunnerUuid, err)
 		}
 		// wait before retrying, but stop if context is done
 		select {
 		case <-ctx.Done():
-			log.Errorf("failed to establish a connection to the agent in runner: %s", m.Cfg.RunnerUuid)
+			log.Errorf("context done before connection could be established to agent in runner: %s", r.cfg.RunnerUuid)
 			return ctx.Err() // send context cancellation error
 		case <-time.After(time.Duration(math.Round(1000/retriesPerSecond)) * time.Millisecond): // retry delay
 			continue

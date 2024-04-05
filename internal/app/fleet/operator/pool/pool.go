@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
@@ -12,25 +11,24 @@ import (
 var log = logger.NewLogger("apollo.manager.pool")
 
 type RunnerPool interface {
-	Pool() *map[string]map[string]*runner.RunnerInstance
+	Pool() *map[string]map[string]runner.RunnerInstance
 	Lock()
 	Unlock()
 	Add(instance runner.RunnerInstance) error
-	Get(functionUuid string, runnerUuid string) (*runner.RunnerInstance, error)
+	Get(functionUuid string, runnerUuid string) (runner.RunnerInstance, error)
 	Remove(functionUuid string, runnerUuid string)
-	RemoveAndDestroy(functionUuid string, runnerUuid string) error
-	AvailableRunner(functionUuid string) (*runner.RunnerInstance, error)
+	AvailableRunner(functionUuid string) (runner.RunnerInstance, error)
 }
 
 type runnerPool struct {
-	pool map[string]map[string]*runner.RunnerInstance
+	pool map[string]map[string]runner.RunnerInstance
 	lock sync.Mutex
 }
 
 // NewRunnerPool returns a new instance of runnerPool.
 func NewRunnerPool() RunnerPool {
 	return &runnerPool{
-		pool: make(map[string]map[string]*runner.RunnerInstance),
+		pool: make(map[string]map[string]runner.RunnerInstance),
 	}
 }
 
@@ -45,7 +43,7 @@ func (r *runnerPool) Unlock() {
 }
 
 // Pool returns the pool with runners inside.
-func (r *runnerPool) Pool() *map[string]map[string]*runner.RunnerInstance {
+func (r *runnerPool) Pool() *map[string]map[string]runner.RunnerInstance {
 	return &r.pool
 }
 
@@ -54,15 +52,15 @@ func (r *runnerPool) Add(instance runner.RunnerInstance) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	if r.pool[instance.Cfg.FunctionUuid][instance.Cfg.RunnerUuid] != nil {
-		return fmt.Errorf("pool already contains a runner instance with the given id: %s", instance.Cfg.RunnerUuid)
+	if r.pool[instance.Config().FunctionUuid][instance.Config().RunnerUuid] != nil {
+		return fmt.Errorf("pool already contains a runner instance with the given uuid: %s", instance.Config().RunnerUuid)
 	}
-	r.pool[instance.Cfg.FunctionUuid][instance.Cfg.RunnerUuid] = &instance
+	r.pool[instance.Config().FunctionUuid][instance.Config().RunnerUuid] = instance
 	return nil
 }
 
 // Get returns a runner instance by its uuid from the pool.
-func (r *runnerPool) Get(functionUuid string, runnerUuid string) (*runner.RunnerInstance, error) {
+func (r *runnerPool) Get(functionUuid string, runnerUuid string) (runner.RunnerInstance, error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -81,35 +79,17 @@ func (r *runnerPool) Remove(functionUuid string, runnerUuid string) {
 	delete(r.pool[functionUuid], runnerUuid)
 }
 
-// RemoveAndDestroy removes a runner instance from the pool and destroys it afterwards.
-func (r *runnerPool) RemoveAndDestroy(functionUuid string, runnerUuid string) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	target := r.pool[functionUuid][runnerUuid]
-	if target == nil {
-		log.Errorf("failed to find runner in pool: %s", runnerUuid)
-		return fmt.Errorf("failed to find runner in pool: %s", runnerUuid)
-	}
-	r.Remove(functionUuid, runnerUuid)
-	if err := target.ShutdownAndDestroy(context.Background()); err != nil {
-		log.Errorf("error while shutting down runner: %s", runnerUuid)
-		return err
-	}
-	return nil
-}
-
 // AvailableRunner returns a available runner instance from the pool.
-func (r *runnerPool) AvailableRunner(functionUuid string) (*runner.RunnerInstance, error) {
+func (r *runnerPool) AvailableRunner(functionUuid string) (runner.RunnerInstance, error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	vms := r.pool[functionUuid]
-	if vms == nil || len(vms) < 1 {
+	runners := r.pool[functionUuid]
+	if runners == nil || len(runners) < 1 {
 		log.Debugf("pool does not contain runner instances for function uuid: %s", functionUuid)
 		return nil, nil
 	}
-	for _, runnerInstance := range vms {
+	for _, runnerInstance := range runners {
 		if runnerInstance.State() == runner.RunnerStateReady {
 			return runnerInstance, nil
 		}

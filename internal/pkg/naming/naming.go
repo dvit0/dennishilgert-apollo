@@ -2,6 +2,8 @@ package naming
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 )
 
 var (
@@ -29,4 +31,40 @@ func ImageNameCode(functionUuid string) string {
 
 func ImageRefStr(imageRegistryAddress string, imageName string, imageTag string) string {
 	return fmt.Sprintf("%s/%s/%s:%s", imageRegistryAddress, ImagePrefix, imageName, imageTag)
+}
+
+func FunctionStoragePath(dataPath string, functionUuid string) string {
+	return fmt.Sprintf("%s/functions/%s", dataPath, functionUuid)
+}
+
+func FunctionImageFileName(functionUuid string) string {
+	return fmt.Sprintf("%s.ext4", functionUuid)
+}
+
+func KernelStoragePath(dataPath string, kernelName string, kernelVersion string) string {
+	return fmt.Sprintf("%s/kernels/%s-%s", dataPath, kernelName, kernelVersion)
+}
+
+func KernelFileName(kernelName string, kernelVersion string) string {
+	return fmt.Sprintf("%s-%s", kernelName, kernelVersion)
+}
+
+func RuntimeStoragePath(dataPath string, runtimeName string, runtimeVersion string) string {
+	return fmt.Sprintf("%s/runtimes/%s-%s", dataPath, runtimeName, runtimeVersion)
+}
+
+func RuntimeImageFileName(runtimeName string, runtimeVersion string) string {
+	return fmt.Sprintf("%s-%s.ext4", runtimeName, runtimeVersion)
+}
+
+func RunnerStoragePath(dataPath string, runnerUuid string) string {
+	return fmt.Sprintf("%s/runners/%s", dataPath, runnerUuid)
+}
+
+func RunnerLogFileName(runnerUuid string) string {
+	return fmt.Sprintf("%s.fc.log", runnerUuid)
+}
+
+func RunnerSocketFileName(runnerUuid string) string {
+	return fmt.Sprintf("%s.%s.fc.sock", runnerUuid, strconv.Itoa(os.Getpid()))
 }

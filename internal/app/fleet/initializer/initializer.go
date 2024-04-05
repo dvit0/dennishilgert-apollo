@@ -22,8 +22,11 @@ type Options struct {
 }
 
 type RunnerInitializer interface {
+	DataPath() string
 	InitializeDataDir() error
-	InitializeFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error
+	InitializeRunner(ctx context.Context, runnerUuid string) (*string, error)
+	RemoveRunner(ctx context.Context, runnerUuid string) error
+	InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error
 }
 
 type runnerInitializer struct {
@@ -38,6 +41,10 @@ func NewRunnerInitializer(storageService storage.StorageService, opts Options) R
 		dataPath:             opts.DataPath,
 		imageRegistryAddress: opts.ImageRegistryAddress,
 	}
+}
+
+func (r *runnerInitializer) DataPath() string {
+	return r.dataPath
 }
 
 func (r *runnerInitializer) InitializeDataDir() error {
@@ -55,21 +62,38 @@ func (r *runnerInitializer) InitializeDataDir() error {
 	return nil
 }
 
-func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fleet.PrepareRunnerRequest) error {
-	path := strings.Join([]string{r.dataPath, "functions", request.FunctionUuid}, string(os.PathSeparator))
-	filename := strings.Join([]string{request.FunctionUuid, "ext4"}, ".")
+func (r *runnerInitializer) InitializeRunner(ctx context.Context, runnerUuid string) (*string, error) {
+	path := naming.RunnerStoragePath(r.dataPath, runnerUuid)
 
+	log.Debugf("initializing runner: %s", runnerUuid)
+	if err := prepareTargetDirectory(path); err != nil {
+		return nil, err
+	}
+
+	return &path, nil
+}
+
+func (r *runnerInitializer) RemoveRunner(ctx context.Context, runnerUuid string) error {
+
+	return nil
+}
+
+func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error {
+	path := naming.FunctionStoragePath(r.dataPath, request.FunctionUuid)
+	filename := naming.FunctionImageFileName(request.FunctionUuid)
+
+	log.Debugf("check if function dependencies are already initialized")
+	if err := r.initializeKernel(ctx, request.Kernel.Name, request.Kernel.Version); err != nil {
+		return err
+	}
+	if err := r.initializeRuntime(ctx, request.Runtime.Name, request.Runtime.Version); err != nil {
+		return err
+	}
 	log.Debugf("check if function is already initialized")
 	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
 	if exists {
 		log.Infof("function is already initialized: %s", request.FunctionUuid)
 		return nil
-	}
-	if err := r.initializeKernel(ctx, request.KernelName, request.KernelVersion); err != nil {
-		return err
-	}
-	if err := r.initializeRuntime(ctx, request.RuntimeName, request.RuntimeVersion); err != nil {
-		return err
 	}
 
 	log.Infof("initializing function: %s", request.FunctionUuid)
@@ -96,21 +120,22 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 }
 
 func (r *runnerInitializer) initializeKernel(ctx context.Context, kernelName string, kernelVersion string) error {
-	kernel := strings.Join([]string{kernelName, kernelVersion}, "-")
-	path := strings.Join([]string{r.dataPath, "kernels", kernel}, string(os.PathSeparator))
+	path := naming.KernelStoragePath(r.dataPath, kernelName, kernelVersion)
+	filename := naming.KernelFileName(kernelName, kernelVersion)
 
 	log.Debugf("check if kernel is already initialized")
-	exists, _ := utils.FileExists(strings.Join([]string{path, kernel}, string(os.PathSeparator)))
+	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
 	if exists {
-		log.Infof("kernel is already initialized: %s", kernel)
+		log.Infof("kernel is already initialized: %s %s", kernelName, kernelVersion)
 		return nil
 	}
 
-	log.Infof("initializing kernel: %s", kernel)
+	log.Infof("initializing kernel: %s %s", kernelName, kernelVersion)
 	if err := prepareTargetDirectory(path); err != nil {
 		return err
 	}
-	if err := r.storageService.DownloadObject(ctx, naming.StorageKernelBucketName, kernel, strings.Join([]string{path, kernel}, string(os.PathSeparator))); err != nil {
+	log.Debugf("downloading kernel image: %s %s", kernelName, kernelVersion)
+	if err := r.storageService.DownloadObject(ctx, naming.StorageKernelBucketName, filename, strings.Join([]string{path, filename}, string(os.PathSeparator))); err != nil {
 		return err
 	}
 
@@ -118,18 +143,17 @@ func (r *runnerInitializer) initializeKernel(ctx context.Context, kernelName str
 }
 
 func (r *runnerInitializer) initializeRuntime(ctx context.Context, runtimeName string, runtimeVersion string) error {
-	runtime := strings.Join([]string{runtimeName, runtimeVersion}, "-")
-	path := strings.Join([]string{r.dataPath, "runtimes", runtime}, string(os.PathSeparator))
-	filename := strings.Join([]string{runtime, "ext4"}, ".")
+	path := naming.RuntimeStoragePath(r.dataPath, runtimeName, runtimeVersion)
+	filename := naming.RuntimeImageFileName(runtimeName, runtimeVersion)
 
 	log.Debugf("check if runtime is already initialized")
 	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
 	if exists {
-		log.Infof("runtime is already initialized: %s", runtime)
+		log.Infof("runtime is already initialized: %s %s", runtimeName, runtimeVersion)
 		return nil
 	}
 
-	log.Infof("initializing runtime: %s", runtime)
+	log.Infof("initializing runtime: %s %s", runtimeName, runtimeVersion)
 	if err := prepareTargetDirectory(path); err != nil {
 		return err
 	}
@@ -145,7 +169,7 @@ func (r *runnerInitializer) initializeRuntime(ctx context.Context, runtimeName s
 		return err
 	}
 	log.Infof("exporting runtime image: %s", refString)
-	if err := container.ImageExport(ctx, dockerClient, log, path, refString, strings.Join([]string{runtime, "ext4"}, ".")); err != nil {
+	if err := container.ImageExport(ctx, dockerClient, log, path, refString, filename); err != nil {
 		return err
 	}
 

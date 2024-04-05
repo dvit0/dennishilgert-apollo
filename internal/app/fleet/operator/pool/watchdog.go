@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator/runner"
+	taskRunner "github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
 	"github.com/dennishilgert/apollo/pkg/proto/health/v1"
 )
@@ -22,22 +23,24 @@ type runnerPoolWatchdog struct {
 	runnerPool    RunnerPool
 	worker        worker.WorkerManager
 	checkInterval time.Duration
+	teardownCh    chan runner.TeardownParams
 	errCh         chan error
 }
 
 // NewRunnerPoolWatchdog create a new Watchdog.
-func NewRunnerPoolWatchdog(runnerPool RunnerPool, opts WatchdogOptions) RunnerPoolWatchdog {
+func NewRunnerPoolWatchdog(runnerPool RunnerPool, runnerTeardownCh chan runner.TeardownParams, opts WatchdogOptions) RunnerPoolWatchdog {
 	return &runnerPoolWatchdog{
 		runnerPool:    runnerPool,
 		worker:        worker.NewWorkerManager(opts.WorkerCount),
 		checkInterval: opts.CheckInterval,
+		teardownCh:    runnerTeardownCh,
 		errCh:         make(chan error),
 	}
 }
 
 // Run runs the health checks in a specified time interval.
 func (p *runnerPoolWatchdog) Run(ctx context.Context) error {
-	runner := runner.NewRunnerManager(
+	runner := taskRunner.NewRunnerManager(
 		func(ctx context.Context) error {
 			if err := p.worker.Run(ctx); err != nil {
 				return err
@@ -70,23 +73,27 @@ func (p *runnerPoolWatchdog) Run(ctx context.Context) error {
 
 // checkRunners checks the health status of the runners in the pool.
 func (p *runnerPoolWatchdog) checkRunners() {
-	p.runnerPool.Lock()
-	defer p.runnerPool.Unlock()
+	runnerPool := *p.runnerPool.Pool()
 
-	for _, runnerPool := range *p.runnerPool.Pool() {
-		for _, target := range runnerPool {
+	for _, runnersByFunction := range runnerPool {
+		for _, target := range runnersByFunction {
+			if target.Idle() >= target.Config().IdleTtl {
+				log.Debugf("runner idle ttl has been reached: %s", target.Config().RunnerUuid)
+				p.teardownRunner(target.Config().FunctionUuid, target.Config().RunnerUuid)
+				continue
+			}
 
 			// building the task for the health check
 			task := worker.NewTask[bool](func(ctx context.Context) (bool, error) {
-				log.Debugf("checking health status of runner: %s", target.Cfg.RunnerUuid)
+				log.Debugf("checking health status of runner: %s", target.Config().RunnerUuid)
 
 				healthStatus, err := target.Health(ctx)
 				if err != nil {
-					log.Errorf("error while checking health status of runner %s: %v", target.Cfg.RunnerUuid, err)
+					log.Errorf("error while checking health status of runner %s: %v", target.Config().RunnerUuid, err)
 					return false, err
 				}
 				if *healthStatus != health.HealthStatus_HEALTHY {
-					log.Warnf("runner not healthy: %s", target.Cfg.RunnerUuid)
+					log.Warnf("runner not healthy: %s", target.Config().RunnerUuid)
 					return false, nil
 				}
 				return true, nil
@@ -95,16 +102,28 @@ func (p *runnerPoolWatchdog) checkRunners() {
 			// add a callback to handle the result of the health check
 			task.Callback(func(healthy bool, err error) {
 				if !healthy || err != nil {
-					// destroy the runner if it's not healthy
-					p.runnerPool.RemoveAndDestroy(target.Cfg.FunctionUuid, target.Cfg.RunnerUuid)
-				}
-				if err != nil {
-					p.errCh <- err
+					if err != nil {
+						p.errCh <- err
+					}
+					log.Debugf("runner is unhealthy: %s", target.Config().RunnerUuid)
+					p.teardownRunner(target.Config().FunctionUuid, target.Config().RunnerUuid)
 				}
 			})
 
 			// add the task to the worker queue
 			p.worker.Add(task)
 		}
+	}
+}
+
+// teardownRunner removes the runner from the pool and sends the tear down signal to the runner operator.
+func (p *runnerPoolWatchdog) teardownRunner(functionUuid string, runnerUuid string) {
+	// remove runner from pool to prevent further usage
+	p.runnerPool.Remove(functionUuid, runnerUuid)
+
+	// send runner params to runner operator to tear down the runner
+	p.teardownCh <- runner.TeardownParams{
+		FunctionUuid: functionUuid,
+		RunnerUuid:   runnerUuid,
 	}
 }

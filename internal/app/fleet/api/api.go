@@ -127,7 +127,7 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) Prepare(ctx context.Context, req *fleet.PrepareRunnerRequest) (*shared.EmptyResponse, error) {
+func (a *apiServer) Initialize(ctx context.Context, req *fleet.InitializeFunctionRequest) (*shared.EmptyResponse, error) {
 	// handle preparation request asynchronous and respond immediately
 	go func() {
 		bgCtx, cancel := context.WithTimeout(a.appCtx, time.Minute*10)
@@ -150,6 +150,15 @@ func (a *apiServer) Prepare(ctx context.Context, req *fleet.PrepareRunnerRequest
 		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionStatusUpdateTopic, message)
 	}()
 	return &shared.EmptyResponse{}, nil
+}
+
+func (a *apiServer) Provision(ctx context.Context, req *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
+	result, err := a.runnerOperator.ProvisionRunner(ctx, req)
+	if err != nil {
+		log.Error("failed to provision runner")
+		return nil, err
+	}
+	return result, nil
 }
 
 func (a *apiServer) Invoke(ctx context.Context, req *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error) {

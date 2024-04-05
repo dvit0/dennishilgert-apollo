@@ -47,17 +47,6 @@ type fleetManager struct {
 }
 
 func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
-	runnerOperator, err := operator.NewRunnerOperator(operator.Options{
-		AgentApiPort:          opts.AgentApiPort,
-		OsArch:                utils.DetectArchitecture(),
-		FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
-		WatchdogCheckInterval: opts.WatchdogCheckInterval,
-		WatchdogWorkerCount:   opts.WatchdogWorkerCount,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error while creating runner operator: %v", err)
-	}
-
 	storageService, err := storage.NewStorageService(storage.Options{
 		Endpoint:        opts.StorageEndpoint,
 		AccessKeyId:     opts.StorageAccessKeyId,
@@ -74,6 +63,20 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 			ImageRegistryAddress: opts.ImageRegistryAddress,
 		},
 	)
+
+	runnerOperator, err := operator.NewRunnerOperator(
+		runnerInitializer,
+		operator.Options{
+			AgentApiPort:          opts.AgentApiPort,
+			OsArch:                utils.DetectArchitecture(),
+			FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
+			WatchdogCheckInterval: opts.WatchdogCheckInterval,
+			WatchdogWorkerCount:   opts.WatchdogWorkerCount,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating runner operator: %v", err)
+	}
 
 	messagingProducer, err := producer.NewMessagingProducer(
 		ctx,
