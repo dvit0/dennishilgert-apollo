@@ -153,7 +153,7 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleet.InitializeFunctio
 }
 
 func (a *apiServer) Provision(ctx context.Context, req *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
-	result, err := a.runnerOperator.ProvisionRunner(ctx, req)
+	result, err := a.runnerOperator.ProvisionRunner(req)
 	if err != nil {
 		log.Error("failed to provision runner")
 		return nil, err

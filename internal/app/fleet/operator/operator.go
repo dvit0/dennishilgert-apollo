@@ -31,7 +31,7 @@ type Options struct {
 type RunnerOperator interface {
 	Init(ctx context.Context) error
 	AvailableRunner(request *fleet.AvailableRunnerRequest) (*fleet.AvailableRunnerResponse, error)
-	ProvisionRunner(ctx context.Context, request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error)
+	ProvisionRunner(request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error)
 	InvokeFunction(ctx context.Context, request *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error)
 }
 
@@ -43,10 +43,11 @@ type runnerOperator struct {
 	runnerPool            pool.RunnerPool
 	runnerPoolWatchdog    pool.RunnerPoolWatchdog
 	runnerInitializer     initializer.RunnerInitializer
+	appCtx                context.Context
 }
 
 // NewRunnerOperator creates a new Operator.
-func NewRunnerOperator(runnerInitializer initializer.RunnerInitializer, opts Options) (RunnerOperator, error) {
+func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.RunnerInitializer, opts Options) (RunnerOperator, error) {
 	runnerTeardownCh := make(chan runner.TeardownParams)
 
 	runnerPool := pool.NewRunnerPool()
@@ -67,6 +68,7 @@ func NewRunnerOperator(runnerInitializer initializer.RunnerInitializer, opts Opt
 		runnerPool:            runnerPool,
 		runnerPoolWatchdog:    runnerPoolWatchdog,
 		runnerInitializer:     runnerInitializer,
+		appCtx:                ctx,
 	}, nil
 }
 
@@ -115,7 +117,7 @@ func (r *runnerOperator) AvailableRunner(request *fleet.AvailableRunnerRequest) 
 }
 
 // ProvisionRunner provisions a new runner with specified parameters.
-func (v *runnerOperator) ProvisionRunner(ctx context.Context, request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
+func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
 	runnerUuid := uuid.New().String()
 
 	multiThreading := false
@@ -186,23 +188,26 @@ func (v *runnerOperator) ProvisionRunner(ctx context.Context, request *fleet.Pro
 		AgentApiPort:   v.agentApiPort,
 	}
 
-	if err := v.runnerInitializer.InitializeRunner(ctx, cfg); err != nil {
+	//
+	if err := v.runnerInitializer.InitializeRunner(v.appCtx, cfg); err != nil {
 		// We don't care if the runner storage removal throws an error as this is just for cleanup
-		v.runnerInitializer.RemoveRunner(ctx, runnerUuid)
+		v.runnerInitializer.RemoveRunner(v.appCtx, runnerUuid)
 		return nil, err
 	}
 
 	// Create and start new runner instance.
-	instance, err := runner.NewInstance(ctx, cfg)
+	// It is important to use the app context here as the instance would be terminated
+	// after the request is done.
+	instance, err := runner.NewInstance(v.appCtx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	if err := instance.CreateAndStart(ctx); err != nil {
+	if err := instance.CreateAndStart(v.appCtx); err != nil {
 		return nil, err
 	}
 
 	// Waiting for the runner to become ready.
-	if err := instance.Ready(ctx); err != nil {
+	if err := instance.Ready(v.appCtx); err != nil {
 		return nil, err
 	}
 

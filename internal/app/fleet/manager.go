@@ -65,6 +65,7 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	)
 
 	runnerOperator, err := operator.NewRunnerOperator(
+		ctx,
 		runnerInitializer,
 		operator.Options{
 			AgentApiPort:          opts.AgentApiPort,

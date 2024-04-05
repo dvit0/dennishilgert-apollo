@@ -260,7 +260,7 @@ func (r *runnerInstance) IsRunning() bool {
 
 // ConnectionAlive returns if a grpc client connection is still alive.
 func (r *runnerInstance) ConnectionAlive() bool {
-	return (r.clientConn.GetState() == connectivity.Ready || r.clientConn.GetState() == connectivity.Idle)
+	return ((r.clientConn.GetState() == connectivity.Ready) || (r.clientConn.GetState() == connectivity.Idle))
 }
 
 // Idle returns for how long the instance is idling.
