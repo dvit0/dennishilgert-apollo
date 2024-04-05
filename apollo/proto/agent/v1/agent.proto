@@ -3,22 +3,13 @@ syntax = "proto3";
 package apollo.proto.agent.v1;
 
 import "google/protobuf/struct.proto";
+import "apollo/proto/shared/v1/shared.proto";
 
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/agent/v1;agent";
 
 service Agent {
+  rpc Initialize(InitializeRuntimeRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc Invoke(InvokeRequest) returns (InvokeResponse) {}
-}
-
-message InvokeRequest {
-  ConfigData config = 1;
-  ContextData context = 2;
-  EventData event = 3;
-}
-
-message ConfigData {
-  string runtime_binary_path = 1;
-  repeated string runtime_binary_args = 2;
 }
 
 message ContextData {
@@ -30,16 +21,27 @@ message ContextData {
 }
 
 message EventData {
-  string id = 1;
+  string uuid = 1;
   string type = 2;
   google.protobuf.Struct data = 3;
 }
 
+message InitializeRuntimeRequest {
+  string handler = 1;
+  string binary_path = 2;
+  repeated string binary_args = 3;
+}
+
+message InvokeRequest {
+  ContextData context = 1;
+  EventData event = 2;
+}
+
 message InvokeResponse {
-  string event_id = 1;
+  string event_uuid = 1;
   int32 status = 2;
   string status_message = 3;
-  string duration = 6;
-  repeated google.protobuf.Struct logs = 4;
-  google.protobuf.Struct data = 5;
+  string duration = 4;
+  repeated google.protobuf.Struct logs = 5;
+  google.protobuf.Struct data = 6;
 }

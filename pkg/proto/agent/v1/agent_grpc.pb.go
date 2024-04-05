@@ -8,6 +8,7 @@ package agent
 
 import (
 	context "context"
+	v1 "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,13 +20,15 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Agent_Invoke_FullMethodName = "/apollo.proto.agent.v1.Agent/Invoke"
+	Agent_Initialize_FullMethodName = "/apollo.proto.agent.v1.Agent/Initialize"
+	Agent_Invoke_FullMethodName     = "/apollo.proto.agent.v1.Agent/Invoke"
 )
 
 // AgentClient is the client API for Agent service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentClient interface {
+	Initialize(ctx context.Context, in *InitializeRuntimeRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
 	Invoke(ctx context.Context, in *InvokeRequest, opts ...grpc.CallOption) (*InvokeResponse, error)
 }
 
@@ -35,6 +38,15 @@ type agentClient struct {
 
 func NewAgentClient(cc grpc.ClientConnInterface) AgentClient {
 	return &agentClient{cc}
+}
+
+func (c *agentClient) Initialize(ctx context.Context, in *InitializeRuntimeRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
+	out := new(v1.EmptyResponse)
+	err := c.cc.Invoke(ctx, Agent_Initialize_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *agentClient) Invoke(ctx context.Context, in *InvokeRequest, opts ...grpc.CallOption) (*InvokeResponse, error) {
@@ -50,6 +62,7 @@ func (c *agentClient) Invoke(ctx context.Context, in *InvokeRequest, opts ...grp
 // All implementations should embed UnimplementedAgentServer
 // for forward compatibility
 type AgentServer interface {
+	Initialize(context.Context, *InitializeRuntimeRequest) (*v1.EmptyResponse, error)
 	Invoke(context.Context, *InvokeRequest) (*InvokeResponse, error)
 }
 
@@ -57,6 +70,9 @@ type AgentServer interface {
 type UnimplementedAgentServer struct {
 }
 
+func (UnimplementedAgentServer) Initialize(context.Context, *InitializeRuntimeRequest) (*v1.EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
+}
 func (UnimplementedAgentServer) Invoke(context.Context, *InvokeRequest) (*InvokeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
 }
@@ -70,6 +86,24 @@ type UnsafeAgentServer interface {
 
 func RegisterAgentServer(s grpc.ServiceRegistrar, srv AgentServer) {
 	s.RegisterService(&Agent_ServiceDesc, srv)
+}
+
+func _Agent_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitializeRuntimeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).Initialize(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Agent_Initialize_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).Initialize(ctx, req.(*InitializeRuntimeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Agent_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -97,6 +131,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "apollo.proto.agent.v1.Agent",
 	HandlerType: (*AgentServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Initialize",
+			Handler:    _Agent_Initialize_Handler,
+		},
 		{
 			MethodName: "Invoke",
 			Handler:    _Agent_Invoke_Handler,
