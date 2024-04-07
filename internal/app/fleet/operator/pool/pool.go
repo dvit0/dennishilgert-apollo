@@ -52,6 +52,10 @@ func (r *runnerPool) Add(instance runner.RunnerInstance) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
+	// Create inner map if it is non existent.
+	if r.pool[instance.Config().FunctionUuid] == nil {
+		r.pool[instance.Config().FunctionUuid] = make(map[string]runner.RunnerInstance)
+	}
 	if r.pool[instance.Config().FunctionUuid][instance.Config().RunnerUuid] != nil {
 		return fmt.Errorf("pool already contains a runner instance with the given uuid: %s", instance.Config().RunnerUuid)
 	}
