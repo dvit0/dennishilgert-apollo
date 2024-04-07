@@ -18,7 +18,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 )
 
 var log = logger.NewLogger("apollo.manager.runner")
@@ -61,6 +60,9 @@ type runnerInstance struct {
 	lastUsed   time.Time
 	clientConn *grpc.ClientConn
 	state      atomic.Value
+	stdout     *os.File
+	stderr     *os.File
+	readyCh    chan error
 }
 
 // NewInstance creates a new RunnerInstance.
@@ -78,6 +80,7 @@ func NewInstance(ctx context.Context, cfg *Config) (RunnerInstance, error) {
 		ctx:       fnCtx,
 		ctxCancel: fnCtxCancel,
 		lastUsed:  time.Now(),
+		readyCh:   make(chan error, 1),
 	}, nil
 }
 
@@ -109,14 +112,18 @@ func (r *runnerInstance) CreateAndStart(ctx context.Context) error {
 	// Stdout will be directed to this file.
 	stdout, err := os.OpenFile(r.cfg.StdOutFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(fmt.Errorf("failed to create stdout file: %v", err))
+		log.Errorf("failed to open stdout file")
+		return err
 	}
+	r.stdout = stdout
 
 	// Stderr will be directed to this file.
 	stderr, err := os.OpenFile(r.cfg.StdErrFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(fmt.Errorf("failed to create stderr file: %v", err))
+		log.Errorf("failed to open stderr file")
+		return err
 	}
+	r.stderr = stderr
 
 	// If the jailer is used, the final command will be built in firecracker.NewMachine(...).
 	// If not, the final command is built here.
@@ -153,16 +160,31 @@ func (r *runnerInstance) CreateAndStart(ctx context.Context) error {
 func (r *runnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
 	log.Debugf("shutting down runner: %s", r.cfg.RunnerUuid)
 
+	// Close logging files and connection after the machine has been shut down.
+	defer func() {
+		r.stdout.Close()
+		r.stderr.Close()
+
+		if r.clientConn != nil {
+			r.clientConn.Close()
+		}
+
+		close(r.readyCh)
+
+		r.ctxCancel()
+	}()
+
 	r.SetState(RunnerStateShutdown)
 
 	if err := r.machine.Shutdown(parentCtx); err != nil {
+		log.Errorf("failed to shutdown runner: %v", err)
 		return err
 	}
 	timeout := 3 * time.Second
 	ctx, cancel := context.WithTimeout(parentCtx, timeout)
 	defer cancel()
 
-	// check every 500ms if the machine is still running
+	// Check every 500 ms if the machine is still running.
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -231,6 +253,17 @@ func (r *runnerInstance) Health(ctx context.Context) (*health.HealthStatus, erro
 
 // Ready makes sure the runner is ready.
 func (r *runnerInstance) Ready(ctx context.Context) error {
+	// TEMP TODO: Wait for agent inside the runner to become ready.
+	// IDEA: The agent inside the runner sends a message to the messaging service which will be received
+	// by the messaging consumer of the fleet manager. The handler of this topic will then send the error
+	// or nil to the readyCh of this runner instance. If an error is sent to the channel, it will be
+	// handled here and the runner will be shut down.
+	// log.Infof("waiting for the agent inside the runner to become ready")
+	// if err := <-r.readyCh; err != nil {
+	// 	log.Errorf("error while waiting for agent inside runner to become ready: %v", err)
+	// 	return err
+	// }
+
 	if err := r.establishConnection(ctx); err != nil {
 		return err
 	}
@@ -249,8 +282,8 @@ func (r *runnerInstance) Ready(ctx context.Context) error {
 
 // IsRunning returns if a firecracker machine is running.
 func (r *runnerInstance) IsRunning() bool {
-	// to check if the machine is running, try to establish a connection via the unix socket
-	conn, err := net.Dial("unix", r.machine.Cfg.SocketPath)
+	// To check if the machine is running, try to establish a connection via the unix socket.
+	conn, err := net.DialTimeout("unix", r.machine.Cfg.SocketPath, 2*time.Second)
 	if err != nil {
 		return false
 	}
@@ -260,7 +293,7 @@ func (r *runnerInstance) IsRunning() bool {
 
 // ConnectionAlive returns if a grpc client connection is still alive.
 func (r *runnerInstance) ConnectionAlive() bool {
-	return ((r.clientConn.GetState() == connectivity.Ready) || (r.clientConn.GetState() == connectivity.Idle))
+	return (r.clientConn.GetState() == connectivity.Ready) || (r.clientConn.GetState() == connectivity.Idle)
 }
 
 // Idle returns for how long the instance is idling.
@@ -277,32 +310,26 @@ func (r *runnerInstance) establishConnection(ctx context.Context) error {
 			log.Infof("connection alive - no need to establish a new connection to agent in runner: %s", r.cfg.RunnerUuid)
 			return nil
 		}
-		// try to close the existing conenction and ignore the possible error
+		// Try to close the existing connection and ignore the possible error.
 		r.clientConn.Close()
 	}
 
 	addr := strings.Join([]string{r.ip.String(), fmt.Sprint(r.cfg.AgentApiPort)}, ":")
 	log.Debugf("connecting to agent with address: %s", addr)
 
-	// As there are frequent requests made to the agent api, a keep-alive connection for the whole vm time-to-live is used.
-	// The connection is saved in the object of the vm and used for every request to the agent api.
-	keepAliveParams := keepalive.ClientParameters{
-		Time:                10 * time.Second, // time after which a ping is sent if no activity; grpc defined min value is 10s
-		Timeout:             3 * time.Second,  // time after which the connection is closed if no ack for ping
-		PermitWithoutStream: true,             // allows pings even when there are no active streams
-	}
-
-	const retrySeconds = 5     // trying to connect for a period of 5 seconds
-	const retriesPerSecond = 4 // trying to connect 5 times per second
+	const retrySeconds = 3     // trying to connect for a period of 3 seconds
+	const retriesPerSecond = 2 // trying to connect 2 times per second
 	for i := 0; i < (retrySeconds * retriesPerSecond); i++ {
-		conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithKeepaliveParams(keepAliveParams))
+		conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 		if err == nil {
 			r.clientConn = conn
+			log.Infof("connection to agent in runner established: %s", r.cfg.RunnerUuid)
 			return nil
 		} else {
+			conn.Close()
 			log.Debugf("failed to establish agent connection in runner: %s - reason: %v", r.cfg.RunnerUuid, err)
 		}
-		// wait before retrying, but stop if context is done
+		// Wait before retrying, but stop if context is done.
 		select {
 		case <-ctx.Done():
 			log.Errorf("context done before connection could be established to agent in runner: %s", r.cfg.RunnerUuid)
@@ -311,5 +338,5 @@ func (r *runnerInstance) establishConnection(ctx context.Context) error {
 			continue
 		}
 	}
-	return nil
+	return fmt.Errorf("failed to establish agent connection in runner: %s", r.cfg.RunnerUuid)
 }
