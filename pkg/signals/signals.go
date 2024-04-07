@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/dennishilgert/apollo/pkg/logger"
 )
@@ -14,6 +15,8 @@ var (
 	// Inspired by
 	// https://github.com/kubernetes-sigs/controller-runtime/blob/8499b67e316a03b260c73f92d0380de8cd2e97a1/pkg/manager/signals/signal.go#L25
 	onlyOneSignalHandler = make(chan struct{})
+
+	shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
 )
 
 // Context returns a context which will be canceled when either the SIGINT
