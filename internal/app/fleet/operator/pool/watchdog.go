@@ -23,12 +23,12 @@ type runnerPoolWatchdog struct {
 	runnerPool    RunnerPool
 	worker        worker.WorkerManager
 	checkInterval time.Duration
-	teardownCh    chan runner.TeardownParams
+	teardownCh    chan runner.RunnerInstance
 	errCh         chan error
 }
 
 // NewRunnerPoolWatchdog create a new Watchdog.
-func NewRunnerPoolWatchdog(runnerPool RunnerPool, runnerTeardownCh chan runner.TeardownParams, opts WatchdogOptions) RunnerPoolWatchdog {
+func NewRunnerPoolWatchdog(runnerPool RunnerPool, runnerTeardownCh chan runner.RunnerInstance, opts WatchdogOptions) RunnerPoolWatchdog {
 	return &runnerPoolWatchdog{
 		runnerPool:    runnerPool,
 		worker:        worker.NewWorkerManager(opts.WorkerCount),
@@ -60,9 +60,8 @@ func (p *runnerPoolWatchdog) Run(ctx context.Context) error {
 					// check the vms health
 					p.checkRunners()
 				case err := <-p.errCh:
-					// log error occured while checking the health
 					if err != nil {
-						log.Errorf("error while running the watchdog: %v", err)
+						log.Errorf("error while checking the runners: %v", err)
 					}
 				}
 			}
@@ -89,7 +88,7 @@ func (p *runnerPoolWatchdog) checkRunners() {
 
 				healthStatus, err := target.Health(ctx)
 				if err != nil {
-					log.Errorf("error while checking health status of runner %s: %v", target.Config().RunnerUuid, err)
+					log.Errorf("error while checking health status of runner: %s - reason: %v", target.Config().RunnerUuid, err)
 					return false, err
 				}
 				if *healthStatus != health.HealthStatus_HEALTHY {
@@ -97,7 +96,7 @@ func (p *runnerPoolWatchdog) checkRunners() {
 					return false, nil
 				}
 				return true, nil
-			})
+			}, 5*time.Second)
 
 			// add a callback to handle the result of the health check
 			task.Callback(func(healthy bool, err error) {
@@ -105,7 +104,7 @@ func (p *runnerPoolWatchdog) checkRunners() {
 					if err != nil {
 						p.errCh <- err
 					}
-					log.Debugf("runner is unhealthy: %s", target.Config().RunnerUuid)
+					log.Debugf("runner is unhealthy - tear down: %s", target.Config().RunnerUuid)
 					p.teardownRunner(target.Config().FunctionUuid, target.Config().RunnerUuid)
 				}
 			})
@@ -118,12 +117,15 @@ func (p *runnerPoolWatchdog) checkRunners() {
 
 // teardownRunner removes the runner from the pool and sends the tear down signal to the runner operator.
 func (p *runnerPoolWatchdog) teardownRunner(functionUuid string, runnerUuid string) {
-	// remove runner from pool to prevent further usage
+	// Get runner instance from runner pool.
+	runnerInstance, err := p.runnerPool.Get(functionUuid, runnerUuid)
+	if err != nil {
+		log.Errorf("failed to send runner teardown job: %v", err)
+	}
+
+	// Remove runner from pool to prevent further usage.
 	p.runnerPool.Remove(functionUuid, runnerUuid)
 
-	// send runner params to runner operator to tear down the runner
-	p.teardownCh <- runner.TeardownParams{
-		FunctionUuid: functionUuid,
-		RunnerUuid:   runnerUuid,
-	}
+	// Send runner params to runner operator to tear down the runner.
+	p.teardownCh <- runnerInstance
 }

@@ -18,8 +18,9 @@ type Task[T any] struct {
 }
 
 // NewTask creates a new Task.
-func NewTask[T any](executor func(ctx context.Context) (T, error)) *Task[T] {
+func NewTask[T any](executor func(ctx context.Context) (T, error), timeout time.Duration) *Task[T] {
 	return &Task[T]{
+		timeout:  timeout,
 		executor: executor,
 	}
 }

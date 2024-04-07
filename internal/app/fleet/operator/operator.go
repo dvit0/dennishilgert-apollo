@@ -39,16 +39,18 @@ type runnerOperator struct {
 	osArch                utils.OsArch
 	firecrackerBinaryPath string
 	agentApiPort          int
-	runnerTeardownCh      chan runner.TeardownParams
+	runnerTeardownCh      chan runner.RunnerInstance
 	runnerPool            pool.RunnerPool
 	runnerPoolWatchdog    pool.RunnerPoolWatchdog
 	runnerInitializer     initializer.RunnerInitializer
 	appCtx                context.Context
+	runnerCtx             context.Context
+	runnerCtxCancel       context.CancelFunc
 }
 
 // NewRunnerOperator creates a new Operator.
 func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.RunnerInitializer, opts Options) (RunnerOperator, error) {
-	runnerTeardownCh := make(chan runner.TeardownParams)
+	runnerTeardownCh := make(chan runner.RunnerInstance)
 
 	runnerPool := pool.NewRunnerPool()
 	runnerPoolWatchdog := pool.NewRunnerPoolWatchdog(
@@ -60,6 +62,8 @@ func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.Runner
 		},
 	)
 
+	runnerCtx, runnerCtxCancel := context.WithCancel(context.Background())
+
 	return &runnerOperator{
 		osArch:                opts.OsArch,
 		firecrackerBinaryPath: opts.FirecrackerBinaryPath,
@@ -69,6 +73,8 @@ func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.Runner
 		runnerPoolWatchdog:    runnerPoolWatchdog,
 		runnerInitializer:     runnerInitializer,
 		appCtx:                ctx,
+		runnerCtx:             runnerCtx,
+		runnerCtxCancel:       runnerCtxCancel,
 	}, nil
 }
 
@@ -88,14 +94,21 @@ func (v *runnerOperator) Init(ctx context.Context) error {
 
 			for {
 				select {
-				case <-ctx.Done():
+				case <-v.appCtx.Done():
 					log.Info("tearing down all runners")
-					// Use new context as the main context has already been cancelled.
-					v.TeardownRunners(context.Background())
+
+					// Cancel runner context after 1 minute.
+					// This gives the opportunity to shutdown all runners gracefully.
+					time.AfterFunc(1*time.Minute, func() {
+						log.Warnf("runner teardown timeout reached - killing left over runners")
+						v.runnerCtxCancel()
+					})
+
+					v.TeardownRunners(v.runnerCtx)
 					return nil
-				case params := <-v.runnerTeardownCh:
-					if err := v.TeardownRunner(ctx, params.FunctionUuid, params.RunnerUuid); err != nil {
-						return err
+				case runnerInstance := <-v.runnerTeardownCh:
+					if err := v.TeardownRunner(v.runnerCtx, runnerInstance); err != nil {
+						log.Errorf("failed to tear down runner: %s - reason: %v", runnerInstance.Config().RunnerUuid, err)
 					}
 				}
 			}
@@ -189,30 +202,39 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 	}
 
 	//
-	if err := v.runnerInitializer.InitializeRunner(v.appCtx, cfg); err != nil {
+	if err := v.runnerInitializer.InitializeRunner(v.runnerCtx, cfg); err != nil {
 		// We don't care if the runner storage removal throws an error as this is just for cleanup
-		v.runnerInitializer.RemoveRunner(v.appCtx, runnerUuid)
+		v.runnerInitializer.RemoveRunner(v.runnerCtx, runnerUuid)
 		return nil, err
 	}
 
 	// Create and start new runner instance.
 	// It is important to use the app context here as the instance would be terminated
 	// after the request is done.
-	instance, err := runner.NewInstance(v.appCtx, cfg)
+	instance, err := runner.NewInstance(v.runnerCtx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	if err := instance.CreateAndStart(v.appCtx); err != nil {
+	if err := instance.CreateAndStart(v.runnerCtx); err != nil {
+		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
+			log.Errorf("failed to shutdown runner instance: %v", err)
+		}
 		return nil, err
 	}
 
 	// Waiting for the runner to become ready.
-	if err := instance.Ready(v.appCtx); err != nil {
+	if err := instance.Ready(v.runnerCtx); err != nil {
+		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
+			log.Errorf("failed to shutdown runner instance: %v", err)
+		}
 		return nil, err
 	}
 
 	// Add runner to the runner pool.
 	if err := v.runnerPool.Add(instance); err != nil {
+		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
+			log.Errorf("failed to shutdown runner instance: %v", err)
+		}
 		return nil, err
 	}
 
@@ -223,20 +245,16 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 }
 
 // TeardownRunner tears down a specified runner.
-func (r *runnerOperator) TeardownRunner(ctx context.Context, functionUuid string, runnerUuid string) error {
-	instance, err := r.runnerPool.Get(functionUuid, runnerUuid)
-	if err != nil {
-		log.Errorf("failed to teardown runner: %s", runnerUuid)
+func (r *runnerOperator) TeardownRunner(ctx context.Context, runnerInstance runner.RunnerInstance) error {
+	if err := runnerInstance.ShutdownAndDestroy(ctx); err != nil {
+		log.Errorf("error while shutting down runner: %s", runnerInstance.Config().RunnerUuid)
 		return err
 	}
-	if err := instance.ShutdownAndDestroy(ctx); err != nil {
-		log.Errorf("error while shutting down runner: %s", runnerUuid)
-		return err
-	}
-	if err := r.runnerInitializer.RemoveRunner(ctx, runnerUuid); err != nil {
-		log.Errorf("failed to remove runner storage: %s", runnerUuid)
-		return err
-	}
+	// TEMP TODO: uncomment to enable runner directory cleanup after teardown.
+	// if err := r.runnerInitializer.RemoveRunner(ctx, runnerInstance.Config().RunnerUuid); err != nil {
+	// 	log.Errorf("failed to remove runner storage: %s", runnerInstance.Config().RunnerUuid)
+	// 	return err
+	// }
 	return nil
 }
 
@@ -249,13 +267,15 @@ func (r *runnerOperator) TeardownRunners(ctx context.Context) {
 		runnerCount := len(runnersByFunction)
 		runnerIndex := 1
 
-		log.Debugf("tearing down runners of function (%d/%d): %s", functionIndex, functionCount, functionUuid)
+		if runnerCount > 0 {
+			log.Debugf("tearing down runners of function (%d/%d): %s", functionIndex, functionCount, functionUuid)
+		}
 
-		for runnerUuid := range runnersByFunction {
+		for runnerUuid, runnerInstance := range runnersByFunction {
 			log.Debugf("tearing down runner (%d/%d): %s", runnerIndex, runnerCount, runnerUuid)
 			r.runnerPool.Remove(functionUuid, runnerUuid)
-			if err := r.TeardownRunner(ctx, functionUuid, runnerUuid); err != nil {
-				log.Warnf("failed to tear down runner: %s", runnerUuid)
+			if err := r.TeardownRunner(ctx, runnerInstance); err != nil {
+				log.Warnf("failed to tear down runner - manual cleanup needed: %s", runnerUuid)
 			}
 			runnerIndex += 1
 		}
@@ -288,9 +308,10 @@ func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleet.Invo
 	if err != nil {
 		return nil, err
 	}
-	// TODO: send billed duration to user service via messaging
+	// TODO: Send billed duration to user service and logs to the log collector via messaging.
+	// IDEA: This can be done directly inside the runner. The connection to the messaging
+	// service is already implemented, so why not use it.
 	log.Infof("Billed duration for execution: %s, duration: %s", invokeResponse.EventUuid, invokeResponse.Duration)
-	// TODO: send logs to logs service via messaging
 	log.Infof("Logs for execution: %s, logs: %v", invokeResponse.EventUuid, invokeResponse.Logs)
 
 	response := &fleet.InvokeFunctionResponse{

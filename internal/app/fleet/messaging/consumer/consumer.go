@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/handler"
@@ -95,7 +96,7 @@ func (m *messagingConsumer) Start(ctx context.Context) error {
 						task := worker.NewTask[struct{}](func(ctx context.Context) (struct{}, error) {
 							handler(event)
 							return struct{}{}, nil
-						})
+						}, 10*time.Second)
 						m.worker.Add(task)
 					case kafka.PartitionEOF:
 						log.Debugf("no more kafka messages to read at the moment")
