@@ -1,6 +1,8 @@
 package app
 
 import (
+	"strings"
+
 	"github.com/dennishilgert/apollo/cmd/agent/config"
 	"github.com/dennishilgert/apollo/internal/app/agent"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
@@ -24,9 +26,19 @@ func Run() {
 	log.Infof("log level set to: %s", log.LogLevel())
 
 	ctx := signals.Context()
-	agent, err := agent.NewAgent(agent.Options{
-		ApiPort: cfg.ApiPort,
-	})
+	agent, err := agent.NewAgent(
+		ctx,
+		agent.Options{
+			ManagerUuid:               cfg.ManagerUuid,
+			FunctionUuid:              cfg.FunctionUuid,
+			RunnerUuid:                cfg.RunnerUuid,
+			RuntimeHandler:            cfg.RuntimeHandler,
+			RuntimeBinaryPath:         cfg.RuntimeBinaryPath,
+			RuntimeBinaryArgs:         strings.Split(strings.ReplaceAll(cfg.RuntimeBinaryArgs, "\"", ""), " "),
+			ApiPort:                   cfg.ApiPort,
+			MessagingBootstrapServers: cfg.MessagingBootstrapServers,
+		},
+	)
 	if err != nil {
 		log.Fatalf("error while creating agent: %v", err)
 	}

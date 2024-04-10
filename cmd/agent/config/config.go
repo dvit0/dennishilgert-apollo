@@ -9,20 +9,38 @@ import (
 var log = logger.NewLogger("apollo.agent.config")
 
 type Config struct {
-	ApiPort int
+	ManagerUuid       string
+	FunctionUuid      string
+	RunnerUuid        string
+	RuntimeHandler    string
+	RuntimeBinaryPath string
+	RuntimeBinaryArgs string
+
+	ApiPort                   int
+	MessagingBootstrapServers string
 }
 
 func Load() (*Config, error) {
 	var config Config
 
-	// automatically load environment variables that match
+	// Automatically load environment variables that match.
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("APOLLO")
 
-	// loading the values from the environment or use default values
+	// Loading the application specific values from the environment.
+	configuration.LoadOrDefault("ManagerUuid", "APOLLO_MANAGER_UUID", nil)
+	configuration.LoadOrDefault("FunctionUuid", "APOLLO_FUNCTION_UUID", nil)
+	configuration.LoadOrDefault("RunnerUuid", "APOLLO_RUNTIME_UUID", nil)
+	configuration.LoadOrDefault("RuntimeHandler", "APOLLO_RUNTIME_HANDLER", nil)
+	configuration.LoadOrDefault("RuntimeBinaryPath", "APOLLO_RUNTIME_BINARY_PATH", nil)
+	configuration.LoadOrDefault("RuntimeBinaryArgs", "APOLLO_RUNTIME_BINARY_ARGS", nil)
+
+	// Loading the values from the environment or use default values.
 	configuration.LoadOrDefault("ApiPort", "APOLLO_API_PORT", 50051)
 
-	// unmarshalling the Config struct
+	configuration.LoadOrDefault("MessagingBootstrapServers", "APOLLO_MESSAGING_BOOTSTRAP_SERVERS", nil)
+
+	// Unmarshalling the Config struct.
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatalf("unable to unmarshal config: %v", err)
 		return nil, err
