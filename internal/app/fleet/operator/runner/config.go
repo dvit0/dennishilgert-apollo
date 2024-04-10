@@ -10,26 +10,27 @@ import (
 )
 
 type Config struct {
-	FunctionUuid          string
-	RunnerUuid            string
-	HostOsArch            utils.OsArch
-	FirecrackerBinaryPath string
-	KernelImagePath       string
-	RuntimeDrivePath      string
-	RuntimeHandler        string
-	RuntimeBinaryPath     string
-	RuntimeBinaryArgs     []string
-	FunctionDrivePath     string
-	SocketPath            string
-	LogFilePath           string
-	StdOutFilePath        string
-	StdErrFilePath        string
-	VCpuCount             int
-	MemSizeMib            int
-	IdleTtl               time.Duration
-	Multithreading        bool
-	AgentApiPort          int
-	LogLevel              string
+	FunctionUuid             string
+	RunnerUuid               string
+	HostOsArch               utils.OsArch
+	FirecrackerBinaryPath    string
+	KernelImagePath          string
+	RuntimeDrivePath         string
+	RuntimeHandler           string
+	RuntimeBinaryPath        string
+	RuntimeBinaryArgs        []string
+	FunctionDrivePath        string
+	SocketPath               string
+	LogFilePath              string
+	StdOutFilePath           string
+	StdErrFilePath           string
+	VCpuCount                int
+	MemSizeMib               int
+	IdleTtl                  time.Duration
+	Multithreading           bool
+	AgentApiPort             int
+	MessagingBoostrapServers string
+	LogLevel                 string
 }
 
 func validate(cfg *Config) error {
@@ -87,6 +88,9 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 			WithRuntimeHandler(cfg.RuntimeHandler).
 			WithRuntimeBinaryPath(cfg.RuntimeBinaryPath).
 			WithRuntimeBinaryArgs(cfg.RuntimeBinaryArgs).
+			WithApiPort(cfg.AgentApiPort).
+			WithMessagingBootstrapServers(cfg.MessagingBoostrapServers).
+			WithLogLevel(cfg.LogLevel).
 			WithInit("/usr/bin/tini-static -p SIGINT -p SIGTERM -- /usr/bin/init").
 			Build(),
 		LogPath: cfg.LogFilePath,

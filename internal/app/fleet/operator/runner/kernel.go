@@ -18,21 +18,26 @@ type KernelArgsBuilder interface {
 	WithRuntimeHandler(handler string) KernelArgsBuilder
 	WithRuntimeBinaryPath(binaryPath string) KernelArgsBuilder
 	WithRuntimeBinaryArgs(binaryArgs []string) KernelArgsBuilder
+	WithApiPort(port int) KernelArgsBuilder
+	WithMessagingBootstrapServers(servers string) KernelArgsBuilder
+	WithLogLevel(logLevel string) KernelArgsBuilder
 }
 
 type kernelArgsBuilder struct {
-	console           string
-	reboot            string
-	panic             string
-	pci               string
-	nomodules         string
-	init              string
-	functionUuid      string
-	runnerUuid        string
-	runtimeHandler    string
-	runtimeBinaryPath string
-	runtimeBinaryArgs string
-	logLevel          string
+	console                   string
+	reboot                    string
+	panic                     string
+	pci                       string
+	nomodules                 string
+	init                      string
+	functionUuid              string
+	runnerUuid                string
+	runtimeHandler            string
+	runtimeBinaryPath         string
+	runtimeBinaryArgs         string
+	apiPort                   string
+	messagingBootstrapServers string
+	logLevel                  string
 }
 
 func NewKernelArgsBuilder() KernelArgsBuilder {
@@ -110,6 +115,16 @@ func (c *kernelArgsBuilder) WithRuntimeBinaryPath(binaryPath string) KernelArgsB
 
 func (c *kernelArgsBuilder) WithRuntimeBinaryArgs(binaryArgs []string) KernelArgsBuilder {
 	c.runtimeBinaryArgs = fmt.Sprintf("rt-bin-args=\"%s\"", strings.Join(binaryArgs, " "))
+	return c
+}
+
+func (c *kernelArgsBuilder) WithApiPort(port int) KernelArgsBuilder {
+	c.apiPort = fmt.Sprintf("api-port=%d", port)
+	return c
+}
+
+func (c *kernelArgsBuilder) WithMessagingBootstrapServers(servers string) KernelArgsBuilder {
+	c.messagingBootstrapServers = fmt.Sprintf("msg-srvs=%s", servers)
 	return c
 }
 

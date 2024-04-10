@@ -68,11 +68,12 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		ctx,
 		runnerInitializer,
 		operator.Options{
-			AgentApiPort:          opts.AgentApiPort,
-			OsArch:                utils.DetectArchitecture(),
-			FirecrackerBinaryPath: opts.FirecrackerBinaryPath,
-			WatchdogCheckInterval: opts.WatchdogCheckInterval,
-			WatchdogWorkerCount:   opts.WatchdogWorkerCount,
+			AgentApiPort:              opts.AgentApiPort,
+			MessagingBootstrapServers: opts.MessagingBootstrapServers,
+			OsArch:                    utils.DetectArchitecture(),
+			FirecrackerBinaryPath:     opts.FirecrackerBinaryPath,
+			WatchdogCheckInterval:     opts.WatchdogCheckInterval,
+			WatchdogWorkerCount:       opts.WatchdogWorkerCount,
 		},
 	)
 	if err != nil {

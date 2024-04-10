@@ -21,11 +21,12 @@ import (
 var log = logger.NewLogger("apollo.manager.operator")
 
 type Options struct {
-	AgentApiPort          int
-	OsArch                utils.OsArch
-	FirecrackerBinaryPath string
-	WatchdogCheckInterval time.Duration
-	WatchdogWorkerCount   int
+	AgentApiPort              int
+	MessagingBootstrapServers string
+	OsArch                    utils.OsArch
+	FirecrackerBinaryPath     string
+	WatchdogCheckInterval     time.Duration
+	WatchdogWorkerCount       int
 }
 
 type RunnerOperator interface {
@@ -37,16 +38,17 @@ type RunnerOperator interface {
 }
 
 type runnerOperator struct {
-	osArch                utils.OsArch
-	firecrackerBinaryPath string
-	agentApiPort          int
-	runnerTeardownCh      chan runner.RunnerInstance
-	runnerPool            pool.RunnerPool
-	runnerPoolWatchdog    pool.RunnerPoolWatchdog
-	runnerInitializer     initializer.RunnerInitializer
-	appCtx                context.Context
-	runnerCtx             context.Context
-	runnerCtxCancel       context.CancelFunc
+	osArch                    utils.OsArch
+	firecrackerBinaryPath     string
+	agentApiPort              int
+	messagingBootstrapServers string
+	runnerTeardownCh          chan runner.RunnerInstance
+	runnerPool                pool.RunnerPool
+	runnerPoolWatchdog        pool.RunnerPoolWatchdog
+	runnerInitializer         initializer.RunnerInitializer
+	appCtx                    context.Context
+	runnerCtx                 context.Context
+	runnerCtxCancel           context.CancelFunc
 }
 
 // NewRunnerOperator creates a new Operator.
@@ -66,16 +68,17 @@ func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.Runner
 	runnerCtx, runnerCtxCancel := context.WithCancel(context.Background())
 
 	return &runnerOperator{
-		osArch:                opts.OsArch,
-		firecrackerBinaryPath: opts.FirecrackerBinaryPath,
-		agentApiPort:          opts.AgentApiPort,
-		runnerTeardownCh:      runnerTeardownCh,
-		runnerPool:            runnerPool,
-		runnerPoolWatchdog:    runnerPoolWatchdog,
-		runnerInitializer:     runnerInitializer,
-		appCtx:                ctx,
-		runnerCtx:             runnerCtx,
-		runnerCtxCancel:       runnerCtxCancel,
+		osArch:                    opts.OsArch,
+		firecrackerBinaryPath:     opts.FirecrackerBinaryPath,
+		agentApiPort:              opts.AgentApiPort,
+		messagingBootstrapServers: opts.MessagingBootstrapServers,
+		runnerTeardownCh:          runnerTeardownCh,
+		runnerPool:                runnerPool,
+		runnerPoolWatchdog:        runnerPoolWatchdog,
+		runnerInitializer:         runnerInitializer,
+		appCtx:                    ctx,
+		runnerCtx:                 runnerCtx,
+		runnerCtxCancel:           runnerCtxCancel,
 	}, nil
 }
 
@@ -203,12 +206,13 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 			},
 			string(os.PathSeparator),
 		),
-		VCpuCount:      int(request.Machine.VcpuCores),
-		MemSizeMib:     int(request.Machine.MemoryLimit),
-		IdleTtl:        time.Duration(request.Machine.IdleTtl) * time.Minute,
-		Multithreading: multiThreading,
-		AgentApiPort:   v.agentApiPort,
-		LogLevel:       logLevel,
+		VCpuCount:                int(request.Machine.VcpuCores),
+		MemSizeMib:               int(request.Machine.MemoryLimit),
+		IdleTtl:                  time.Duration(request.Machine.IdleTtl) * time.Minute,
+		Multithreading:           multiThreading,
+		AgentApiPort:             v.agentApiPort,
+		MessagingBoostrapServers: v.messagingBootstrapServers,
+		LogLevel:                 logLevel,
 	}
 
 	//
