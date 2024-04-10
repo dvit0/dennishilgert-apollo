@@ -1,21 +1,17 @@
 #!/bin/bash
 
 # This script is responsible for:
-# - mounting all system relevant directories
+# - Mounting all system relevant directories
 #     - /proc:  mount -t proc proc /proc
 #     - /sys:   mount -t sysfs sysfs /sys
-# - to evaluate: mounting the overlay filesystem (see rootfs-builder-3/files_debootstrap/sbin/overlay-init)
-# - setting up the network, based on the kernel args
+# - To evaluate: mounting the overlay filesystem (see rootfs-builder-3/files_debootstrap/sbin/overlay-init)
+# - Setting up the network, based on the kernel args
 
 # The reason this is implemented in a shell script is because it is more leightweight than a (go) executable.
 
-# log() {
-#   local message=$1
-#   printf "%s  init: %s\n" "$(date '+%d-%m-%Y %H:%M:%S.%3N')" "$message"
-# }
+VERSION="v1.0.1"
 
-VERSION="v1.0.0"
-
+# Function to log messages with the system uptime from /proc/stat
 log() {
   message="$1"
 
@@ -40,20 +36,34 @@ log() {
   echo "$display_time $message"
 }
 
-# log function for situations where /proc/stat is not available
+# Function to log messages for situations where /proc/stat is not available
 log_blank() {
   message=$1
   echo "               $message"
 }
 
-# ----- show init system banner
+# Function to parse kernel command line argument and export it as an environment variable
+parse_and_export_env() {
+    local arg_name="$1"
+    local env_name="$2"
+
+    # Extract the value of the kernel command line argument
+    local arg_value=$(cat /proc/cmdline | tr ' ' '\n' | grep "^${arg_name}=" | cut -d'=' -f2)
+
+    # Check if the argument was found and export it as an environment variable
+    if [ ! -z "$arg_value" ]; then
+        export "$env_name=$arg_value"
+    fi
+}
+
+# ----- Show init system banner
 
 log_blank "apollo init system - $VERSION"
 
-# ----- mounting system relevant directories
+# ----- Mounting system relevant directories
 
 if [ ! -d "/proc" ]; then
-  # cannot use 'log' here because /proc is not mounted yet
+  # Cannot use 'log' here because /proc is not mounted yet
   log_blank "cannot mount proc - /proc does not exist"
   exit 1
 fi
@@ -67,7 +77,7 @@ fi
 /bin/mount -t sysfs sysfs /sys
 log "mounted sysfs to /sys"
 
-# ----- mounting the code filesystem
+# ----- Mounting the code filesystem
 
 if [ ! -d "/workspace" ]; then
   log "cannot mount codefs - /workspace does not exist"
@@ -82,7 +92,7 @@ fi
 /bin/mount /dev/vdb /workspace
 log "mounted codefs to /workspace"
 
-# ----- setting up the network
+# ----- Setting up the network
 
 # Extract the 'ip' argument from the kernel command line
 ip_arg=$(cat /proc/cmdline | tr ' ' '\n' | grep '^ip=' | cut -d'=' -f2)
@@ -129,7 +139,16 @@ fi
 
 log "network has been set up with ip $client_ip"
 
-# ----- invoke the agent and porceed with the boot process
+# ----- Set the environment variables parsed from the kernel command line
+
+parse_and_export_env "fn-uuid" "APOLLO_FUNCTION_UUID"
+parse_and_export_env "rn-uuid" "APOLLO_RUNTIME_UUID"
+parse_and_export_env "rt-hdlr" "APOLLO_RUNTIME_HANDLER"
+parse_and_export_env "rt-bin-path" "APOLLO_RUNTIME_BINARY_PATH"
+parse_and_export_env "rt-bin-args" "APOLLO_RUNTIME_BINARY_ARGS"
+parse_and_export_env "log-lvl" "APOLLO_LOG_LEVEL"
+
+# ----- Invoke the agent and porceed with the boot process
 
 log "done - run agent"
 exec /usr/bin/agent $@
