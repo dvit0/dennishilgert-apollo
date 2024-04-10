@@ -29,6 +29,7 @@ type Config struct {
 	IdleTtl               time.Duration
 	Multithreading        bool
 	AgentApiPort          int
+	LogLevel              string
 }
 
 func validate(cfg *Config) error {
@@ -74,10 +75,21 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 		// The KernelArgs are re-parsed in the sdk before they are passed to the vm.
 		// This means that values like the custom init statement with tini will be
 		// mixed up resulting in invalid kernel args.
-		// Therefore the firecracker-go-sdk has been forked and modified which needs
-		// to be used for this.
-		KernelArgs: "console=ttyS0 reboot=k panic=1 pci=off nomodules init=/usr/bin/tini-static -p SIGINT -p SIGTERM -- /usr/bin/init",
-		LogPath:    cfg.LogFilePath,
+		// Therefore the firecracker-go-sdk has been forked and modified.
+		KernelArgs: NewKernelArgsBuilder().
+			WithConsole("ttyS0").
+			WithReboot("k").
+			WithPanic(1).
+			WithPci("off").
+			WithNoModules(true).
+			WithFunctionUuid(cfg.FunctionUuid).
+			WithRunnerUuid(cfg.RunnerUuid).
+			WithRuntimeHandler(cfg.RuntimeHandler).
+			WithRuntimeBinaryPath(cfg.RuntimeBinaryPath).
+			WithRuntimeBinaryArgs(cfg.RuntimeBinaryArgs).
+			WithInit("/usr/bin/tini-static -p SIGINT -p SIGTERM -- /usr/bin/init").
+			Build(),
+		LogPath: cfg.LogFilePath,
 		Drives: []models.Drive{
 			{
 				DriveID:      firecracker.String("1"),
