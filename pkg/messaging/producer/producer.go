@@ -9,7 +9,7 @@ import (
 	"github.com/dennishilgert/apollo/pkg/logger"
 )
 
-var log = logger.NewLogger("apollo.manager.messaging.producer")
+var log = logger.NewLogger("apollo.messaging.producer")
 
 type Options struct {
 	BootstrapServers string
