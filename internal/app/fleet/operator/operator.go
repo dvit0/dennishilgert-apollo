@@ -21,6 +21,7 @@ import (
 var log = logger.NewLogger("apollo.manager.operator")
 
 type Options struct {
+	ManagerUuid               string
 	AgentApiPort              int
 	MessagingBootstrapServers string
 	OsArch                    utils.OsArch
@@ -38,6 +39,7 @@ type RunnerOperator interface {
 }
 
 type runnerOperator struct {
+	managerUuid               string
 	osArch                    utils.OsArch
 	firecrackerBinaryPath     string
 	agentApiPort              int
@@ -68,6 +70,7 @@ func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.Runner
 	runnerCtx, runnerCtxCancel := context.WithCancel(context.Background())
 
 	return &runnerOperator{
+		managerUuid:               opts.ManagerUuid,
 		osArch:                    opts.OsArch,
 		firecrackerBinaryPath:     opts.FirecrackerBinaryPath,
 		agentApiPort:              opts.AgentApiPort,
@@ -150,6 +153,7 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 		logLevel = *request.Machine.LogLevel
 	}
 	cfg := &runner.Config{
+		ManagerUuid:           v.managerUuid,
 		FunctionUuid:          request.FunctionUuid,
 		RunnerUuid:            runnerUuid,
 		HostOsArch:            v.osArch,

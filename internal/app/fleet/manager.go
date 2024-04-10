@@ -7,6 +7,7 @@ import (
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/api"
 	"github.com/dennishilgert/apollo/internal/app/fleet/initializer"
+	"github.com/dennishilgert/apollo/internal/app/fleet/messaging"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/consumer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
@@ -15,6 +16,7 @@ import (
 	"github.com/dennishilgert/apollo/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/pkg/storage"
 	"github.com/dennishilgert/apollo/pkg/utils"
+	"github.com/google/uuid"
 )
 
 var log = logger.NewLogger("apollo.manager")
@@ -39,14 +41,18 @@ type FleetManager interface {
 }
 
 type fleetManager struct {
-	runnerOperator    operator.RunnerOperator
-	runnerInitializer initializer.RunnerInitializer
-	apiServer         api.Server
-	messagingProducer producer.MessagingProducer
-	messagingConsumer consumer.MessagingConsumer
+	managerUuid               string
+	messagingBootstrapServers string
+	runnerOperator            operator.RunnerOperator
+	runnerInitializer         initializer.RunnerInitializer
+	apiServer                 api.Server
+	messagingProducer         producer.MessagingProducer
+	messagingConsumer         consumer.MessagingConsumer
 }
 
 func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
+	managerUuid := uuid.NewString()
+
 	storageService, err := storage.NewStorageService(storage.Options{
 		Endpoint:        opts.StorageEndpoint,
 		AccessKeyId:     opts.StorageAccessKeyId,
@@ -68,6 +74,7 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		ctx,
 		runnerInitializer,
 		operator.Options{
+			ManagerUuid:               managerUuid,
 			AgentApiPort:              opts.AgentApiPort,
 			MessagingBootstrapServers: opts.MessagingBootstrapServers,
 			OsArch:                    utils.DetectArchitecture(),
@@ -111,11 +118,13 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	)
 
 	return &fleetManager{
-		runnerOperator:    runnerOperator,
-		runnerInitializer: runnerInitializer,
-		apiServer:         apiServer,
-		messagingProducer: messagingProducer,
-		messagingConsumer: messagingConsumer,
+		managerUuid:               managerUuid,
+		messagingBootstrapServers: opts.MessagingBootstrapServers,
+		runnerOperator:            runnerOperator,
+		runnerInitializer:         runnerInitializer,
+		apiServer:                 apiServer,
+		messagingProducer:         messagingProducer,
+		messagingConsumer:         messagingConsumer,
 	}, nil
 }
 
@@ -150,6 +159,8 @@ func (m *fleetManager) Run(ctx context.Context) error {
 			}
 			healthStatusProvider.Ready()
 			log.Info("filesystem initialized")
+
+			// Wait for the main context to be done.
 			<-ctx.Done()
 			return nil
 		},
@@ -162,21 +173,41 @@ func (m *fleetManager) Run(ctx context.Context) error {
 			return nil
 		},
 		func(ctx context.Context) error {
-			log.Info("starting messaging consumer")
-			if err := m.messagingConsumer.Start(ctx); err != nil {
-				log.Error("failed to start messaging consumer")
-				return err
-			}
-			return nil
-		},
-		func(ctx context.Context) error {
 			if err := m.apiServer.Ready(ctx); err != nil {
 				log.Error("api server did not become ready in time")
 				return err
 			}
 			healthStatusProvider.Ready()
 			log.Info("api server started")
+
+			// Wait for the main context to be done.
 			<-ctx.Done()
+			return nil
+		},
+		func(ctx context.Context) error {
+			log.Info("setting up messaging")
+			if err := messaging.CreateRelatedTopic(ctx, m.messagingBootstrapServers, m.managerUuid); err != nil {
+				log.Error("failed to setup messaging")
+				return err
+			}
+			// Signalize that the messaging setup is done.
+			m.messagingConsumer.SetupDone()
+
+			// Wait for the main context to be done.
+			<-ctx.Done()
+			log.Info("cleaning up messaging")
+			if err := messaging.DeleteRelatedTopic(ctx, m.messagingBootstrapServers, m.managerUuid); err != nil {
+				log.Error("failed to messaging")
+				return err
+			}
+			return nil
+		},
+		func(ctx context.Context) error {
+			log.Info("starting messaging consumer")
+			if err := m.messagingConsumer.Start(ctx); err != nil {
+				log.Error("failed to start messaging consumer")
+				return err
+			}
 			return nil
 		},
 	)

@@ -13,6 +13,7 @@ type KernelArgsBuilder interface {
 	WithPci(pci string) KernelArgsBuilder
 	WithNoModules(noModules bool) KernelArgsBuilder
 	WithInit(init string) KernelArgsBuilder
+	WithManagerUuid(managerUuid string) KernelArgsBuilder
 	WithFunctionUuid(functionUuid string) KernelArgsBuilder
 	WithRunnerUuid(runnerUuid string) KernelArgsBuilder
 	WithRuntimeHandler(handler string) KernelArgsBuilder
@@ -30,6 +31,7 @@ type kernelArgsBuilder struct {
 	pci                       string
 	nomodules                 string
 	init                      string
+	managerUuid               string
 	functionUuid              string
 	runnerUuid                string
 	runtimeHandler            string
@@ -90,6 +92,11 @@ func (c *kernelArgsBuilder) WithNoModules(noModules bool) KernelArgsBuilder {
 
 func (c *kernelArgsBuilder) WithInit(init string) KernelArgsBuilder {
 	c.init = fmt.Sprintf("init=%s", init)
+	return c
+}
+
+func (c *kernelArgsBuilder) WithManagerUuid(managerUuid string) KernelArgsBuilder {
+	c.managerUuid = managerUuid
 	return c
 }
 

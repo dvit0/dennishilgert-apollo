@@ -14,19 +14,25 @@ import (
 
 var log = logger.NewLogger("apollo.manager.messaging.handler")
 
+type Options struct {
+	ManagerUuid string
+}
+
 type MessagingHandler interface {
 	RegisterAll()
 	Handlers() map[string]func(msg *kafka.Message)
 }
 
 type messagingHandler struct {
+	managerUuid    string
 	handlers       map[string]func(msg *kafka.Message)
 	lock           sync.Mutex
 	runnerOperator operator.RunnerOperator
 }
 
-func NewMessagingHandler(runnerOperator operator.RunnerOperator) MessagingHandler {
+func NewMessagingHandler(runnerOperator operator.RunnerOperator, opts Options) MessagingHandler {
 	return &messagingHandler{
+		managerUuid:    opts.ManagerUuid,
 		handlers:       map[string]func(msg *kafka.Message){},
 		runnerOperator: runnerOperator,
 	}
@@ -44,7 +50,7 @@ func (m *messagingHandler) RegisterAll() {
 	})
 
 	// Handle MessagingRunnerAgentReadyTopic messages
-	m.add(naming.MessagingRunnerAgentReadyTopic, func(msg *kafka.Message) {
+	m.add(naming.MessagingManagerRelatedAgentReadyTopic(m.managerUuid), func(msg *kafka.Message) {
 		var message messages.RunnerAgentReadyMessage
 		if err := json.Unmarshal(msg.Value, &message); err != nil {
 			log.Errorf("failed to unmarshal kafka message: %v", err)

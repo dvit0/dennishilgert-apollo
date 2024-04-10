@@ -17,18 +17,22 @@ import (
 var log = logger.NewLogger("apollo.manager.messaging.consumer")
 
 type Options struct {
+	ManagerUuid      string
 	BootstrapServers string
 	WorkerCount      int
 }
 
 type MessagingConsumer interface {
+	SetupDone()
 	Start(ctx context.Context) error
 }
 
 type messagingConsumer struct {
-	worker   worker.WorkerManager
-	consumer *kafka.Consumer
-	handlers map[string]func(msg *kafka.Message)
+	managerUuid string
+	worker      worker.WorkerManager
+	consumer    *kafka.Consumer
+	handlers    map[string]func(msg *kafka.Message)
+	setupDoneCh chan bool
 }
 
 func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) (MessagingConsumer, error) {
@@ -42,20 +46,33 @@ func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) 
 		return nil, err
 	}
 
-	messagingHandler := handler.NewMessagingHandler(runnerOperator)
+	messagingHandler := handler.NewMessagingHandler(runnerOperator, handler.Options{
+		ManagerUuid: opts.ManagerUuid,
+	})
 	messagingHandler.RegisterAll()
 
 	return &messagingConsumer{
-		worker:   worker.NewWorkerManager(opts.WorkerCount),
-		consumer: consumer,
-		handlers: messagingHandler.Handlers(),
+		managerUuid: opts.ManagerUuid,
+		worker:      worker.NewWorkerManager(opts.WorkerCount),
+		consumer:    consumer,
+		handlers:    messagingHandler.Handlers(),
+		setupDoneCh: make(chan bool, 1),
 	}, nil
 }
 
+// SetupDone signalizes that the messaging setup is done.
+func (m *messagingConsumer) SetupDone() {
+	m.setupDoneCh <- true
+}
+
+// Start subscribes to the specified topics and starts listening for incoming messages.
 func (m *messagingConsumer) Start(ctx context.Context) error {
+	log.Info("waiting until messaging setup is done")
+	<-m.setupDoneCh
+
 	subscribedTopics := []string{
 		naming.MessagingFunctionInitializationTopic,
-		naming.MessagingRunnerAgentReadyTopic,
+		naming.MessagingManagerRelatedAgentReadyTopic(m.managerUuid),
 	}
 	if err := m.consumer.SubscribeTopics(subscribedTopics, nil); err != nil {
 		log.Error("failed to subscribe to topics")

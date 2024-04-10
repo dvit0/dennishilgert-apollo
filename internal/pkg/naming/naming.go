@@ -12,7 +12,6 @@ var (
 
 	// Messaging topics
 	MessagingFunctionInitializationTopic = "apollo_function_initialization"
-	MessagingRunnerAgentReadyTopic       = "apollo_runner_agent_ready"
 
 	// Name of the kernel storage bucket
 	StorageKernelBucketName = "apollo-kernels"
@@ -20,6 +19,10 @@ var (
 	// Name of the function storage bucket
 	StorageFunctionBucketName = "apollo-functions"
 )
+
+func MessagingManagerRelatedAgentReadyTopic(managerUuid string) string {
+	return fmt.Sprintf("apollo_agent_ready_related_%s", managerUuid)
+}
 
 func ImageNameRootFs(functionUuid string) string {
 	return fmt.Sprintf("%s-rootfs", functionUuid)
