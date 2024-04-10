@@ -141,6 +141,7 @@ log "network has been set up with ip $client_ip"
 
 # ----- Set the environment variables parsed from the kernel command line
 
+parse_and_export_env "mgr-uuid" "APOLLO_MANAGER_UUID"
 parse_and_export_env "fn-uuid" "APOLLO_FUNCTION_UUID"
 parse_and_export_env "rn-uuid" "APOLLO_RUNNER_UUID"
 parse_and_export_env "rt-hdlr" "APOLLO_RUNTIME_HANDLER"
