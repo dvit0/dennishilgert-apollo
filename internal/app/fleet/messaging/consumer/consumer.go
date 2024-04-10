@@ -55,6 +55,7 @@ func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) 
 func (m *messagingConsumer) Start(ctx context.Context) error {
 	subscribedTopics := []string{
 		naming.MessagingFunctionInitializationTopic,
+		naming.MessagingRunnerAgentReadyTopic,
 	}
 	if err := m.consumer.SubscribeTopics(subscribedTopics, nil); err != nil {
 		log.Error("failed to subscribe to topics")
