@@ -8,11 +8,11 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/fleet/api"
 	"github.com/dennishilgert/apollo/internal/app/fleet/initializer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/consumer"
-	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/producer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/pkg/storage"
 	"github.com/dennishilgert/apollo/pkg/utils"
 )
@@ -89,10 +89,13 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		return nil, fmt.Errorf("error while creating messaging producer: %v", err)
 	}
 
-	messagingConsumer, err := consumer.NewMessagingConsumer(consumer.Options{
-		BootstrapServers: opts.MessagingBootstrapServers,
-		WorkerCount:      opts.MessagingWorkerCount,
-	})
+	messagingConsumer, err := consumer.NewMessagingConsumer(
+		runnerOperator,
+		consumer.Options{
+			BootstrapServers: opts.MessagingBootstrapServers,
+			WorkerCount:      opts.MessagingWorkerCount,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating messaging consumer: %v", err)
 	}

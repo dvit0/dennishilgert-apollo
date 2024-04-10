@@ -4,13 +4,16 @@ package apollo.proto.messages.v1;
 
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/messages/v1;messages";
 
-message FunctionInitialized {
-  string function_uuid = 1;
-  string worker_uuid = 2;
-}
-
-message FunctionInitializationFailed {
+message FunctionInitializationMessage {
   string function_uuid = 1;
   string worker_uuid = 2;
   string reason = 3;
+  bool success = 4;
+}
+
+message RunnerAgentReadyMessage {
+  string function_uuid = 1;
+  string runner_uuid = 2;
+  string reason = 3;
+  bool success = 4;
 }

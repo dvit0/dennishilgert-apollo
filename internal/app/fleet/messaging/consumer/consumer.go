@@ -7,6 +7,7 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/handler"
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
@@ -30,7 +31,7 @@ type messagingConsumer struct {
 	handlers map[string]func(msg *kafka.Message)
 }
 
-func NewMessagingConsumer(opts Options) (MessagingConsumer, error) {
+func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) (MessagingConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,
 		"group.id":          "fleet_manager_group",
@@ -41,7 +42,7 @@ func NewMessagingConsumer(opts Options) (MessagingConsumer, error) {
 		return nil, err
 	}
 
-	messagingHandler := handler.NewMessagingHandler()
+	messagingHandler := handler.NewMessagingHandler(runnerOperator)
 	messagingHandler.RegisterAll()
 
 	return &messagingConsumer{
@@ -53,7 +54,7 @@ func NewMessagingConsumer(opts Options) (MessagingConsumer, error) {
 
 func (m *messagingConsumer) Start(ctx context.Context) error {
 	subscribedTopics := []string{
-		naming.MessagingFunctionStatusUpdateTopic,
+		naming.MessagingFunctionInitializationTopic,
 	}
 	if err := m.consumer.SubscribeTopics(subscribedTopics, nil); err != nil {
 		log.Error("failed to subscribe to topics")

@@ -12,7 +12,7 @@ var (
 
 	// Messaging topics
 	MessagingFunctionInitializationTopic = "apollo_function_initialization"
-	MessagingFunctionStatusUpdateTopic   = "apollo_function_status_update"
+	MessagingRunnerAgentReadyTopic       = "apollo_runner_agent_ready"
 
 	// Name of the kernel storage bucket
 	StorageKernelBucketName = "apollo-kernels"

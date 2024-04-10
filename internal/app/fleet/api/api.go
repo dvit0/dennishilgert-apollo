@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/initializer"
-	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/producer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	"github.com/dennishilgert/apollo/pkg/proto/messages/v1"
 	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
@@ -135,19 +135,22 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleet.InitializeFunctio
 
 		if err := a.runnerInitializer.InitializeFunction(bgCtx, req); err != nil {
 			log.Errorf("failed to prepare function: %v", err)
-			message := &messages.FunctionInitializationFailed{
+			message := &messages.FunctionInitializationMessage{
 				FunctionUuid: req.FunctionUuid,
 				WorkerUuid:   "TO_BE_REPLACED_WITH_WORKER_UUID",
 				Reason:       err.Error(),
+				Success:      false,
 			}
-			a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionStatusUpdateTopic, message)
+			a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
 		}
 		log.Infof("function has been prepared successfully: %s", req.FunctionUuid)
-		message := &messages.FunctionInitialized{
+		message := &messages.FunctionInitializationMessage{
 			FunctionUuid: req.FunctionUuid,
 			WorkerUuid:   "TO_BE_REPLACED_WITH_WORKER_UUID",
+			Reason:       "ok",
+			Success:      true,
 		}
-		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionStatusUpdateTopic, message)
+		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
 	}()
 	return &shared.EmptyResponse{}, nil
 }

@@ -45,6 +45,7 @@ type RunnerInstance interface {
 	ShutdownAndDestroy(ctx context.Context) error
 	Invoke(ctx context.Context, request *agent.InvokeRequest) (*agent.InvokeResponse, error)
 	Health(ctx context.Context) (*health.HealthStatus, error)
+	AgentReady(err error)
 	Ready(ctx context.Context) error
 	IsRunning() bool
 	ConnectionAlive() bool
@@ -251,18 +252,31 @@ func (r *runnerInstance) Health(ctx context.Context) (*health.HealthStatus, erro
 	return &healthStatus.Status, nil
 }
 
+// AgentReady signalizes that the agent inside the runner is ready to handle requests.
+func (r *runnerInstance) AgentReady(err error) {
+	r.readyCh <- err
+}
+
 // Ready makes sure the runner is ready.
 func (r *runnerInstance) Ready(ctx context.Context) error {
-	// TEMP TODO: Wait for agent inside the runner to become ready.
-	// IDEA: The agent inside the runner sends a message to the messaging service which will be received
+	// The agent inside the runner sends a message to the messaging service which will be received
 	// by the messaging consumer of the fleet manager. The handler of this topic will then send the error
 	// or nil to the readyCh of this runner instance. If an error is sent to the channel, it will be
 	// handled here and the runner will be shut down.
-	// log.Infof("waiting for the agent inside the runner to become ready")
-	// if err := <-r.readyCh; err != nil {
-	// 	log.Errorf("error while waiting for agent inside runner to become ready: %v", err)
-	// 	return err
-	// }
+	log.Infof("waiting for the agent inside the runner to become ready")
+
+	waitCtx, waitCtxCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer waitCtxCancel()
+
+	select {
+	case <-waitCtx.Done():
+		return fmt.Errorf("timeout while waiting for the agent in runner to become ready")
+	case err := <-r.readyCh:
+		if err != nil {
+			log.Errorf("error while waiting for agent inside runner to become ready: %v", err)
+			return err
+		}
+	}
 
 	if err := r.establishConnection(ctx); err != nil {
 		return err

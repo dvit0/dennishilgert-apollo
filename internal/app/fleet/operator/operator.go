@@ -30,6 +30,7 @@ type Options struct {
 
 type RunnerOperator interface {
 	Init(ctx context.Context) error
+	Runner(functionUuid string, runnerUuid string) (runner.RunnerInstance, error)
 	AvailableRunner(request *fleet.AvailableRunnerRequest) (*fleet.AvailableRunnerResponse, error)
 	ProvisionRunner(request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error)
 	InvokeFunction(ctx context.Context, request *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error)
@@ -117,6 +118,10 @@ func (v *runnerOperator) Init(ctx context.Context) error {
 	return runnerManager.Run(ctx)
 }
 
+func (r *runnerOperator) Runner(functionUuid string, runnerUuid string) (runner.RunnerInstance, error) {
+	return r.runnerPool.Get(functionUuid, runnerUuid)
+}
+
 func (r *runnerOperator) AvailableRunner(request *fleet.AvailableRunnerRequest) (*fleet.AvailableRunnerResponse, error) {
 	instance, err := r.runnerPool.AvailableRunner(request.FunctionUuid)
 	if err != nil {
@@ -136,6 +141,10 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 	multiThreading := false
 	if v.osArch == utils.Arch_x86_64 {
 		multiThreading = true
+	}
+	logLevel := log.LogLevel()
+	if request.Machine.LogLevel != nil {
+		logLevel = *request.Machine.LogLevel
 	}
 	cfg := &runner.Config{
 		FunctionUuid:          request.FunctionUuid,
@@ -199,6 +208,7 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 		IdleTtl:        time.Duration(request.Machine.IdleTtl) * time.Minute,
 		Multithreading: multiThreading,
 		AgentApiPort:   v.agentApiPort,
+		LogLevel:       logLevel,
 	}
 
 	//
@@ -250,7 +260,7 @@ func (r *runnerOperator) TeardownRunner(ctx context.Context, runnerInstance runn
 		log.Errorf("error while shutting down runner: %s", runnerInstance.Config().RunnerUuid)
 		return err
 	}
-	// TEMP TODO: uncomment to enable runner directory cleanup after teardown.
+	// TODO: uncomment to enable runner directory cleanup after teardown.
 	// if err := r.runnerInitializer.RemoveRunner(ctx, runnerInstance.Config().RunnerUuid); err != nil {
 	// 	log.Errorf("failed to remove runner storage: %s", runnerInstance.Config().RunnerUuid)
 	// 	return err

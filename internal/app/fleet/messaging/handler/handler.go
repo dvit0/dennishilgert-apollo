@@ -2,9 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/proto/messages/v1"
@@ -18,25 +20,44 @@ type MessagingHandler interface {
 }
 
 type messagingHandler struct {
-	handlers map[string]func(msg *kafka.Message)
-	lock     sync.Mutex
+	handlers       map[string]func(msg *kafka.Message)
+	lock           sync.Mutex
+	runnerOperator operator.RunnerOperator
 }
 
-func NewMessagingHandler() MessagingHandler {
+func NewMessagingHandler(runnerOperator operator.RunnerOperator) MessagingHandler {
 	return &messagingHandler{
-		handlers: map[string]func(msg *kafka.Message){},
+		handlers:       map[string]func(msg *kafka.Message){},
+		runnerOperator: runnerOperator,
 	}
 }
 
 // RegisterAll registrates all handlers for the subscribed topics in the handler map.
 func (m *messagingHandler) RegisterAll() {
-	// Handling MessagingFunctionInitializationTopic messages
-	m.add(naming.MessagingFunctionStatusUpdateTopic, func(msg *kafka.Message) {
-		var message messages.FunctionInitialized
+	// Handle MessagingFunctionInitializationTopic messages
+	m.add(naming.MessagingFunctionInitializationTopic, func(msg *kafka.Message) {
+		var message messages.FunctionInitializationMessage
 		if err := json.Unmarshal(msg.Value, &message); err != nil {
 			log.Errorf("failed to unmarshal kafka message: %v", err)
 		}
 		log.Infof("NOT IMPLEMENTED: handling message in topic: %s - value: %v", *msg.TopicPartition.Topic, &message)
+	})
+
+	// Handle MessagingRunnerAgentReadyTopic messages
+	m.add(naming.MessagingRunnerAgentReadyTopic, func(msg *kafka.Message) {
+		var message messages.RunnerAgentReadyMessage
+		if err := json.Unmarshal(msg.Value, &message); err != nil {
+			log.Errorf("failed to unmarshal kafka message: %v", err)
+		}
+		instance, err := m.runnerOperator.Runner(message.FunctionUuid, message.RunnerUuid)
+		if err != nil {
+			log.Warnf("requested runner instance does not exist in pool: %s", message.RunnerUuid)
+		}
+		var mErr error
+		if !message.Success {
+			mErr = fmt.Errorf(message.Reason)
+		}
+		instance.AgentReady(mErr)
 	})
 }
 
