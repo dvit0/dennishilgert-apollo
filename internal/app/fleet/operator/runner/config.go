@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	ManagerUuid              string
+	WorkerUuid               string
 	FunctionUuid             string
 	RunnerUuid               string
 	HostOsArch               utils.OsArch
@@ -84,7 +84,7 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 			WithPanic(1).
 			WithPci("off").
 			WithNoModules(true).
-			WithManagerUuid(cfg.ManagerUuid).
+			WithWorkerUuid(cfg.WorkerUuid).
 			WithFunctionUuid(cfg.FunctionUuid).
 			WithRunnerUuid(cfg.RunnerUuid).
 			WithRuntimeHandler(cfg.RuntimeHandler).

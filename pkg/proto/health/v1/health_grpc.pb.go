@@ -4,7 +4,7 @@
 // - protoc             v4.25.2
 // source: apollo/proto/health/v1/health.proto
 
-package health
+package healthpb
 
 import (
 	context "context"

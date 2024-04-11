@@ -10,7 +10,7 @@ import (
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/container"
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
+	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	"github.com/dennishilgert/apollo/pkg/storage"
 	"github.com/dennishilgert/apollo/pkg/utils"
 )
@@ -27,7 +27,7 @@ type RunnerInitializer interface {
 	InitializeDataDir() error
 	InitializeRunner(ctx context.Context, cfg *runner.Config) error
 	RemoveRunner(ctx context.Context, runnerUuid string) error
-	InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error
+	InitializeFunction(ctx context.Context, request *fleetpb.InitializeFunctionRequest) error
 }
 
 type runnerInitializer struct {
@@ -97,7 +97,7 @@ func (r *runnerInitializer) RemoveRunner(ctx context.Context, runnerUuid string)
 	return nil
 }
 
-func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fleet.InitializeFunctionRequest) error {
+func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fleetpb.InitializeFunctionRequest) error {
 	path := naming.FunctionStoragePath(r.dataPath, request.FunctionUuid)
 	filename := naming.FunctionImageFileName(request.FunctionUuid)
 

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	sharedpb "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -42,22 +42,6 @@ type DefaultProperties struct {
 	RawProperties json.RawMessage `json:"properties"`
 }
 
-type LogProperties struct {
-	Level   string `json:"level"`
-	Message string `json:"message"`
-}
-
-type ErrorProperties struct {
-	Code    int32  `json:"code"`
-	Message string `json:"message"`
-	Cause   string `json:"cause"`
-	Stack   string `json:"stack"`
-}
-
-type ResultProperties struct {
-	Data map[string]interface{} `json:"data"`
-}
-
 type LogLine struct {
 	Timestamp int64
 	Level     string
@@ -70,49 +54,59 @@ type Result struct {
 	StatusMessage string
 	Duration      string
 	Logs          []LogLine
-	Errors        []shared.Error
+	Errors        []sharedpb.Error
 	Data          map[string]interface{}
 }
 
 type PersistentRuntime interface {
+	Config() Config
 	Lock()
 	Unlock()
-	Initialize(handler string) error
+	Start(handler string) error
+	Wait() error
+	Tidy() error
 	Invoke(ctx context.Context, fnCtx Context, fnEvt Event) (*Result, error)
-	Close() error
 }
 
 type persistentRuntime struct {
+	cfg    Config
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
-	stdout *bufio.Reader
-	stderr *bufio.Reader
+	stdout io.ReadCloser
+	stderr io.ReadCloser
 	lock   sync.Mutex
 }
 
 func NewPersistentRuntime(ctx context.Context, config Config) (PersistentRuntime, error) {
 	cmd := exec.CommandContext(ctx, config.BinaryPath, config.BinaryArgs...)
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating stdin pipe failed: %w", err)
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating stdout pipe failed: %w", err)
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating stderr pipe failed: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("starting command failed: %w", err)
 	}
+
 	return &persistentRuntime{
+		cfg:    config,
 		cmd:    cmd,
 		stdin:  stdin,
-		stdout: bufio.NewReader(stdout),
-		stderr: bufio.NewReader(stderr),
+		stdout: stdout,
+		stderr: stderr,
 	}, nil
+}
+
+func (p *persistentRuntime) Config() Config {
+	return p.cfg
 }
 
 func (p *persistentRuntime) Lock() {
@@ -123,23 +117,39 @@ func (p *persistentRuntime) Unlock() {
 	p.lock.Unlock()
 }
 
-func (p *persistentRuntime) Initialize(handler string) error {
-	initBytes, err := json.Marshal(map[string]interface{}{
+func (p *persistentRuntime) Start(handler string) error {
+	initParamsBytes, err := json.Marshal(map[string]interface{}{
 		"handler": handler,
 	})
 	if err != nil {
-		log.Error("error while encoding init params to json")
-		return err
+		return fmt.Errorf("encoding init params to json failed: %w", err)
 	}
-	_, err = p.stdin.Write(initBytes)
+	_, err = p.stdin.Write(initParamsBytes)
 	if err != nil {
-		log.Error("failed to write to stdin of the process")
-		return err
+		return fmt.Errorf("writing init params to stdin failed: %w", err)
 	}
 	_, err = p.stdin.Write([]byte("\n")) // Ensure the initialization message is completed
 	if err != nil {
-		log.Error("failed to write initialization end delimiter")
-		return err
+		return fmt.Errorf("writing end delimiter failed: %w", err)
+	}
+	return nil
+}
+
+// Waits for the command to finish.
+func (p *persistentRuntime) Wait() error {
+	return p.cmd.Wait()
+}
+
+// Tidy closes all open command pipes.
+func (p *persistentRuntime) Tidy() error {
+	if err := p.stdin.Close(); err != nil {
+		return fmt.Errorf("closing stdin pipe failed: %w", err)
+	}
+	if err := p.stdout.Close(); err != nil {
+		return fmt.Errorf("closing stdout pipe failed: %w", err)
+	}
+	if err := p.stderr.Close(); err != nil {
+		return fmt.Errorf("closing stderr pipe failed: %w", err)
 	}
 	return nil
 }
@@ -149,122 +159,23 @@ func (p *persistentRuntime) Invoke(ctx context.Context, fnCtx Context, fnEvt Eve
 	p.Lock()
 	defer p.Unlock()
 
-	timestamp := time.Now()
+	var (
+		errs  []sharedpb.Error
+		logs  []LogLine
+		data  map[string]interface{}
+		start = time.Now()
+	)
 
-	fnParams := map[string]interface{}{
-		"context": fnCtx,
-		"event":   fnEvt,
-	}
-	fnParamsBytes, err := json.Marshal(fnParams)
-	if err != nil {
-		log.Error("error while encoding fn params to json")
-		return nil, err
-	}
-	_, err = p.stdin.Write(fnParamsBytes)
-	if err != nil {
-		log.Error("failed to write to stdin of the process")
-		return nil, err
-	}
-	_, err = p.stdin.Write([]byte("\n")) // Delimiter for end of request.
-	if err != nil {
-		log.Error("failed to write delimiter to stdin of the process")
+	if err := p.sendInvocationData(fnCtx, fnEvt); err != nil {
 		return nil, err
 	}
 
-	var errs []shared.Error
-	var logs []LogLine
-	var data map[string]interface{}
-
-	outputDone := make(chan bool)
-	go func() {
-		for {
-			line, _, err := p.stdout.ReadLine()
-			if err != nil {
-				if err != io.EOF {
-					errs = append(errs, shared.Error{Message: "error while reading stdout", Cause: err.Error(), Stack: err.Error()})
-					log.Errorf("error while reading stdout: %v", err)
-				}
-				break
-			}
-			var defaultProps DefaultProperties
-			if err := json.Unmarshal(line, &defaultProps); err != nil {
-				errs = append(errs, shared.Error{Message: "failed to decode json from output line", Cause: err.Error(), Stack: err.Error()})
-				log.Errorf("failed to decode json from output line: %v", line)
-				continue
-			}
-
-			switch defaultProps.Type {
-			case "log":
-				var logProps LogProperties
-				if err := json.Unmarshal(defaultProps.RawProperties, &logProps); err != nil {
-					errs = append(errs, shared.Error{Message: "failed to unmarshal log properties", Cause: err.Error(), Stack: err.Error()})
-					log.Errorf("failed to unmarshal log properties: %v", err)
-
-					logs = append(logs, LogLine{Timestamp: defaultProps.Timestamp, Level: "undefined", Message: string(line)})
-					continue
-				}
-				logs = append(logs, LogLine{Timestamp: defaultProps.Timestamp, Level: logProps.Level, Message: logProps.Message})
-			case "error":
-				var errorProps ErrorProperties
-				if err := json.Unmarshal(defaultProps.RawProperties, &errorProps); err != nil {
-					errs = append(errs, shared.Error{Message: "failed to unmarshal error properties", Cause: err.Error(), Stack: err.Error()})
-					log.Errorf("failed to unmarshal error properties: %v", err)
-
-					logs = append(logs, LogLine{Timestamp: defaultProps.Timestamp, Level: "undefined", Message: string(line)})
-					errs = append(errs, shared.Error{Message: string(line)})
-					continue
-				}
-				logs = append(logs, LogLine{Timestamp: defaultProps.Timestamp, Level: "error", Message: errorProps.Message})
-				errs = append(errs, shared.Error{Code: errorProps.Code, Message: errorProps.Message, Cause: errorProps.Cause, Stack: errorProps.Stack})
-			case "result":
-				var resultProps ResultProperties
-				if err := json.Unmarshal(defaultProps.RawProperties, &resultProps); err != nil {
-					errs = append(errs, shared.Error{Message: "failed to unmarshal result properties", Cause: err.Error(), Stack: err.Error()})
-					log.Errorf("failed to unmarshal result properties: %v", err)
-					continue
-				}
-				data = resultProps.Data
-			default:
-				log.Errorf("unsupported data type in output buffer: %v", defaultProps.Type)
-			}
-		}
-
-		outputDone <- true
-	}()
-
-	<-outputDone // Wait for the output processing to complete
-
-	// Check for errors on stderr
-	errOutput, _ := io.ReadAll(p.stderr)
-	if len(errOutput) > 0 {
-		log.Errorf("runtime stderr: %s", string(errOutput))
+	if err := p.processOutput(&logs, &errs, &data); err != nil {
+		return nil, err
 	}
 
-	duration := fmt.Sprintf("%dms", time.Since(timestamp).Milliseconds())
-
-	status := 200
-	statusMsg := "ok"
-	if len(errs) > 0 {
-		status = 500
-		statusMsg = "error while invoking function"
-	}
-
-	return &Result{
-		EventUuid:     fnEvt.EventUuid,
-		Status:        status,
-		StatusMessage: statusMsg,
-		Duration:      duration,
-		Logs:          logs,
-		Errors:        errs,
-		Data:          data,
-	}, nil
-}
-
-func (p *persistentRuntime) Close() error {
-	if err := p.stdin.Close(); err != nil {
-		return err
-	}
-	return p.cmd.Wait()
+	duration := time.Since(start)
+	return p.buildResult(fnEvt.EventUuid, logs, errs, data, duration), nil
 }
 
 func LogsToStructList(logs []LogLine) ([]*structpb.Struct, error) {
@@ -282,4 +193,97 @@ func LogsToStructList(logs []LogLine) ([]*structpb.Struct, error) {
 		logList = append(logList, structLine)
 	}
 	return logList, nil
+}
+
+func (p *persistentRuntime) sendInvocationData(fnCtx Context, fnEvt Event) error {
+	fnParams := map[string]interface{}{"context": fnCtx, "event": fnEvt}
+	fnParamsBytes, err := json.Marshal(fnParams)
+	if err != nil {
+		return fmt.Errorf("encoding fn params to json failed: %w", err)
+	}
+	if _, err := p.stdin.Write(fnParamsBytes); err != nil {
+		return fmt.Errorf("writing fn params to stdin failed: %w", err)
+	}
+	_, err = p.stdin.Write([]byte("\n"))
+	return err
+}
+
+func (p *persistentRuntime) processOutput(logs *[]LogLine, errs *[]sharedpb.Error, data *map[string]interface{}) error {
+	reader := bufio.NewReader(p.stdout)
+	for {
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			if err != io.EOF {
+				return fmt.Errorf("reading from stdout failed: %w", err)
+			}
+			log.Warnf("error while reading from output buffer: %v", err)
+			break
+		}
+
+		var defaultProps DefaultProperties
+		if err := json.Unmarshal(line, &defaultProps); err != nil {
+			return fmt.Errorf("decoding json from output line failed: %w", err)
+		}
+
+		if continueReading := p.handleLine(&defaultProps, logs, errs, data); !continueReading {
+			return nil
+		}
+	}
+	return nil
+}
+
+func (p *persistentRuntime) handleLine(defaultProps *DefaultProperties, logs *[]LogLine, errs *[]sharedpb.Error, data *map[string]interface{}) bool {
+	switch defaultProps.Type {
+	case "log", "error":
+		var props struct {
+			Level   string `json:"level,omitempty"`
+			Message string `json:"message"`
+			Code    int32  `json:"code,omitempty"`
+			Cause   string `json:"cause,omitempty"`
+			Stack   string `json:"stack,omitempty"`
+		}
+		if err := json.Unmarshal(defaultProps.RawProperties, &props); err != nil {
+			*errs = append(*errs, sharedpb.Error{Message: "failed to unmarshal properties", Cause: err.Error()})
+			log.Errorf("failed to unmarshal properties: %v", err)
+			return true
+		}
+		if defaultProps.Type == "log" {
+			*logs = append(*logs, LogLine{Timestamp: defaultProps.Timestamp, Level: props.Level, Message: props.Message})
+		} else {
+			*errs = append(*errs, sharedpb.Error{Code: props.Code, Message: props.Message, Cause: props.Cause, Stack: props.Stack})
+			*logs = append(*logs, LogLine{Timestamp: defaultProps.Timestamp, Level: "error", Message: props.Message})
+		}
+	case "result":
+		var props struct {
+			Data map[string]interface{} `json:"data"`
+		}
+		if err := json.Unmarshal(defaultProps.RawProperties, &props); err != nil {
+			*errs = append(*errs, sharedpb.Error{Message: "failed to unmarshal properties", Cause: err.Error()})
+			log.Errorf("failed to unmarshal properties: %v", err)
+			return true
+		}
+		*data = props.Data
+	case "done":
+		log.Debug("reading from stdout done")
+		return false
+	default:
+		log.Errorf("unsupported data type in output buffer: %v", defaultProps.Type)
+	}
+	return true
+}
+
+func (p *persistentRuntime) buildResult(eventUuid string, logs []LogLine, errs []sharedpb.Error, data map[string]interface{}, duration time.Duration) *Result {
+	status, statusMessage := 200, "ok"
+	if len(errs) > 0 {
+		status, statusMessage = 500, "error while invoking function"
+	}
+	return &Result{
+		EventUuid:     eventUuid,
+		Status:        status,
+		StatusMessage: statusMessage,
+		Duration:      fmt.Sprintf("%dms", duration.Milliseconds()),
+		Logs:          logs,
+		Errors:        errs,
+		Data:          data,
+	}
 }

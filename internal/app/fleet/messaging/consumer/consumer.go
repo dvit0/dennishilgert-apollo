@@ -17,7 +17,7 @@ import (
 var log = logger.NewLogger("apollo.manager.messaging.consumer")
 
 type Options struct {
-	ManagerUuid      string
+	WorkerUuid       string
 	BootstrapServers string
 	WorkerCount      int
 }
@@ -28,7 +28,7 @@ type MessagingConsumer interface {
 }
 
 type messagingConsumer struct {
-	managerUuid string
+	workerUuid  string
 	worker      worker.WorkerManager
 	consumer    *kafka.Consumer
 	handlers    map[string]func(msg *kafka.Message)
@@ -47,12 +47,12 @@ func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) 
 	}
 
 	messagingHandler := handler.NewMessagingHandler(runnerOperator, handler.Options{
-		ManagerUuid: opts.ManagerUuid,
+		WorkerUuid: opts.WorkerUuid,
 	})
 	messagingHandler.RegisterAll()
 
 	return &messagingConsumer{
-		managerUuid: opts.ManagerUuid,
+		workerUuid:  opts.WorkerUuid,
 		worker:      worker.NewWorkerManager(opts.WorkerCount),
 		consumer:    consumer,
 		handlers:    messagingHandler.Handlers(),
@@ -72,8 +72,9 @@ func (m *messagingConsumer) Start(ctx context.Context) error {
 
 	subscribedTopics := []string{
 		naming.MessagingFunctionInitializationTopic,
-		naming.MessagingManagerRelatedAgentReadyTopic(m.managerUuid),
+		naming.MessagingWorkerRelatedAgentReadyTopic(m.workerUuid),
 	}
+	log.Debugf("subscribing to topics: %s", subscribedTopics)
 	if err := m.consumer.SubscribeTopics(subscribedTopics, nil); err != nil {
 		log.Error("failed to subscribe to topics")
 		return err

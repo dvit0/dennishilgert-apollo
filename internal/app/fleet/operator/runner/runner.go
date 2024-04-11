@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
-	"github.com/dennishilgert/apollo/pkg/proto/health/v1"
-	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	agentpb "github.com/dennishilgert/apollo/pkg/proto/agent/v1"
+	healthpb "github.com/dennishilgert/apollo/pkg/proto/health/v1"
 	"github.com/firecracker-microvm/firecracker-go-sdk"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -43,8 +42,8 @@ type RunnerInstance interface {
 	SetState(state RunnerState)
 	CreateAndStart(ctx context.Context) error
 	ShutdownAndDestroy(ctx context.Context) error
-	Invoke(ctx context.Context, request *agent.InvokeRequest) (*agent.InvokeResponse, error)
-	Health(ctx context.Context) (*health.HealthStatus, error)
+	Invoke(ctx context.Context, request *agentpb.InvokeRequest) (*agentpb.InvokeResponse, error)
+	Health(ctx context.Context) (*healthpb.HealthStatus, error)
 	AgentReady(err error)
 	Ready(ctx context.Context) error
 	IsRunning() bool
@@ -210,28 +209,15 @@ func (r *runnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
 	}
 }
 
-// Initialize initializes and executes the runtime inside the runner.
-func (r *runnerInstance) Initialize(ctx context.Context, request *agent.InitializeRuntimeRequest) (*shared.EmptyResponse, error) {
-	if !r.ConnectionAlive() {
-		return nil, fmt.Errorf("connection dead - failed to connect to agent in runner: %s", r.cfg.RunnerUuid)
-	}
-	apiClient := agent.NewAgentClient(r.clientConn)
-	initResponse, err := apiClient.Initialize(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-	return initResponse, nil
-}
-
 // Invoke invokes the function inside the runner through the agent.
-func (r *runnerInstance) Invoke(ctx context.Context, request *agent.InvokeRequest) (*agent.InvokeResponse, error) {
+func (r *runnerInstance) Invoke(ctx context.Context, request *agentpb.InvokeRequest) (*agentpb.InvokeResponse, error) {
 	if !r.ConnectionAlive() {
 		return nil, fmt.Errorf("connection dead - failed to connect to agent in runner: %s", r.cfg.RunnerUuid)
 	}
 
 	r.lastUsed = time.Now()
 
-	apiClient := agent.NewAgentClient(r.clientConn)
+	apiClient := agentpb.NewAgentClient(r.clientConn)
 	invokeResponse, err := apiClient.Invoke(ctx, request)
 	if err != nil {
 		return nil, err
@@ -240,12 +226,12 @@ func (r *runnerInstance) Invoke(ctx context.Context, request *agent.InvokeReques
 }
 
 // Health checks the health status of an agent and returns the result.
-func (r *runnerInstance) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (r *runnerInstance) Health(ctx context.Context) (*healthpb.HealthStatus, error) {
 	if !r.ConnectionAlive() {
 		return nil, fmt.Errorf("connection dead - failed to connect to agent in runner: %s", r.cfg.RunnerUuid)
 	}
-	apiClient := health.NewHealthClient(r.clientConn)
-	healthStatus, err := apiClient.Status(ctx, &health.HealthStatusRequest{})
+	apiClient := healthpb.NewHealthClient(r.clientConn)
+	healthStatus, err := apiClient.Status(ctx, &healthpb.HealthStatusRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -278,18 +264,11 @@ func (r *runnerInstance) Ready(ctx context.Context) error {
 		}
 	}
 
+	// Establish the gRPC connection to the agent inside the runner.
 	if err := r.establishConnection(ctx); err != nil {
 		return err
 	}
-	_, err := r.Initialize(ctx, &agent.InitializeRuntimeRequest{
-		Handler:    r.cfg.RuntimeHandler,
-		BinaryPath: r.cfg.RuntimeBinaryPath,
-		BinaryArgs: r.cfg.RuntimeBinaryArgs,
-	})
-	if err != nil {
-		log.Errorf("error while initializing runtime in runner: %s", r.cfg.RunnerUuid)
-		return err
-	}
+
 	r.SetState(RunnerStateReady)
 	return nil
 }
@@ -307,6 +286,9 @@ func (r *runnerInstance) IsRunning() bool {
 
 // ConnectionAlive returns if a grpc client connection is still alive.
 func (r *runnerInstance) ConnectionAlive() bool {
+	if r.clientConn == nil {
+		return false
+	}
 	return (r.clientConn.GetState() == connectivity.Ready) || (r.clientConn.GetState() == connectivity.Idle)
 }
 

@@ -41,7 +41,7 @@ type FleetManager interface {
 }
 
 type fleetManager struct {
-	managerUuid               string
+	workerUuid                string
 	messagingBootstrapServers string
 	runnerOperator            operator.RunnerOperator
 	runnerInitializer         initializer.RunnerInitializer
@@ -51,7 +51,7 @@ type fleetManager struct {
 }
 
 func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
-	managerUuid := uuid.NewString()
+	workerUuid := uuid.NewString()
 
 	storageService, err := storage.NewStorageService(storage.Options{
 		Endpoint:        opts.StorageEndpoint,
@@ -74,7 +74,7 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		ctx,
 		runnerInitializer,
 		operator.Options{
-			ManagerUuid:               managerUuid,
+			WorkerUuid:                workerUuid,
 			AgentApiPort:              opts.AgentApiPort,
 			MessagingBootstrapServers: opts.MessagingBootstrapServers,
 			OsArch:                    utils.DetectArchitecture(),
@@ -100,6 +100,7 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	messagingConsumer, err := consumer.NewMessagingConsumer(
 		runnerOperator,
 		consumer.Options{
+			WorkerUuid:       workerUuid,
 			BootstrapServers: opts.MessagingBootstrapServers,
 			WorkerCount:      opts.MessagingWorkerCount,
 		},
@@ -118,7 +119,7 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	)
 
 	return &fleetManager{
-		managerUuid:               managerUuid,
+		workerUuid:                workerUuid,
 		messagingBootstrapServers: opts.MessagingBootstrapServers,
 		runnerOperator:            runnerOperator,
 		runnerInitializer:         runnerInitializer,
@@ -186,7 +187,7 @@ func (m *fleetManager) Run(ctx context.Context) error {
 		},
 		func(ctx context.Context) error {
 			log.Info("setting up messaging")
-			if err := messaging.CreateRelatedTopic(ctx, m.messagingBootstrapServers, m.managerUuid); err != nil {
+			if err := messaging.CreateRelatedTopic(ctx, m.messagingBootstrapServers, m.workerUuid); err != nil {
 				log.Error("failed to setup messaging")
 				return err
 			}
@@ -196,8 +197,10 @@ func (m *fleetManager) Run(ctx context.Context) error {
 			// Wait for the main context to be done.
 			<-ctx.Done()
 			log.Info("cleaning up messaging")
-			if err := messaging.DeleteRelatedTopic(ctx, m.messagingBootstrapServers, m.managerUuid); err != nil {
-				log.Error("failed to messaging")
+			cleanupCtx, cleanupCtxCancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cleanupCtxCancel()
+			if err := messaging.DeleteRelatedTopic(cleanupCtx, m.messagingBootstrapServers, m.workerUuid); err != nil {
+				log.Error("failed to cleanup messaging")
 				return err
 			}
 			return nil

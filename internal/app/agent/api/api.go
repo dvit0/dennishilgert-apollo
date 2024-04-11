@@ -10,8 +10,7 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/agent/runtime"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
-	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	agentpb "github.com/dennishilgert/apollo/pkg/proto/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -28,7 +27,7 @@ type Server interface {
 }
 
 type apiServer struct {
-	agent.UnimplementedAgentServer
+	agentpb.UnimplementedAgentServer
 
 	port              int
 	readyCh           chan struct{}
@@ -45,20 +44,18 @@ func NewApiServer(opts Options) Server {
 
 func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provider) error {
 	if !a.running.CompareAndSwap(false, true) {
-		return errors.New("api server is already running")
+		return fmt.Errorf("api server already running")
 	}
 
-	log.Infof("starting api server on port %d", a.port)
-
 	s := grpc.NewServer()
-	agent.RegisterAgentServer(s, a)
+	agentpb.RegisterAgentServer(s, a)
 
 	healthServer := health.NewHealthServer(healthStatusProvider, log)
 	healthServer.Register(s)
 
 	lis, err := net.Listen("tcp", ":"+fmt.Sprint(a.port))
 	if err != nil {
-		return fmt.Errorf("error while starting tcp listener: %w", err)
+		return fmt.Errorf("starting tcp listener failed: %w", err)
 	}
 	close(a.readyCh)
 
@@ -67,7 +64,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 		defer close(errCh) // ensure channel is closed to avoid goroutine leak
 
 		if err := s.Serve(lis); err != nil {
-			errCh <- fmt.Errorf("error while serving api server: %w", err)
+			errCh <- fmt.Errorf("serving api server failed: %w", err)
 			return
 		}
 		errCh <- nil
@@ -83,7 +80,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 	}
 	err = lis.Close()
 	if err != nil && !errors.Is(err, net.ErrClosed) {
-		return fmt.Errorf("error while closing listener: %w", err)
+		return fmt.Errorf("closing tcp listener failed: %w", err)
 	}
 
 	return nil
@@ -99,24 +96,7 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) Initialize(ctx context.Context, req *agent.InitializeRuntimeRequest) (*shared.EmptyResponse, error) {
-	persistentRuntime, err := runtime.NewPersistentRuntime(ctx, runtime.Config{
-		BinaryPath: req.BinaryPath,
-		BinaryArgs: req.BinaryArgs,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := persistentRuntime.Initialize(req.Handler); err != nil {
-		return nil, err
-	}
-
-	a.persistentRuntime = persistentRuntime
-
-	return &shared.EmptyResponse{}, nil
-}
-
-func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent.InvokeResponse, error) {
+func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*agentpb.InvokeResponse, error) {
 	fnCtx := runtime.Context{
 		Runtime:        in.Context.Runtime,
 		RuntimeVersion: in.Context.RuntimeVersion,
@@ -159,16 +139,14 @@ func (a *apiServer) Invoke(ctx context.Context, in *agent.InvokeRequest) (*agent
 
 	logs, err := runtime.LogsToStructList(result.Logs)
 	if err != nil {
-		log.Fatalf("failed to convert result log lines to struct list: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("log lines conversion failed: %w", err)
 	}
 	data, err := structpb.NewStruct(result.Data)
 	if err != nil {
-		log.Fatalf("failed to convert result data to struct: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("result data conversion failed: %w", err)
 	}
 
-	response := &agent.InvokeResponse{
+	response := &agentpb.InvokeResponse{
 		EventUuid:     result.EventUuid,
 		Status:        int32(result.Status),
 		StatusMessage: result.StatusMessage,

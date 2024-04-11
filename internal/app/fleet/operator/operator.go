@@ -12,8 +12,8 @@ import (
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	taskRunner "github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/agent/v1"
-	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
+	agentpb "github.com/dennishilgert/apollo/pkg/proto/agent/v1"
+	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	"github.com/dennishilgert/apollo/pkg/utils"
 	"github.com/google/uuid"
 )
@@ -21,7 +21,7 @@ import (
 var log = logger.NewLogger("apollo.manager.operator")
 
 type Options struct {
-	ManagerUuid               string
+	WorkerUuid                string
 	AgentApiPort              int
 	MessagingBootstrapServers string
 	OsArch                    utils.OsArch
@@ -33,13 +33,13 @@ type Options struct {
 type RunnerOperator interface {
 	Init(ctx context.Context) error
 	Runner(functionUuid string, runnerUuid string) (runner.RunnerInstance, error)
-	AvailableRunner(request *fleet.AvailableRunnerRequest) (*fleet.AvailableRunnerResponse, error)
-	ProvisionRunner(request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error)
-	InvokeFunction(ctx context.Context, request *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error)
+	AvailableRunner(request *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error)
+	ProvisionRunner(request *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error)
+	InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error)
 }
 
 type runnerOperator struct {
-	managerUuid               string
+	workerUuid                string
 	osArch                    utils.OsArch
 	firecrackerBinaryPath     string
 	agentApiPort              int
@@ -70,7 +70,7 @@ func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.Runner
 	runnerCtx, runnerCtxCancel := context.WithCancel(context.Background())
 
 	return &runnerOperator{
-		managerUuid:               opts.ManagerUuid,
+		workerUuid:                opts.WorkerUuid,
 		osArch:                    opts.OsArch,
 		firecrackerBinaryPath:     opts.FirecrackerBinaryPath,
 		agentApiPort:              opts.AgentApiPort,
@@ -128,20 +128,20 @@ func (r *runnerOperator) Runner(functionUuid string, runnerUuid string) (runner.
 	return r.runnerPool.Get(functionUuid, runnerUuid)
 }
 
-func (r *runnerOperator) AvailableRunner(request *fleet.AvailableRunnerRequest) (*fleet.AvailableRunnerResponse, error) {
+func (r *runnerOperator) AvailableRunner(request *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error) {
 	instance, err := r.runnerPool.AvailableRunner(request.FunctionUuid)
 	if err != nil {
 		return nil, err
 	}
 	instance.SetState(runner.RunnerStateReserved)
-	response := &fleet.AvailableRunnerResponse{
+	response := &fleetpb.AvailableRunnerResponse{
 		RunnerUuid: instance.Config().RunnerUuid,
 	}
 	return response, nil
 }
 
 // ProvisionRunner provisions a new runner with specified parameters.
-func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
+func (v *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
 	runnerUuid := uuid.New().String()
 
 	multiThreading := false
@@ -153,7 +153,7 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 		logLevel = *request.Machine.LogLevel
 	}
 	cfg := &runner.Config{
-		ManagerUuid:           v.managerUuid,
+		WorkerUuid:            v.workerUuid,
 		FunctionUuid:          request.FunctionUuid,
 		RunnerUuid:            runnerUuid,
 		HostOsArch:            v.osArch,
@@ -240,14 +240,6 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 		return nil, err
 	}
 
-	// Waiting for the runner to become ready.
-	if err := instance.Ready(v.runnerCtx); err != nil {
-		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
-			log.Errorf("failed to shutdown runner instance: %v", err)
-		}
-		return nil, err
-	}
-
 	// Add runner to the runner pool.
 	if err := v.runnerPool.Add(instance); err != nil {
 		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
@@ -256,7 +248,18 @@ func (v *runnerOperator) ProvisionRunner(request *fleet.ProvisionRunnerRequest) 
 		return nil, err
 	}
 
-	response := &fleet.ProvisionRunnerResponse{
+	// Waiting for the runner to become ready.
+	if err := instance.Ready(v.runnerCtx); err != nil {
+		// Remove runner from pool.
+		v.runnerPool.Remove(request.FunctionUuid, runnerUuid)
+
+		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
+			log.Errorf("failed to shutdown runner instance: %v", err)
+		}
+		return nil, err
+	}
+
+	response := &fleetpb.ProvisionRunnerResponse{
 		RunnerUuid: instance.Config().RunnerUuid,
 	}
 	return response, nil
@@ -302,20 +305,20 @@ func (r *runnerOperator) TeardownRunners(ctx context.Context) {
 }
 
 // InvokeFunction invokes the function inside of a specified runner.
-func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error) {
+func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	instance, err := r.runnerPool.Get(request.FunctionUuid, request.RunnerUuid)
 	if err != nil {
 		return nil, err
 	}
-	invokeRequest := &agent.InvokeRequest{
-		Context: &agent.ContextData{
+	invokeRequest := &agentpb.InvokeRequest{
+		Context: &agentpb.ContextData{
 			Runtime:        "mocked - will be removed in future",
 			RuntimeVersion: "mocked - will be removed in future",
 			RuntimeHandler: "mocked - will be removed in future",
 			VCpuCores:      -1,
 			MemoryLimit:    -1,
 		},
-		Event: &agent.EventData{
+		Event: &agentpb.EventData{
 			Uuid: request.Event.Uuid,
 			Type: request.Event.Type,
 			Data: request.Event.Data,
@@ -332,7 +335,7 @@ func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleet.Invo
 	log.Infof("Billed duration for execution: %s, duration: %s", invokeResponse.EventUuid, invokeResponse.Duration)
 	log.Infof("Logs for execution: %s, logs: %v", invokeResponse.EventUuid, invokeResponse.Logs)
 
-	response := &fleet.InvokeFunctionResponse{
+	response := &fleetpb.InvokeFunctionResponse{
 		EventUuid:     invokeResponse.EventUuid,
 		Status:        invokeResponse.Status,
 		StatusMessage: invokeResponse.StatusMessage,

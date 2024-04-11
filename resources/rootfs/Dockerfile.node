@@ -1,4 +1,4 @@
-FROM localhost:5000/apollo/baseos:bullseye
+FROM localhost:5000/apollo/baseos:bookworm
 
 # Set /tmp as the workdir to get rid of downloaded archives after installation.
 WORKDIR /tmp

@@ -4,7 +4,7 @@
 // - protoc             v4.25.2
 // source: apollo/proto/fleet/v1/fleet.proto
 
-package fleet
+package fleetpb
 
 import (
 	context "context"

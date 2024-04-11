@@ -39,9 +39,9 @@ func CreateTopics(ctx context.Context, client *kafka.AdminClient, log logger.Log
 }
 
 // DeleteTopic deletes a topic from the kafka cluster.
-func DeleteTopic(ctx context.Context, client *kafka.AdminClient, log logger.Logger, topic string) (kafka.TopicResult, error) {
-	result, err := DeleteTopics(ctx, client, log, []string{topic})
-	return result[0], err
+func DeleteTopic(ctx context.Context, client *kafka.AdminClient, log logger.Logger, topic string) error {
+	_, err := DeleteTopics(ctx, client, log, []string{topic})
+	return err
 }
 
 // DeleteTopics deletes multiple topics from the kafka cluster at once.

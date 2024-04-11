@@ -9,7 +9,7 @@ import (
 var log = logger.NewLogger("apollo.agent.config")
 
 type Config struct {
-	ManagerUuid       string
+	WorkerUuid        string
 	FunctionUuid      string
 	RunnerUuid        string
 	RuntimeHandler    string
@@ -28,9 +28,9 @@ func Load() (*Config, error) {
 	viper.SetEnvPrefix("APOLLO")
 
 	// Loading the application specific values from the environment.
-	configuration.LoadOrDefault("ManagerUuid", "APOLLO_MANAGER_UUID", nil)
+	configuration.LoadOrDefault("WorkerUuid", "APOLLO_WORKER_UUID", nil)
 	configuration.LoadOrDefault("FunctionUuid", "APOLLO_FUNCTION_UUID", nil)
-	configuration.LoadOrDefault("RunnerUuid", "APOLLO_RUNTIME_UUID", nil)
+	configuration.LoadOrDefault("RunnerUuid", "APOLLO_RUNNER_UUID", nil)
 	configuration.LoadOrDefault("RuntimeHandler", "APOLLO_RUNTIME_HANDLER", nil)
 	configuration.LoadOrDefault("RuntimeBinaryPath", "APOLLO_RUNTIME_BINARY_PATH", nil)
 	configuration.LoadOrDefault("RuntimeBinaryArgs", "APOLLO_RUNTIME_BINARY_ARGS", nil)

@@ -7,7 +7,7 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator/runner"
 	taskRunner "github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
-	"github.com/dennishilgert/apollo/pkg/proto/health/v1"
+	healthpb "github.com/dennishilgert/apollo/pkg/proto/health/v1"
 )
 
 type WatchdogOptions struct {
@@ -76,6 +76,9 @@ func (p *runnerPoolWatchdog) checkRunners() {
 
 	for _, runnersByFunction := range runnerPool {
 		for _, target := range runnersByFunction {
+			if target.State() == runner.RunnerStateCreated || target.State() == runner.RunnerStateShutdown {
+				continue
+			}
 			if target.Idle() >= target.Config().IdleTtl {
 				log.Debugf("runner idle ttl has been reached: %s", target.Config().RunnerUuid)
 				p.teardownRunner(target.Config().FunctionUuid, target.Config().RunnerUuid)
@@ -91,7 +94,7 @@ func (p *runnerPoolWatchdog) checkRunners() {
 					log.Errorf("error while checking health status of runner: %s - reason: %v", target.Config().RunnerUuid, err)
 					return false, err
 				}
-				if *healthStatus != health.HealthStatus_HEALTHY {
+				if *healthStatus != healthpb.HealthStatus_HEALTHY {
 					log.Warnf("runner not healthy: %s", target.Config().RunnerUuid)
 					return false, nil
 				}

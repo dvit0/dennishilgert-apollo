@@ -10,13 +10,13 @@ import (
 
 var log = logger.NewLogger("apollo.manager.messaging")
 
-func CreateRelatedTopic(ctx context.Context, bootstrapServers string, managerUuid string) error {
+func CreateRelatedTopic(ctx context.Context, bootstrapServers string, workerUuid string) error {
 	adminClient, err := messaging.GetDefaultAdminClient(bootstrapServers)
 	if err != nil {
 		log.Errorf("failed to get default kafka admin client")
 		return err
 	}
-	topic := naming.MessagingManagerRelatedAgentReadyTopic(managerUuid)
+	topic := naming.MessagingWorkerRelatedAgentReadyTopic(workerUuid)
 	_, err = messaging.CreateTopic(ctx, adminClient, log, topic)
 	if err != nil {
 		log.Errorf("failed to create manager related topic: %s", topic)
@@ -25,16 +25,15 @@ func CreateRelatedTopic(ctx context.Context, bootstrapServers string, managerUui
 	return nil
 }
 
-func DeleteRelatedTopic(ctx context.Context, bootstrapServers string, managerUuid string) error {
+func DeleteRelatedTopic(ctx context.Context, bootstrapServers string, workerUuid string) error {
 	adminClient, err := messaging.GetDefaultAdminClient(bootstrapServers)
 	if err != nil {
 		log.Errorf("failed to get default kafka admin client")
 		return err
 	}
-	topic := naming.MessagingManagerRelatedAgentReadyTopic(managerUuid)
-	_, err = messaging.DeleteTopic(ctx, adminClient, log, topic)
-	if err != nil {
-		log.Errorf("failed to delete manager related topic: %s", topic)
+	topic := naming.MessagingWorkerRelatedAgentReadyTopic(workerUuid)
+	if err := messaging.DeleteTopic(ctx, adminClient, log, topic); err != nil {
+		log.Errorf("failed to delete manager related topic: %v", err)
 		return err
 	}
 	return nil

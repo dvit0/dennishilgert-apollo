@@ -9,7 +9,7 @@
 
 # The reason this is implemented in a shell script is because it is more leightweight than a (go) executable.
 
-VERSION="v1.0.1"
+VERSION="v1.0.2"
 
 # Function to log messages with the system uptime from /proc/stat
 log() {
@@ -53,6 +53,7 @@ parse_and_export_env() {
     # Check if the argument was found and export it as an environment variable
     if [ ! -z "$arg_value" ]; then
         export "$env_name=$arg_value"
+        log "$env_name = $arg_value"
     fi
 }
 
@@ -141,7 +142,9 @@ log "network has been set up with ip $client_ip"
 
 # ----- Set the environment variables parsed from the kernel command line
 
-parse_and_export_env "mgr-uuid" "APOLLO_MANAGER_UUID"
+log "exporting env variables for agent"
+
+parse_and_export_env "wkr-uuid" "APOLLO_WORKER_UUID"
 parse_and_export_env "fn-uuid" "APOLLO_FUNCTION_UUID"
 parse_and_export_env "rn-uuid" "APOLLO_RUNNER_UUID"
 parse_and_export_env "rt-hdlr" "APOLLO_RUNTIME_HANDLER"

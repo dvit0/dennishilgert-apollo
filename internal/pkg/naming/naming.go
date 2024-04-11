@@ -20,8 +20,8 @@ var (
 	StorageFunctionBucketName = "apollo-functions"
 )
 
-func MessagingManagerRelatedAgentReadyTopic(managerUuid string) string {
-	return fmt.Sprintf("apollo_agent_ready_related_%s", managerUuid)
+func MessagingWorkerRelatedAgentReadyTopic(workerUuid string) string {
+	return fmt.Sprintf("apollo_agent_ready_related_%s", workerUuid)
 }
 
 func ImageNameRootFs(functionUuid string) string {

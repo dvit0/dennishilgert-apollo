@@ -1,16 +1,20 @@
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # set /tmp as the workdir to get rid of downloaded archives after installation
 WORKDIR /tmp
 
 # update the cached package lists and install basic os packages
 RUN apt-get update && apt-get install --no-install-recommends -y \
+  # Tini is the tiny init system for the runners.
   tini \
-  #iputils-ping \ # this package is used for testing purposes only
-  iproute2
+  # This package is needed to setup the network inside the runners.
+  iproute2 \
+  # These packages are needed because the agent depends on them (dynamically linked).
+  libc6 \
+  librdkafka-dev
 
 # removing unneeded packages
-RUN apt-get autoremove -y
+#RUN apt-get autoremove -y
 
 # copy over agent executable
 COPY ./agent /usr/bin/agent

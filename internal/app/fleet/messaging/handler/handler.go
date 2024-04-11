@@ -9,13 +9,13 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/messages/v1"
+	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
 )
 
 var log = logger.NewLogger("apollo.manager.messaging.handler")
 
 type Options struct {
-	ManagerUuid string
+	WorkerUuid string
 }
 
 type MessagingHandler interface {
@@ -24,7 +24,7 @@ type MessagingHandler interface {
 }
 
 type messagingHandler struct {
-	managerUuid    string
+	workerUuid     string
 	handlers       map[string]func(msg *kafka.Message)
 	lock           sync.Mutex
 	runnerOperator operator.RunnerOperator
@@ -32,7 +32,7 @@ type messagingHandler struct {
 
 func NewMessagingHandler(runnerOperator operator.RunnerOperator, opts Options) MessagingHandler {
 	return &messagingHandler{
-		managerUuid:    opts.ManagerUuid,
+		workerUuid:     opts.WorkerUuid,
 		handlers:       map[string]func(msg *kafka.Message){},
 		runnerOperator: runnerOperator,
 	}
@@ -42,7 +42,7 @@ func NewMessagingHandler(runnerOperator operator.RunnerOperator, opts Options) M
 func (m *messagingHandler) RegisterAll() {
 	// Handle MessagingFunctionInitializationTopic messages
 	m.add(naming.MessagingFunctionInitializationTopic, func(msg *kafka.Message) {
-		var message messages.FunctionInitializationMessage
+		var message messagespb.FunctionInitializationMessage
 		if err := json.Unmarshal(msg.Value, &message); err != nil {
 			log.Errorf("failed to unmarshal kafka message: %v", err)
 		}
@@ -50,14 +50,15 @@ func (m *messagingHandler) RegisterAll() {
 	})
 
 	// Handle MessagingRunnerAgentReadyTopic messages
-	m.add(naming.MessagingManagerRelatedAgentReadyTopic(m.managerUuid), func(msg *kafka.Message) {
-		var message messages.RunnerAgentReadyMessage
+	m.add(naming.MessagingWorkerRelatedAgentReadyTopic(m.workerUuid), func(msg *kafka.Message) {
+		var message messagespb.RunnerAgentReadyMessage
 		if err := json.Unmarshal(msg.Value, &message); err != nil {
 			log.Errorf("failed to unmarshal kafka message: %v", err)
 		}
 		instance, err := m.runnerOperator.Runner(message.FunctionUuid, message.RunnerUuid)
 		if err != nil {
-			log.Warnf("requested runner instance does not exist in pool: %s", message.RunnerUuid)
+			log.Errorf("requested runner instance does not exist in pool: %s", message.RunnerUuid)
+			return
 		}
 		var mErr error
 		if !message.Success {

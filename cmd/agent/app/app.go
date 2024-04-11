@@ -29,7 +29,7 @@ func Run() {
 	agent, err := agent.NewAgent(
 		ctx,
 		agent.Options{
-			ManagerUuid:               cfg.ManagerUuid,
+			WorkerUuid:                cfg.WorkerUuid,
 			FunctionUuid:              cfg.FunctionUuid,
 			RunnerUuid:                cfg.RunnerUuid,
 			RuntimeHandler:            cfg.RuntimeHandler,

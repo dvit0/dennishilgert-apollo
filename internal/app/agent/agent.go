@@ -5,24 +5,20 @@ import (
 	"fmt"
 
 	"github.com/dennishilgert/apollo/internal/app/agent/api"
+	"github.com/dennishilgert/apollo/internal/app/agent/runtime"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/messaging/producer"
-	"github.com/dennishilgert/apollo/pkg/proto/messages/v1"
+	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
 )
 
 var log = logger.NewLogger("apollo.agent")
 
-// Agent is an Apollo application that runs inside a Firecracker Micro VM.
-type Agent interface {
-	Run(ctx context.Context) error
-}
-
 // Options contains the options for `NewAgent`.
 type Options struct {
-	ManagerUuid       string
+	WorkerUuid        string
 	FunctionUuid      string
 	RunnerUuid        string
 	RuntimeHandler    string
@@ -33,16 +29,19 @@ type Options struct {
 	MessagingBootstrapServers string
 }
 
+// Agent is an Apollo application that runs inside a Firecracker Micro VM.
+type Agent interface {
+	Run(ctx context.Context) error
+}
+
 type agent struct {
-	managerUuid       string
+	workerUuid        string
 	functionUuid      string
 	runnerUuid        string
 	runtimeHandler    string
-	runtimeBinaryPath string
-	runtimeBinaryArgs []string
-
 	apiServer         api.Server
 	messagingProducer producer.MessagingProducer
+	persistentRuntime runtime.PersistentRuntime
 }
 
 func NewAgent(ctx context.Context, opts Options) (Agent, error) {
@@ -57,18 +56,25 @@ func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error while creating messaging producer: %v", err)
+		return nil, fmt.Errorf("creating messaging producer failed: %w", err)
+	}
+
+	persistentRuntime, err := runtime.NewPersistentRuntime(ctx, runtime.Config{
+		BinaryPath: opts.RuntimeBinaryPath,
+		BinaryArgs: opts.RuntimeBinaryArgs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("initializing runtime failed: %w", err)
 	}
 
 	return &agent{
-		managerUuid:       opts.ManagerUuid,
+		workerUuid:        opts.WorkerUuid,
 		functionUuid:      opts.FunctionUuid,
 		runnerUuid:        opts.RunnerUuid,
 		runtimeHandler:    opts.RuntimeHandler,
-		runtimeBinaryPath: opts.RuntimeBinaryPath,
-		runtimeBinaryArgs: opts.RuntimeBinaryArgs,
 		apiServer:         apiServer,
 		messagingProducer: messagingProducer,
+		persistentRuntime: persistentRuntime,
 	}, nil
 }
 
@@ -80,7 +86,7 @@ func (a *agent) Run(ctx context.Context) error {
 	})
 	readyCallback := func() {
 		log.Infof("signalizing agent ready")
-		a.messagingProducer.Publish(ctx, naming.MessagingManagerRelatedAgentReadyTopic(a.managerUuid), messages.RunnerAgentReadyMessage{
+		a.messagingProducer.Publish(ctx, naming.MessagingWorkerRelatedAgentReadyTopic(a.workerUuid), messagespb.RunnerAgentReadyMessage{
 			FunctionUuid: a.functionUuid,
 			RunnerUuid:   a.runnerUuid,
 			Reason:       "ok",
@@ -93,13 +99,13 @@ func (a *agent) Run(ctx context.Context) error {
 		func(ctx context.Context) error {
 			log.Info("starting api server")
 			if err := a.apiServer.Run(ctx, healthStatusProvider); err != nil {
-				return fmt.Errorf("failed to start api server: %v", err)
+				return fmt.Errorf("starting api server failed: %w", err)
 			}
 			return nil
 		},
 		func(ctx context.Context) error {
 			if err := a.apiServer.Ready(ctx); err != nil {
-				return fmt.Errorf("api server did not become ready in time: %v", err)
+				return fmt.Errorf("api server did not become ready in time: %w", err)
 			}
 			healthStatusProvider.Ready()
 			log.Info("api server started")
@@ -108,7 +114,67 @@ func (a *agent) Run(ctx context.Context) error {
 			<-ctx.Done()
 			return nil
 		},
+		func(ctx context.Context) error {
+			log.Info("starting persistent runtime")
+			if err := a.persistentRuntime.Start(a.runtimeHandler); err != nil {
+				return fmt.Errorf("starting runtime failed: %w", err)
+			}
+
+			// Wait for the main context to be done.
+			<-ctx.Done()
+
+			if err := a.persistentRuntime.Tidy(); err != nil {
+				return fmt.Errorf("tidying runtime failed: %w", err)
+			}
+			return nil
+		},
+		func(ctx context.Context) error {
+			log.Info("setting up runtime crash recovery")
+			const maxRecoveryCount = 3
+			var recoveryCounter int
+
+			for {
+				if recoveryCounter >= maxRecoveryCount {
+					return fmt.Errorf("max runtime recovery attempts reached")
+				}
+
+				err := a.persistentRuntime.Wait()
+				if err != nil {
+					log.Errorf("runtime finished with an error: %v", err)
+				}
+
+				// Directly check for context cancellation
+				if ctx.Err() != nil {
+					return fmt.Errorf("context canceled, halting recovery process: %w", ctx.Err())
+				} else {
+					recoveryCounter++
+					log.Warnf("runtime has finished unexpectedly - recovery %d of max %d", recoveryCounter, maxRecoveryCount)
+					if err := a.recoverRuntime(ctx); err != nil {
+						return fmt.Errorf("recovering runtime failed: %w", err)
+					}
+				}
+			}
+		},
 	)
 
 	return runner.Run(ctx)
+}
+
+func (a *agent) recoverRuntime(ctx context.Context) error {
+	if err := a.persistentRuntime.Tidy(); err != nil {
+		return fmt.Errorf("tidying runtime failed: %w", err)
+	}
+
+	runtimeConfig := a.persistentRuntime.Config()
+	newPersistentRuntime, err := runtime.NewPersistentRuntime(ctx, runtimeConfig)
+	if err != nil {
+		return fmt.Errorf("initializing replacement runtime failed: %w", err)
+	}
+	if err := newPersistentRuntime.Start(a.runtimeHandler); err != nil {
+		return fmt.Errorf("starting replacement runtime failed: %w", err)
+	}
+	a.persistentRuntime = newPersistentRuntime
+
+	log.Info("runtime recovered")
+	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/proto/health/v1"
+	healthpb "github.com/dennishilgert/apollo/pkg/proto/health/v1"
 	"google.golang.org/grpc"
 )
 
@@ -13,7 +13,7 @@ type Server interface {
 }
 
 type healthServer struct {
-	health.UnimplementedHealthServer
+	healthpb.UnimplementedHealthServer
 
 	healthStatusProvider Provider
 	log                  logger.Logger
@@ -29,17 +29,17 @@ func NewHealthServer(provider Provider, logger logger.Logger) Server {
 
 // Register registers the health server in an grpc server.
 func (h *healthServer) Register(server *grpc.Server) {
-	health.RegisterHealthServer(server, h)
+	healthpb.RegisterHealthServer(server, h)
 }
 
 // Status returns the health status of the instance.
-func (h *healthServer) Status(ctx context.Context, in *health.HealthStatusRequest) (*health.HealthStatusResponse, error) {
-	status := health.HealthStatus_HEALTHY
+func (h *healthServer) Status(ctx context.Context, in *healthpb.HealthStatusRequest) (*healthpb.HealthStatusResponse, error) {
+	status := healthpb.HealthStatus_HEALTHY
 	if !h.healthStatusProvider.Healthy() {
-		status = health.HealthStatus_UNHEALTHY
+		status = healthpb.HealthStatus_UNHEALTHY
 	}
 	h.log.Debugf("responding to health status request with health status: %s", status.String())
-	response := &health.HealthStatusResponse{
+	response := &healthpb.HealthStatusResponse{
 		Status: status,
 	}
 	return response, nil

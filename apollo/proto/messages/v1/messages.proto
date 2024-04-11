@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package apollo.proto.messages.v1;
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/messages/v1;messages";
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/messages/v1;messagespb";
 
 message FunctionInitializationMessage {
   string function_uuid = 1;

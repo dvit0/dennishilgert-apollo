@@ -48,7 +48,7 @@ func Load() (*Config, error) {
 	configuration.LoadOrDefault("StorageAccessKeyId", "APOLLO_STORAGE_ACCESS_KEY_ID", nil)
 	configuration.LoadOrDefault("StorageSecretAccessKey", "APOLLO_STORAGE_SECRET_ACCESS_KEY", nil)
 
-	configuration.LoadOrDefault("WatchdogCheckInterval", "APOLLO_WATCHDOG_CHECK_INTERVAL", 5)
+	configuration.LoadOrDefault("WatchdogCheckInterval", "APOLLO_WATCHDOG_CHECK_INTERVAL", 3)
 	configuration.LoadOrDefault("WatchdogWorkerCount", "APOLLO_WATCHDOG_WORKER_COUNT", 10)
 
 	// unmarshalling the Config struct

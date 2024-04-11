@@ -289,7 +289,7 @@ func DebugOutput(log logger.Logger, reader *bufio.Reader) {
 func ContainerCopy(ctx context.Context, client *docker.Client, log logger.Logger, containerId string, srcPath string, dstPath string) error {
 	log.Debugf("copying %s to %s", srcPath, dstPath)
 	execConfig := types.ExecConfig{
-		Cmd:          []string{"cp", "-r", srcPath, dstPath},
+		Cmd:          []string{"cp", "-rP", srcPath, dstPath},
 		AttachStdout: true,
 		AttachStderr: true,
 	}
@@ -430,7 +430,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 
 	log.Debug("discovering directories to copy")
 	findExecConfig := types.ExecConfig{
-		Cmd:          []string{"find", "/", "-maxdepth", "1", "-type", "d"},
+		Cmd:          []string{"find", "/", "-maxdepth", "1", "(", "-type", "d", "-o", "-type", "l", ")"},
 		AttachStdout: true,
 		AttachStderr: true,
 	}
@@ -446,9 +446,9 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 	}
 
 	// iterate over the discovered filesystem directories and copy them to the rootfs image.
-	log.Debug("copying directories")
+	log.Debug("copying directories and symlinks")
 	for _, dir := range findExecLines {
-		log.Debugf("handling directory: %s", dir)
+		log.Debugf("handling directory or symlink: %s", dir)
 		if slices.Contains([]string{config.ContainerDestMountTarget, config.ContainerImageMountTarget}, dir) {
 			log.Debugf("directory is working directory: %s", dir)
 			continue

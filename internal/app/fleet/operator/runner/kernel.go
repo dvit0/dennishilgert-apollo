@@ -13,7 +13,7 @@ type KernelArgsBuilder interface {
 	WithPci(pci string) KernelArgsBuilder
 	WithNoModules(noModules bool) KernelArgsBuilder
 	WithInit(init string) KernelArgsBuilder
-	WithManagerUuid(managerUuid string) KernelArgsBuilder
+	WithWorkerUuid(workerUuid string) KernelArgsBuilder
 	WithFunctionUuid(functionUuid string) KernelArgsBuilder
 	WithRunnerUuid(runnerUuid string) KernelArgsBuilder
 	WithRuntimeHandler(handler string) KernelArgsBuilder
@@ -31,7 +31,7 @@ type kernelArgsBuilder struct {
 	pci                       string
 	nomodules                 string
 	init                      string
-	managerUuid               string
+	workerUuid                string
 	functionUuid              string
 	runnerUuid                string
 	runtimeHandler            string
@@ -53,11 +53,15 @@ func (c *kernelArgsBuilder) Build() string {
 		c.panic,
 		c.pci,
 		c.nomodules,
+		c.workerUuid,
 		c.functionUuid,
 		c.runnerUuid,
 		c.runtimeHandler,
 		c.runtimeBinaryPath,
 		c.runtimeBinaryArgs,
+		c.apiPort,
+		c.messagingBootstrapServers,
+		c.logLevel,
 		c.init,
 	}, " ")
 	return strings.Join(strings.Fields(preBuilt), " ")
@@ -95,8 +99,8 @@ func (c *kernelArgsBuilder) WithInit(init string) KernelArgsBuilder {
 	return c
 }
 
-func (c *kernelArgsBuilder) WithManagerUuid(managerUuid string) KernelArgsBuilder {
-	c.managerUuid = managerUuid
+func (c *kernelArgsBuilder) WithWorkerUuid(workerUuid string) KernelArgsBuilder {
+	c.workerUuid = fmt.Sprintf("wkr-uuid=%s", workerUuid)
 	return c
 }
 

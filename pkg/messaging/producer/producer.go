@@ -40,6 +40,7 @@ func NewMessagingProducer(ctx context.Context, opts Options) (MessagingProducer,
 		for {
 			select {
 			case <-ctx.Done():
+				log.Infof("shutting down messaging producer")
 				return
 			case e := <-producer.Events():
 				switch event := e.(type) {
@@ -48,6 +49,12 @@ func NewMessagingProducer(ctx context.Context, opts Options) (MessagingProducer,
 						log.Errorf("failed to deliver message: %v", event.TopicPartition.Error)
 					} else {
 						log.Debugf("successfully delivered message to topic %s [%d] at offset %v", *event.TopicPartition.Topic, event.TopicPartition.Partition, event.TopicPartition.Offset)
+					}
+				case kafka.Error:
+					log.Errorf("failed to send kafka message: %v", event)
+				default:
+					if e != nil {
+						log.Debugf("ignored kafka event: %v", e)
 					}
 				}
 			}

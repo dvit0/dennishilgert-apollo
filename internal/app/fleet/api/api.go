@@ -14,9 +14,9 @@ import (
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	"github.com/dennishilgert/apollo/pkg/messaging/producer"
-	"github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	"github.com/dennishilgert/apollo/pkg/proto/messages/v1"
-	"github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
+	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
+	sharedpb "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
 	"google.golang.org/grpc"
 )
 
@@ -32,7 +32,7 @@ type Server interface {
 }
 
 type apiServer struct {
-	fleet.UnimplementedFleetManagerServer
+	fleetpb.UnimplementedFleetManagerServer
 
 	runnerOperator    operator.RunnerOperator
 	runnerInitializer initializer.RunnerInitializer
@@ -70,7 +70,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 
 	log.Infof("starting api server on port %d", a.port)
 	server := grpc.NewServer()
-	fleet.RegisterFleetManagerServer(server, a)
+	fleetpb.RegisterFleetManagerServer(server, a)
 
 	healthServer := health.NewHealthServer(healthStatusProvider, log)
 	healthServer.Register(server)
@@ -127,7 +127,7 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) Initialize(ctx context.Context, req *fleet.InitializeFunctionRequest) (*shared.EmptyResponse, error) {
+func (a *apiServer) Initialize(ctx context.Context, req *fleetpb.InitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
 	// handle preparation request asynchronous and respond immediately
 	go func() {
 		bgCtx, cancel := context.WithTimeout(a.appCtx, time.Minute*10)
@@ -135,7 +135,7 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleet.InitializeFunctio
 
 		if err := a.runnerInitializer.InitializeFunction(bgCtx, req); err != nil {
 			log.Errorf("failed to prepare function: %v", err)
-			message := &messages.FunctionInitializationMessage{
+			message := &messagespb.FunctionInitializationMessage{
 				FunctionUuid: req.FunctionUuid,
 				WorkerUuid:   "TO_BE_REPLACED_WITH_WORKER_UUID",
 				Reason:       err.Error(),
@@ -144,7 +144,7 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleet.InitializeFunctio
 			a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
 		}
 		log.Infof("function has been prepared successfully: %s", req.FunctionUuid)
-		message := &messages.FunctionInitializationMessage{
+		message := &messagespb.FunctionInitializationMessage{
 			FunctionUuid: req.FunctionUuid,
 			WorkerUuid:   "TO_BE_REPLACED_WITH_WORKER_UUID",
 			Reason:       "ok",
@@ -152,10 +152,10 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleet.InitializeFunctio
 		}
 		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
 	}()
-	return &shared.EmptyResponse{}, nil
+	return &sharedpb.EmptyResponse{}, nil
 }
 
-func (a *apiServer) Provision(ctx context.Context, req *fleet.ProvisionRunnerRequest) (*fleet.ProvisionRunnerResponse, error) {
+func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
 	result, err := a.runnerOperator.ProvisionRunner(req)
 	if err != nil {
 		log.Error("failed to provision runner")
@@ -164,7 +164,7 @@ func (a *apiServer) Provision(ctx context.Context, req *fleet.ProvisionRunnerReq
 	return result, nil
 }
 
-func (a *apiServer) Invoke(ctx context.Context, req *fleet.InvokeFunctionRequest) (*fleet.InvokeFunctionResponse, error) {
+func (a *apiServer) Invoke(ctx context.Context, req *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	result, err := a.runnerOperator.InvokeFunction(ctx, req)
 	if err != nil {
 		log.Error("failed to invoke function")
