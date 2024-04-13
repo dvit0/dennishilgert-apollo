@@ -165,6 +165,15 @@ func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerR
 	return result, nil
 }
 
+// Available checks if a runner for a given function is available.
+func (a *apiServer) Available(ctx context.Context, req *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error) {
+	result, err := a.runnerOperator.AvailableRunner(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check runner availability: %w", err)
+	}
+	return result, nil
+}
+
 // Invoke invokes a function.
 func (a *apiServer) Invoke(ctx context.Context, req *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	result, err := a.runnerOperator.InvokeFunction(ctx, req)

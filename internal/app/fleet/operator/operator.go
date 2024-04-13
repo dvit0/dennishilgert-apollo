@@ -134,7 +134,17 @@ func (r *runnerOperator) AvailableRunner(request *fleetpb.AvailableRunnerRequest
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("reserving runner for 3 seconds: %s", instance.Config().RunnerUuid)
 	instance.SetState(runner.RunnerStateReserved)
+
+	go func(runnerInstance runner.RunnerInstance) {
+		time.Sleep(3 * time.Second)
+		if runnerInstance.State() == runner.RunnerStateReserved {
+			log.Debugf("runner was not used and is available again: %s", runnerInstance.Config().RunnerUuid)
+			runnerInstance.SetState(runner.RunnerStateReady)
+		}
+	}(instance)
+
 	response := &fleetpb.AvailableRunnerResponse{
 		RunnerUuid: instance.Config().RunnerUuid,
 	}
@@ -310,6 +320,9 @@ func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.In
 	if err != nil {
 		return nil, fmt.Errorf("runner not found: %w", err)
 	}
+	instance.SetState(runner.RunnerStateBusy)
+	defer instance.SetState(runner.RunnerStateReady)
+
 	invokeRequest := &agentpb.InvokeRequest{
 		Context: &agentpb.ContextData{
 			Runtime:        "mocked - will be removed in future",
