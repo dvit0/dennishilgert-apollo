@@ -21,7 +21,7 @@ import (
 
 var log = logger.NewLogger("apollo.manager.runner")
 
-type RunnerState int32
+type RunnerState int
 
 const (
 	RunnerStateCreated RunnerState = iota
@@ -30,6 +30,22 @@ const (
 	RunnerStateBusy
 	RunnerStateShutdown
 )
+
+func (r RunnerState) String() string {
+	switch r {
+	case RunnerStateCreated:
+		return "CREATED"
+	case RunnerStateReady:
+		return "READY"
+	case RunnerStateReserved:
+		return "RESERVED"
+	case RunnerStateBusy:
+		return "BUSY"
+	case RunnerStateShutdown:
+		return "SHUTDOWN"
+	}
+	return "UNKNOWN"
+}
 
 type TeardownParams struct {
 	FunctionUuid string
@@ -65,7 +81,7 @@ type runnerInstance struct {
 	readyCh    chan error
 }
 
-// NewInstance creates a new RunnerInstance.
+// NewInstance creates a new runner instance.
 func NewInstance(ctx context.Context, cfg *Config) (RunnerInstance, error) {
 	log.Debugf("validating machine configuration for machine with id: %s", cfg.RunnerUuid)
 	if err := validate(cfg); err != nil {

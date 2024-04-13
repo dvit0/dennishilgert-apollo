@@ -72,45 +72,25 @@ func (p *runnerPoolWatchdog) Run(ctx context.Context) error {
 
 // checkRunners checks the health status of the runners in the pool.
 func (p *runnerPoolWatchdog) checkRunners() {
-	runnerPool := *p.runnerPool.Pool()
+	// To iterate over the runner pool, we need to create a deep copy of the pool.
+	// This is necessary because the pool is locked during the iteration and
+	// we don't want to block the pool for a long time.
+	runnerPool := p.runnerPool.DeepCopy()
 
 	for _, runnersByFunction := range runnerPool {
-		for _, target := range runnersByFunction {
-			if target.State() == runner.RunnerStateCreated || target.State() == runner.RunnerStateShutdown {
+		for _, runnerInstance := range runnersByFunction {
+			if (runnerInstance.State() == runner.RunnerStateCreated) || (runnerInstance.State() == runner.RunnerStateShutdown) {
+				log.Debugf("skipping runner health check because of state: %s", runnerInstance.State().String())
 				continue
 			}
-			if target.Idle() >= target.Config().IdleTtl {
-				log.Debugf("runner idle ttl has been reached: %s", target.Config().RunnerUuid)
-				p.teardownRunner(target.Config().FunctionUuid, target.Config().RunnerUuid)
+			if runnerInstance.Idle() >= runnerInstance.Config().IdleTtl {
+				log.Debugf("runner idle ttl has been reached: %s", runnerInstance.Config().RunnerUuid)
+				p.teardownRunner(runnerInstance)
 				continue
 			}
 
 			// building the task for the health check
-			task := worker.NewTask[bool](func(ctx context.Context) (bool, error) {
-				log.Debugf("checking health status of runner: %s", target.Config().RunnerUuid)
-
-				healthStatus, err := target.Health(ctx)
-				if err != nil {
-					log.Errorf("error while checking health status of runner: %s - reason: %v", target.Config().RunnerUuid, err)
-					return false, err
-				}
-				if *healthStatus != healthpb.HealthStatus_HEALTHY {
-					log.Warnf("runner not healthy: %s", target.Config().RunnerUuid)
-					return false, nil
-				}
-				return true, nil
-			}, 5*time.Second)
-
-			// add a callback to handle the result of the health check
-			task.Callback(func(healthy bool, err error) {
-				if !healthy || err != nil {
-					if err != nil {
-						p.errCh <- err
-					}
-					log.Debugf("runner is unhealthy - tear down: %s", target.Config().RunnerUuid)
-					p.teardownRunner(target.Config().FunctionUuid, target.Config().RunnerUuid)
-				}
-			})
+			task := p.createHealthCheckTask(runnerInstance)
 
 			// add the task to the worker queue
 			p.worker.Add(task)
@@ -118,16 +98,39 @@ func (p *runnerPoolWatchdog) checkRunners() {
 	}
 }
 
-// teardownRunner removes the runner from the pool and sends the tear down signal to the runner operator.
-func (p *runnerPoolWatchdog) teardownRunner(functionUuid string, runnerUuid string) {
-	// Get runner instance from runner pool.
-	runnerInstance, err := p.runnerPool.Get(functionUuid, runnerUuid)
-	if err != nil {
-		log.Errorf("failed to send runner teardown job: %v", err)
-	}
+// createHealthCheckTask creates a health check task for the given runner instance.
+func (p *runnerPoolWatchdog) createHealthCheckTask(runnerInstance runner.RunnerInstance) *worker.Task[bool] {
+	task := worker.NewTask(func(ctx context.Context) (bool, error) {
+		log.Debugf("checking health status of runner: %s", runnerInstance.Config().RunnerUuid)
 
+		healthStatus, err := runnerInstance.Health(ctx)
+		if err != nil {
+			log.Errorf("error while checking health status of runner: %s - reason: %v", runnerInstance.Config().RunnerUuid, err)
+			return false, err
+		}
+		if *healthStatus != healthpb.HealthStatus_HEALTHY {
+			log.Warnf("runner not healthy: %s", runnerInstance.Config().RunnerUuid)
+			return false, nil
+		}
+		return true, nil
+	}, 5*time.Second)
+
+	task.Callback(func(healthy bool, err error) {
+		if !healthy || err != nil {
+			if err != nil {
+				p.errCh <- err
+			}
+			log.Debugf("runner is unhealthy - tear down: %s", runnerInstance.Config().RunnerUuid)
+			p.teardownRunner(runnerInstance)
+		}
+	})
+	return task
+}
+
+// teardownRunner removes the runner from the pool and sends the tear down signal to the runner operator.
+func (p *runnerPoolWatchdog) teardownRunner(runnerInstance runner.RunnerInstance) {
 	// Remove runner from pool to prevent further usage.
-	p.runnerPool.Remove(functionUuid, runnerUuid)
+	p.runnerPool.Remove(runnerInstance.Config().FunctionUuid, runnerInstance.Config().RunnerUuid)
 
 	// Send runner params to runner operator to tear down the runner.
 	p.teardownCh <- runnerInstance
