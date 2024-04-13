@@ -160,8 +160,7 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleetpb.InitializeFunct
 func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
 	result, err := a.runnerOperator.ProvisionRunner(req)
 	if err != nil {
-		log.Error("failed to provision runner")
-		return nil, err
+		return nil, fmt.Errorf("failed to provision runner: %w", err)
 	}
 	return result, nil
 }
@@ -170,8 +169,7 @@ func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerR
 func (a *apiServer) Invoke(ctx context.Context, req *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	result, err := a.runnerOperator.InvokeFunction(ctx, req)
 	if err != nil {
-		log.Error("failed to invoke function")
-		return nil, err
+		return nil, fmt.Errorf("failed to invoke function: %w", err)
 	}
 	return result, nil
 }

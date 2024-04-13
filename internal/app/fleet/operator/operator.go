@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -268,8 +269,7 @@ func (v *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 // TeardownRunner tears down a specified runner.
 func (r *runnerOperator) TeardownRunner(ctx context.Context, runnerInstance runner.RunnerInstance) error {
 	if err := runnerInstance.ShutdownAndDestroy(ctx); err != nil {
-		log.Errorf("error while shutting down runner: %s", runnerInstance.Config().RunnerUuid)
-		return err
+		return fmt.Errorf("failed to shutdown runner instance: %w", err)
 	}
 	// TODO: uncomment to enable runner directory cleanup after teardown.
 	// if err := r.runnerInitializer.RemoveRunner(ctx, runnerInstance.Config().RunnerUuid); err != nil {
@@ -308,7 +308,7 @@ func (r *runnerOperator) TeardownRunners(ctx context.Context) {
 func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	instance, err := r.runnerPool.Get(request.FunctionUuid, request.RunnerUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("runner not found: %w", err)
 	}
 	invokeRequest := &agentpb.InvokeRequest{
 		Context: &agentpb.ContextData{
@@ -327,7 +327,7 @@ func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.In
 	// invoke the function code with the data of the event
 	invokeResponse, err := instance.Invoke(ctx, invokeRequest)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("function invocation failed: %w", err)
 	}
 	// TODO: Send billed duration to user service and logs to the log collector via messaging.
 	// IDEA: This can be done directly inside the runner. The connection to the messaging

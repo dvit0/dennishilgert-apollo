@@ -109,7 +109,6 @@ func (p *runnerPoolWatchdog) createHealthCheckTask(runnerInstance runner.RunnerI
 			return false, err
 		}
 		if *healthStatus != healthpb.HealthStatus_HEALTHY {
-			log.Warnf("runner not healthy: %s", runnerInstance.Config().RunnerUuid)
 			return false, nil
 		}
 		return true, nil
