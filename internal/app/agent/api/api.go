@@ -36,10 +36,11 @@ type apiServer struct {
 }
 
 // NewApiServer creates a new Server.
-func NewApiServer(opts Options) Server {
+func NewApiServer(persistentRuntime runtime.PersistentRuntime, opts Options) Server {
 	return &apiServer{
-		port:    opts.Port,
-		readyCh: make(chan struct{}),
+		port:              opts.Port,
+		readyCh:           make(chan struct{}),
+		persistentRuntime: persistentRuntime,
 	}
 }
 
@@ -113,32 +114,11 @@ func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*age
 		Data:      in.Event.Data,
 	}
 
-	resultCh := make(chan *runtime.Result, 1)
-	errCh := make(chan error, 1)
-	go func() {
-		// Ensure the channels are closed to avoid goroutine leak.
-		defer func() {
-			close(errCh)
-			close(resultCh)
-		}()
-
-		result, err := a.persistentRuntime.Invoke(ctx, fnCtx, fnEvt)
-		if err != nil {
-			errCh <- err
-			return
-		}
-		errCh <- nil
-		resultCh <- result
-	}()
-
-	// Block until the error channel receives a message.
-	err := <-errCh
+	log.Debugf("invoking function with event: %s", in.Event.Uuid)
+	result, err := a.persistentRuntime.Invoke(ctx, fnCtx, fnEvt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("function invocation failed: %w", err)
 	}
-
-	// Because the error channel received a nil message, read result from result channel.
-	result := <-resultCh
 
 	logs, err := runtime.LogsToStructList(result.Logs)
 	if err != nil {

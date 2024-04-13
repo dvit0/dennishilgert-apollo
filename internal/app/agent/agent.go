@@ -46,10 +46,6 @@ type agent struct {
 
 // NewAgent creates a new Agent instance.
 func NewAgent(ctx context.Context, opts Options) (Agent, error) {
-	apiServer := api.NewApiServer(api.Options{
-		Port: opts.ApiPort,
-	})
-
 	messagingProducer, err := producer.NewMessagingProducer(
 		ctx,
 		producer.Options{
@@ -67,6 +63,13 @@ func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 	if err != nil {
 		return nil, fmt.Errorf("initializing runtime failed: %w", err)
 	}
+
+	apiServer := api.NewApiServer(
+		persistentRuntime,
+		api.Options{
+			Port: opts.ApiPort,
+		},
+	)
 
 	return &agent{
 		workerUuid:        opts.WorkerUuid,

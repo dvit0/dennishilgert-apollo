@@ -172,11 +172,11 @@ func (p *persistentRuntime) Invoke(ctx context.Context, fnCtx Context, fnEvt Eve
 	)
 
 	if err := p.sendInvocationData(fnCtx, fnEvt); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sending invocation data failed: %w", err)
 	}
 
 	if err := p.processOutput(&logs, &errs, &data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("processing output failed: %w", err)
 	}
 
 	duration := time.Since(start)
@@ -203,6 +203,7 @@ func LogsToStructList(logs []LogLine) ([]*structpb.Struct, error) {
 
 // LogsToStructList converts a list of log lines to a list of Structs.
 func (p *persistentRuntime) sendInvocationData(fnCtx Context, fnEvt Event) error {
+	log.Debugf("sending invocation data to runtime for event: %s", fnEvt.EventUuid)
 	fnParams := map[string]interface{}{"context": fnCtx, "event": fnEvt}
 	fnParamsBytes, err := json.Marshal(fnParams)
 	if err != nil {
@@ -217,6 +218,7 @@ func (p *persistentRuntime) sendInvocationData(fnCtx Context, fnEvt Event) error
 
 // processOutput reads the output buffer and processes the data.
 func (p *persistentRuntime) processOutput(logs *[]LogLine, errs *[]sharedpb.Error, data *map[string]interface{}) error {
+	log.Debug("processing output from runtime")
 	reader := bufio.NewReader(p.stdout)
 	for {
 		line, _, err := reader.ReadLine()
