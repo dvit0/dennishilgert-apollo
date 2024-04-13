@@ -12,6 +12,7 @@ var log = logger.NewLogger("apollo.manager.pool")
 
 type RunnerPool interface {
 	Pool() *map[string]map[string]runner.RunnerInstance
+	DeepCopy() map[string]map[string]runner.RunnerInstance
 	Lock()
 	Unlock()
 	Add(instance runner.RunnerInstance) error
@@ -25,7 +26,7 @@ type runnerPool struct {
 	lock sync.Mutex
 }
 
-// NewRunnerPool returns a new instance of runnerPool.
+// NewRunnerPool creates a new instance of runnerPool.
 func NewRunnerPool() RunnerPool {
 	return &runnerPool{
 		pool: make(map[string]map[string]runner.RunnerInstance),
@@ -45,6 +46,24 @@ func (r *runnerPool) Unlock() {
 // Pool returns the pool with runners inside.
 func (r *runnerPool) Pool() *map[string]map[string]runner.RunnerInstance {
 	return &r.pool
+}
+
+// DeepCopy creates a deep copy of the pool.
+func (r *runnerPool) DeepCopy() map[string]map[string]runner.RunnerInstance {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	copyPool := make(map[string]map[string]runner.RunnerInstance)
+
+	for functionId, runners := range r.pool {
+		copyRunners := make(map[string]runner.RunnerInstance)
+		for runnerId, runnerInstance := range runners {
+			copyRunners[runnerId] = runnerInstance
+		}
+		copyPool[functionId] = copyRunners
+	}
+
+	return copyPool
 }
 
 // Add adds a runner instance to the pool.
