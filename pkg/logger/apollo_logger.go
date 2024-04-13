@@ -9,15 +9,16 @@ import (
 )
 
 type apolloLogger struct {
-	// name defines the name of the logger that is published to log as a scope
+	// name defines the name of the logger that is published to log as a scope.
 	name string
 
-	// logger defines the instance of a logrus logger
+	// logger defines the instance of a logrus logger.
 	logger *logrus.Entry
 }
 
 var ApolloVersion = "unknown"
 
+// NewLogger creates a new logger with the given name.
 func newApolloLogger(name string) *apolloLogger {
 	newLogger := logrus.New()
 	newLogger.SetOutput(os.Stdout)
@@ -70,10 +71,12 @@ func (l *apolloLogger) EnableJsonOutput(enabled bool) {
 	l.logger.Logger.SetFormatter(formatter)
 }
 
+// LogrusEntry returns the logrus entry.
 func (l *apolloLogger) LogrusEntry() *logrus.Entry {
 	return l.logger
 }
 
+// PrintBanner prints the banner of the logger.
 func (l *apolloLogger) PrintBanner() {
 	l.logger.Log(logrus.InfoLevel, "    _             _ _")
 	l.logger.Log(logrus.InfoLevel, "   /_\\  _ __  ___| | |___")
@@ -88,7 +91,7 @@ func (l *apolloLogger) SetAppId(id string) {
 }
 
 func toLogrusLevel(lvl LogLevel) logrus.Level {
-	// ignore error because it will never happen
+	// Ignore error because it will never happen.
 	l, _ := logrus.ParseLevel(string(lvl))
 	return l
 }

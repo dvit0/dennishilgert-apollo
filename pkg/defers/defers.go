@@ -30,10 +30,12 @@ func NewDefers() Defers {
 	}
 }
 
+// Add adds a new function to the beginning of the list.
 func (df *defaultDefers) Add(fn func()) {
 	df.fs = append([]func(){fn}, df.fs...)
 }
 
+// CallAll invokes all deffered functions in reverse order.
 func (df *defaultDefers) CallAll() {
 	df.Lock()
 	defer df.Unlock()
@@ -45,6 +47,7 @@ func (df *defaultDefers) CallAll() {
 	}
 }
 
+// Trigger tells the instance to (true) or not to (false) process the defers.
 func (df *defaultDefers) Trigger(input bool) {
 	df.Lock()
 	defer df.Unlock()

@@ -65,11 +65,11 @@ func NewWorkerManager(workerCount int) WorkerManager {
 // Run runs a specified number of workers.
 func (w *workerManager) Run(ctx context.Context) error {
 	for i := 0; i < w.workerCount; i++ {
-		// run each worker in its own goroutine
+		// Run each worker in its own goroutine.
 		go w.worker(ctx)
 	}
 
-	// block until the context is cancelled
+	// Block until the context is cancelled.
 	<-ctx.Done()
 
 	close(w.taskCh)
@@ -86,21 +86,21 @@ func (w *workerManager) Add(task TaskExecutor) {
 	w.taskCh <- task
 }
 
-// worker starts a
+// worker is a goroutine that executes tasks from the task channel.
 func (w *workerManager) worker(parentCtx context.Context) {
 	for {
 		select {
 		case <-parentCtx.Done():
-			// exit the goroutine when the context is cancelled
+			// Exit the goroutine when the context is cancelled.
 			return
 		case task, ok := <-w.taskCh:
 			if !ok {
-				// exit the goroutine when the channel is closed
+				// Exit the goroutine when the channel is closed.
 				return
 			}
 			ctx, cancel := context.WithTimeout(parentCtx, task.Timeout())
 			task.Execute(ctx)
-			// cancel task after the task is done
+			// Cancel task after the task is done.
 			cancel()
 		}
 	}

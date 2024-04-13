@@ -38,6 +38,7 @@ type Config struct {
 	ImageRegistryPassword string
 }
 
+// DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
 	return Config{
 		RootFsExcludeDirs:         []string{"/boot", "/opt", "/proc", "/run", "/srv", "/sys", "/tmp"},
@@ -52,6 +53,7 @@ func DefaultConfig() Config {
 	}
 }
 
+// LoadConfig loads the configuration from the environment.
 func LoadConfig() Config {
 	var config Config = DefaultConfig()
 

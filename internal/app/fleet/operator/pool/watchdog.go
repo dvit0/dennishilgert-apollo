@@ -89,10 +89,10 @@ func (p *runnerPoolWatchdog) checkRunners() {
 				continue
 			}
 
-			// building the task for the health check
+			// Building the task for the health check.
 			task := p.createHealthCheckTask(runnerInstance)
 
-			// add the task to the worker queue
+			// Add the task to the worker queue.
 			p.worker.Add(task)
 		}
 	}

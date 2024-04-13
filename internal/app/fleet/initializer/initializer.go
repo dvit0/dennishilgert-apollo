@@ -36,6 +36,7 @@ type runnerInitializer struct {
 	imageRegistryAddress string
 }
 
+// NewRunnerInitializer creates a new RunnerInitializer instance.
 func NewRunnerInitializer(storageService storage.StorageService, opts Options) RunnerInitializer {
 	return &runnerInitializer{
 		storageService:       storageService,
@@ -44,10 +45,12 @@ func NewRunnerInitializer(storageService storage.StorageService, opts Options) R
 	}
 }
 
+// DataPath returns the data path.
 func (r *runnerInitializer) DataPath() string {
 	return r.dataPath
 }
 
+// InitializeDataDir initializes the data directory.
 func (r *runnerInitializer) InitializeDataDir() error {
 	exists, fileInfo := utils.FileExists(r.dataPath)
 	if !exists {
@@ -63,6 +66,7 @@ func (r *runnerInitializer) InitializeDataDir() error {
 	return nil
 }
 
+// InitializeRunner initializes a runner.
 func (r *runnerInitializer) InitializeRunner(ctx context.Context, cfg *runner.Config) error {
 	path := naming.RunnerStoragePath(r.dataPath, cfg.RunnerUuid)
 
@@ -87,6 +91,7 @@ func (r *runnerInitializer) InitializeRunner(ctx context.Context, cfg *runner.Co
 	return nil
 }
 
+// RemoveRunner removes a runner.
 func (r *runnerInitializer) RemoveRunner(ctx context.Context, runnerUuid string) error {
 	path := naming.RunnerStoragePath(r.dataPath, runnerUuid)
 
@@ -97,6 +102,7 @@ func (r *runnerInitializer) RemoveRunner(ctx context.Context, runnerUuid string)
 	return nil
 }
 
+// InitializeFunction initializes a function.
 func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fleetpb.InitializeFunctionRequest) error {
 	path := naming.FunctionStoragePath(r.dataPath, request.FunctionUuid)
 	filename := naming.FunctionImageFileName(request.FunctionUuid)
@@ -138,6 +144,7 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 	return nil
 }
 
+// initializeKernel initializes a kernel.
 func (r *runnerInitializer) initializeKernel(ctx context.Context, kernelName string, kernelVersion string) error {
 	path := naming.KernelStoragePath(r.dataPath, kernelName, kernelVersion)
 	filename := naming.KernelFileName(kernelName, kernelVersion)
@@ -161,6 +168,7 @@ func (r *runnerInitializer) initializeKernel(ctx context.Context, kernelName str
 	return nil
 }
 
+// initializeRuntime initializes a runtime.
 func (r *runnerInitializer) initializeRuntime(ctx context.Context, runtimeName string, runtimeVersion string) error {
 	path := naming.RuntimeStoragePath(r.dataPath, runtimeName, runtimeVersion)
 	filename := naming.RuntimeImageFileName(runtimeName, runtimeVersion)
@@ -195,6 +203,7 @@ func (r *runnerInitializer) initializeRuntime(ctx context.Context, runtimeName s
 	return nil
 }
 
+// prepareTargetDirectory prepares the target directory.
 func prepareTargetDirectory(path string) error {
 	exists, fileInfo := utils.FileExists(path)
 	if exists {

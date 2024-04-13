@@ -23,6 +23,7 @@ type Config struct {
 	WatchdogWorkerCount       int
 }
 
+// Load loads the configuration from the environment.
 func Load() (*Config, error) {
 	var config Config
 

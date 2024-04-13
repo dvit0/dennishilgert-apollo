@@ -25,6 +25,7 @@ type storageService struct {
 	minioClient minio.Client
 }
 
+// NewStorageService creates a new storage service.
 func NewStorageService(opts Options) (StorageService, error) {
 	minioClient, err := minio.New(opts.Endpoint, &minio.Options{
 		Creds: credentials.NewStaticV4(opts.AccessKeyId, opts.SecretAccessKey, ""),
@@ -38,6 +39,7 @@ func NewStorageService(opts Options) (StorageService, error) {
 	}, nil
 }
 
+// PresignUpload returns a presigned URL for uploading an object to the storage.
 func (s *storageService) PresignUpload(ctx context.Context, bucketName string, objectName string) (*url.URL, error) {
 	presignedUrl, err := s.minioClient.PresignedPutObject(ctx, bucketName, objectName, time.Second*3)
 	if err != nil {
@@ -46,6 +48,7 @@ func (s *storageService) PresignUpload(ctx context.Context, bucketName string, o
 	return presignedUrl, nil
 }
 
+// UploadObject uploads an object to the storage.
 func (s *storageService) UploadObject(ctx context.Context, bucketName string, objectName string, filePath string) (*minio.UploadInfo, error) {
 	info, err := s.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -54,6 +57,7 @@ func (s *storageService) UploadObject(ctx context.Context, bucketName string, ob
 	return &info, nil
 }
 
+// DownloadObject downloads an object from the storage to the target path.
 func (s *storageService) DownloadObject(ctx context.Context, bucketName string, objectName string, targetPath string) error {
 	if err := s.minioClient.FGetObject(ctx, bucketName, objectName, targetPath, minio.GetObjectOptions{}); err != nil {
 		return err

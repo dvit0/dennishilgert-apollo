@@ -65,7 +65,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 		return errors.New("api server is already running")
 	}
 
-	// Assign the application context
+	// Assign the application context.
 	a.appCtx = ctx
 
 	log.Infof("starting api server on port %d", a.port)
@@ -80,12 +80,12 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 		log.Error("error while starting tcp listener")
 		return lErr
 	}
-	// close the ready channel to signalize that the api server is ready
+	// Close the ready channel to signalize that the api server is ready.
 	close(a.readyCh)
 
 	errCh := make(chan error, 1)
 	go func() {
-		defer close(errCh) // ensure channel is closed to avoid goroutine leak
+		defer close(errCh) // Ensure channel is closed to avoid goroutine leak.
 
 		if err := server.Serve(lis); err != nil {
 			log.Error("error while serving api server")
@@ -95,19 +95,19 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 		errCh <- nil
 	}()
 
-	// block until the context is done or an error occurs
+	// Block until the context is done or an error occurs.
 	var serveErr error
 	select {
 	case <-ctx.Done():
 		log.Info("shutting down api server")
-	case err := <-errCh: // Handle errors that might have occurred during Serve
+	case err := <-errCh: // Handle errors that might have occurred during Serve.
 		if err != nil {
 			serveErr = err
 			log.Errorf("error while listening for requests")
 		}
 	}
 
-	// perform graceful shutdown and close the listener regardless of the select outcome
+	// Perform graceful shutdown and close the listener regardless of the select outcome.
 	server.GracefulStop()
 	if cErr := lis.Close(); cErr != nil && !errors.Is(cErr, net.ErrClosed) && serveErr == nil {
 		log.Error("error while closing api server listener")
@@ -127,8 +127,9 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
+// Initialize initializes a function.
 func (a *apiServer) Initialize(ctx context.Context, req *fleetpb.InitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
-	// handle preparation request asynchronous and respond immediately
+	// Handle preparation request asynchronous and respond immediately.
 	go func() {
 		bgCtx, cancel := context.WithTimeout(a.appCtx, time.Minute*10)
 		defer cancel()
@@ -155,6 +156,7 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleetpb.InitializeFunct
 	return &sharedpb.EmptyResponse{}, nil
 }
 
+// Provision provisions a runner.
 func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
 	result, err := a.runnerOperator.ProvisionRunner(req)
 	if err != nil {
@@ -164,6 +166,7 @@ func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerR
 	return result, nil
 }
 
+// Invoke invokes a function.
 func (a *apiServer) Invoke(ctx context.Context, req *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	result, err := a.runnerOperator.InvokeFunction(ctx, req)
 	if err != nil {

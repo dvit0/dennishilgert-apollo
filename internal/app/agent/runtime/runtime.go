@@ -77,6 +77,7 @@ type persistentRuntime struct {
 	lock   sync.Mutex
 }
 
+// NewPersistentRuntime creates a new PersistentRuntime instance.
 func NewPersistentRuntime(ctx context.Context, config Config) (PersistentRuntime, error) {
 	cmd := exec.CommandContext(ctx, config.BinaryPath, config.BinaryArgs...)
 
@@ -105,18 +106,22 @@ func NewPersistentRuntime(ctx context.Context, config Config) (PersistentRuntime
 	}, nil
 }
 
+// Config returns the runtime configuration.
 func (p *persistentRuntime) Config() Config {
 	return p.cfg
 }
 
+// Lock locks the runtime.
 func (p *persistentRuntime) Lock() {
 	p.lock.Lock()
 }
 
+// Unlock unlocks the runtime.
 func (p *persistentRuntime) Unlock() {
 	p.lock.Unlock()
 }
 
+// Start starts the runtime with the specified handler.
 func (p *persistentRuntime) Start(handler string) error {
 	initParamsBytes, err := json.Marshal(map[string]interface{}{
 		"handler": handler,
@@ -178,6 +183,7 @@ func (p *persistentRuntime) Invoke(ctx context.Context, fnCtx Context, fnEvt Eve
 	return p.buildResult(fnEvt.EventUuid, logs, errs, data, duration), nil
 }
 
+// LogsToStructList converts a list of log lines to a list of Structs.
 func LogsToStructList(logs []LogLine) ([]*structpb.Struct, error) {
 	logList := make([]*structpb.Struct, 0, len(logs)) // Preallocate slice with the required capacity
 
@@ -195,6 +201,7 @@ func LogsToStructList(logs []LogLine) ([]*structpb.Struct, error) {
 	return logList, nil
 }
 
+// LogsToStructList converts a list of log lines to a list of Structs.
 func (p *persistentRuntime) sendInvocationData(fnCtx Context, fnEvt Event) error {
 	fnParams := map[string]interface{}{"context": fnCtx, "event": fnEvt}
 	fnParamsBytes, err := json.Marshal(fnParams)
@@ -208,6 +215,7 @@ func (p *persistentRuntime) sendInvocationData(fnCtx Context, fnEvt Event) error
 	return err
 }
 
+// processOutput reads the output buffer and processes the data.
 func (p *persistentRuntime) processOutput(logs *[]LogLine, errs *[]sharedpb.Error, data *map[string]interface{}) error {
 	reader := bufio.NewReader(p.stdout)
 	for {
@@ -232,6 +240,7 @@ func (p *persistentRuntime) processOutput(logs *[]LogLine, errs *[]sharedpb.Erro
 	return nil
 }
 
+// handleLine processes a line from the output buffer.
 func (p *persistentRuntime) handleLine(defaultProps *DefaultProperties, logs *[]LogLine, errs *[]sharedpb.Error, data *map[string]interface{}) bool {
 	switch defaultProps.Type {
 	case "log", "error":
@@ -272,6 +281,7 @@ func (p *persistentRuntime) handleLine(defaultProps *DefaultProperties, logs *[]
 	return true
 }
 
+// buildResult creates a Result instance from the provided data.
 func (p *persistentRuntime) buildResult(eventUuid string, logs []LogLine, errs []sharedpb.Error, data map[string]interface{}, duration time.Duration) *Result {
 	status, statusMessage := 200, "ok"
 	if len(errs) > 0 {

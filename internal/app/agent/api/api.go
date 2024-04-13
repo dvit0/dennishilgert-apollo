@@ -35,6 +35,7 @@ type apiServer struct {
 	persistentRuntime runtime.PersistentRuntime
 }
 
+// NewApiServer creates a new Server.
 func NewApiServer(opts Options) Server {
 	return &apiServer{
 		port:    opts.Port,
@@ -42,6 +43,7 @@ func NewApiServer(opts Options) Server {
 	}
 }
 
+// Run runs the api server.
 func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provider) error {
 	if !a.running.CompareAndSwap(false, true) {
 		return fmt.Errorf("api server already running")
@@ -61,7 +63,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 
 	errCh := make(chan error, 1)
 	go func() {
-		defer close(errCh) // ensure channel is closed to avoid goroutine leak
+		defer close(errCh) // Ensure channel is closed to avoid goroutine leak.
 
 		if err := s.Serve(lis); err != nil {
 			errCh <- fmt.Errorf("serving api server failed: %w", err)
@@ -70,7 +72,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 		errCh <- nil
 	}()
 
-	// block until the context is done
+	// Block until the context is done.
 	<-ctx.Done()
 
 	s.GracefulStop()
@@ -96,6 +98,7 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
+// Invoke invokes a function.
 func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*agentpb.InvokeResponse, error) {
 	fnCtx := runtime.Context{
 		Runtime:        in.Context.Runtime,
@@ -113,7 +116,7 @@ func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*age
 	resultCh := make(chan *runtime.Result, 1)
 	errCh := make(chan error, 1)
 	go func() {
-		// ensure the channels are closed to avoid goroutine leak
+		// Ensure the channels are closed to avoid goroutine leak.
 		defer func() {
 			close(errCh)
 			close(resultCh)
@@ -128,13 +131,13 @@ func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*age
 		resultCh <- result
 	}()
 
-	// block until the error channel receives a message
+	// Block until the error channel receives a message.
 	err := <-errCh
 	if err != nil {
 		return nil, err
 	}
 
-	// because the error channel received a nil message, read result from result channel
+	// Because the error channel received a nil message, read result from result channel.
 	result := <-resultCh
 
 	logs, err := runtime.LogsToStructList(result.Logs)

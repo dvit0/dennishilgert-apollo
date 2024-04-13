@@ -50,6 +50,7 @@ type fleetManager struct {
 	messagingConsumer         consumer.MessagingConsumer
 }
 
+// NewManager creates a new FleetManager instance.
 func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	workerUuid := uuid.NewString()
 
@@ -129,6 +130,7 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	}, nil
 }
 
+// Run starts the fleet manager.
 func (m *fleetManager) Run(ctx context.Context) error {
 	log.Info("apollo manager is starting")
 
@@ -140,7 +142,7 @@ func (m *fleetManager) Run(ctx context.Context) error {
 	}()
 
 	healthStatusProvider := health.NewHealthStatusProvider(health.ProviderOptions{
-		Targets: 2,
+		Targets: 3,
 	})
 
 	runner := runner.NewRunnerManager(
@@ -193,6 +195,9 @@ func (m *fleetManager) Run(ctx context.Context) error {
 			}
 			// Signalize that the messaging setup is done.
 			m.messagingConsumer.SetupDone()
+
+			healthStatusProvider.Ready()
+			log.Info("messaging has been set up")
 
 			// Wait for the main context to be done.
 			<-ctx.Done()

@@ -61,6 +61,7 @@ type dockerErrorDetail struct {
 	Message string
 }
 
+// ProcessDockerOutput reads the output from a docker command and logs it.
 func processDockerOutput(log logger.Logger, reader io.ReadCloser, lineReader dockerOutputExtractor) error {
 	defer reader.Close()
 

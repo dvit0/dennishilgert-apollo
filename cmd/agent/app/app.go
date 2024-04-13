@@ -13,8 +13,9 @@ import (
 
 var log = logger.NewLogger("apollo.agent")
 
+// Run starts the agent.
 func Run() {
-	// load environment variables from .env file for local development
+	// Load environment variables from .env file for local development.
 	godotenv.Load()
 
 	cfg, err := config.Load()

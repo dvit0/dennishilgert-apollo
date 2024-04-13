@@ -203,7 +203,7 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 		Tags:        []string{imageTag},
 		ForceRemove: true,
 		Remove:      true,
-		PullParent:  false, // this should be enabled in production to always use the latest version of the parent
+		PullParent:  false, // TODO: This should be enabled in production to always use the latest version of the parent.
 	})
 	if err != nil {
 		return fmt.Errorf("failed to build docker image: %v", err)
@@ -212,7 +212,7 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 	return processDockerOutput(log, buildResponse.Body, dockerReaderStream())
 }
 
-// exports rootfs from the container to the rootfs image file.
+// ImageExport exports the rootfs from the container to the rootfs image file.
 func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, destPath string, imageTag string, imageFileName string) error {
 	cleanup := defers.NewDefers()
 	defer cleanup.CallAll()
@@ -429,6 +429,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 	})
 
 	log.Debug("discovering directories to copy")
+	// The following command finds all directories and symlinks on the root level of the filesystem.
 	findExecConfig := types.ExecConfig{
 		Cmd:          []string{"find", "/", "-maxdepth", "1", "(", "-type", "d", "-o", "-type", "l", ")"},
 		AttachStdout: true,
@@ -445,7 +446,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 		return fmt.Errorf("error while parsing find command exec output: %v", err)
 	}
 
-	// iterate over the discovered filesystem directories and copy them to the rootfs image.
+	// Iterate over the discovered filesystem directories and copy them to the rootfs image.
 	log.Debug("copying directories and symlinks")
 	for _, dir := range findExecLines {
 		log.Debugf("handling directory or symlink: %s", dir)
@@ -457,9 +458,8 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 			log.Debugf("directory is not a valid directory: %s", dir)
 			continue
 		}
-		// only create empty directory on the rootfs image.
+		// Only create empty directory on the rootfs image.
 		if slices.Contains(config.RootFsExcludeDirs, dir) {
-			// only create empty directory on the rootfs image.
 			log.Debug("creating empty directory at destination")
 			mkdirExecConfig := types.ExecConfig{
 				Cmd:          []string{"mkdir", config.ContainerImageMountTarget + dir},
@@ -472,7 +472,7 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 			}
 			defer mkdirExecResponse.Close()
 		} else {
-			// copy the whole directory to the rootfs image.
+			// Copy the whole directory to the rootfs image.
 			if err := ContainerCopy(ctx, client, log, *containerId, dir, config.ContainerImageMountTarget+dir); err != nil {
 				return fmt.Errorf("error while copying to image file: %v", err)
 			}

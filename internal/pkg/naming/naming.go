@@ -10,13 +10,13 @@ var (
 	// Prefix for the images.
 	ImagePrefix = "apollo"
 
-	// Messaging topics
+	// Messaging topics.
 	MessagingFunctionInitializationTopic = "apollo_function_initialization"
 
-	// Name of the kernel storage bucket
+	// Name of the kernel storage bucket.
 	StorageKernelBucketName = "apollo-kernels"
 
-	// Name of the function storage bucket
+	// Name of the function storage bucket.
 	StorageFunctionBucketName = "apollo-functions"
 )
 

@@ -76,7 +76,7 @@ func (r *runnerManager) Run(ctx context.Context) error {
 		}(runner)
 	}
 
-	// Collect all errors
+	// Collect all errors.
 	errObjs := make([]error, 0)
 	for i := 0; i < len(r.runners); i++ {
 		err := <-errCh
@@ -85,7 +85,7 @@ func (r *runnerManager) Run(ctx context.Context) error {
 		}
 	}
 
-	close(errCh) // ensure channel is closed to avoid goroutine leak
+	close(errCh) // Ensure channel is closed to avoid goroutine leak.
 
 	return errors.Join(errObjs...)
 }

@@ -44,6 +44,7 @@ type agent struct {
 	persistentRuntime runtime.PersistentRuntime
 }
 
+// NewAgent creates a new Agent instance.
 func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 	apiServer := api.NewApiServer(api.Options{
 		Port: opts.ApiPort,
@@ -78,11 +79,12 @@ func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 	}, nil
 }
 
+// Run starts the agent.
 func (a *agent) Run(ctx context.Context) error {
 	log.Info("apollo agent is starting")
 
 	healthStatusProvider := health.NewHealthStatusProvider(health.ProviderOptions{
-		Targets: 1,
+		Targets: 2,
 	})
 	readyCallback := func() {
 		log.Infof("signalizing agent ready")
@@ -120,6 +122,9 @@ func (a *agent) Run(ctx context.Context) error {
 				return fmt.Errorf("starting runtime failed: %w", err)
 			}
 
+			healthStatusProvider.Ready()
+			log.Info("persistent runtime started")
+
 			// Wait for the main context to be done.
 			<-ctx.Done()
 
@@ -143,7 +148,7 @@ func (a *agent) Run(ctx context.Context) error {
 					log.Errorf("runtime finished with an error: %v", err)
 				}
 
-				// Directly check for context cancellation
+				// Directly check for context cancellation.
 				if ctx.Err() != nil {
 					return fmt.Errorf("context canceled, halting recovery process: %w", ctx.Err())
 				} else {
@@ -160,6 +165,7 @@ func (a *agent) Run(ctx context.Context) error {
 	return runner.Run(ctx)
 }
 
+// recoverRuntime recovers the runtime by creating a new persistent runtime instance.
 func (a *agent) recoverRuntime(ctx context.Context) error {
 	if err := a.persistentRuntime.Tidy(); err != nil {
 		return fmt.Errorf("tidying runtime failed: %w", err)

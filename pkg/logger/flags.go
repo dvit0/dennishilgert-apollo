@@ -14,6 +14,7 @@ type parsedFlags struct {
 	flagSet  *pflag.FlagSet
 }
 
+// ParseFlags parses the flags for the logging configuration.
 func ParseFlags() *parsedFlags {
 	var f loggingFlags
 
@@ -30,6 +31,7 @@ func ParseFlags() *parsedFlags {
 	}
 }
 
+// ReadAndApply reads the flags and applies the logging configuration.
 func ReadAndApply(command *cobra.Command, logger Logger) {
 	appId, err := command.Flags().GetString("log-app-id")
 	if err != nil {
@@ -48,10 +50,12 @@ func ReadAndApply(command *cobra.Command, logger Logger) {
 	logger.EnableJsonOutput(logJsonOut)
 }
 
+// LoggingFlags returns the logging flags.
 func (p *parsedFlags) LoggingFlags() *loggingFlags {
 	return p.logFlags
 }
 
+// FlagSet returns the flag set.
 func (p *parsedFlags) FlagSet() *pflag.FlagSet {
 	return p.flagSet
 }

@@ -35,6 +35,7 @@ type messagingConsumer struct {
 	setupDoneCh chan bool
 }
 
+// NewMessagingConsumer creates a new MessagingConsumer instance.
 func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) (MessagingConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,

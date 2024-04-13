@@ -19,6 +19,7 @@ const (
 	Other
 )
 
+// DetectArchitecture detects the architecture of the system.
 func DetectArchitecture() OsArch {
 	var utsname unix.Utsname
 	if err := unix.Uname(&utsname); err != nil {
@@ -34,6 +35,7 @@ func DetectArchitecture() OsArch {
 	return Other
 }
 
+// String returns the string representation of the OsArch.
 func (o OsArch) String() string {
 	return [...]string{"unknown", "x86_64", "arm64", "other"}[o]
 }

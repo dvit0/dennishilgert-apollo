@@ -34,6 +34,7 @@ func DefaultConfig() Config {
 	}
 }
 
+// LoadConfig loads the configuration from the environment.
 func LoadConfig() Config {
 	var config Config
 

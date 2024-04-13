@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// LoadOrDefault loads a configuration variable from the environment or sets a default value.
 func LoadOrDefault(configVar string, envVar string, defaultVal any) {
 	if defaultVal != nil {
 		viper.SetDefault(configVar, defaultVal)

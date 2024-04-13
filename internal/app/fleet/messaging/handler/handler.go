@@ -30,6 +30,7 @@ type messagingHandler struct {
 	runnerOperator operator.RunnerOperator
 }
 
+// NewMessagingHandler creates a new MessagingHandler instance.
 func NewMessagingHandler(runnerOperator operator.RunnerOperator, opts Options) MessagingHandler {
 	return &messagingHandler{
 		workerUuid:     opts.WorkerUuid,

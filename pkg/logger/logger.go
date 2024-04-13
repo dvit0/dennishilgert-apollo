@@ -128,7 +128,7 @@ func toLogLevel(level string) LogLevel {
 		return FatalLevel
 	}
 
-	// unsupported log level by apollo.
+	// Unsupported log level by apollo.
 	return UndefinedLevel
 }
 

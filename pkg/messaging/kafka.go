@@ -9,6 +9,7 @@ import (
 
 var config = DefaultConfig()
 
+// GetDefaultAdminClient creates a new kafka admin client with the default configuration.
 func GetDefaultAdminClient(bootstrapServers string) (*kafka.AdminClient, error) {
 	return kafka.NewAdminClient(&kafka.ConfigMap{
 		"bootstrap.servers": bootstrapServers,

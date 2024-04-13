@@ -20,6 +20,7 @@ type Config struct {
 	MessagingBootstrapServers string
 }
 
+// Load loads the configuration from the environment.
 func Load() (*Config, error) {
 	var config Config
 

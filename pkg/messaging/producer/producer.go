@@ -24,6 +24,7 @@ type messagingProducer struct {
 	producer *kafka.Producer
 }
 
+// NewMessagingProducer creates a new messaging producer.
 func NewMessagingProducer(ctx context.Context, opts Options) (MessagingProducer, error) {
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,
@@ -66,6 +67,7 @@ func NewMessagingProducer(ctx context.Context, opts Options) (MessagingProducer,
 	}, nil
 }
 
+// Publish sends a message to a topic.
 func (m *messagingProducer) Publish(ctx context.Context, topic string, message interface{}) {
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
@@ -81,6 +83,7 @@ func (m *messagingProducer) Publish(ctx context.Context, topic string, message i
 	log.Debugf("enqueued message to topic: %s - message: %v", topic, message)
 }
 
+// Close closes the messaging producer.
 func (m *messagingProducer) Close() error {
 	unsentMessages := m.producer.Flush(1000 * 5)
 	m.producer.Close()

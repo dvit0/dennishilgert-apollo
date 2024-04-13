@@ -10,6 +10,7 @@ import (
 
 var log = logger.NewLogger("apollo.manager.messaging")
 
+// CreateRelatedTopic creates the related topic for the worker.
 func CreateRelatedTopic(ctx context.Context, bootstrapServers string, workerUuid string) error {
 	adminClient, err := messaging.GetDefaultAdminClient(bootstrapServers)
 	if err != nil {
@@ -25,6 +26,7 @@ func CreateRelatedTopic(ctx context.Context, bootstrapServers string, workerUuid
 	return nil
 }
 
+// DeleteRelatedTopic deletes the related topic for the worker.
 func DeleteRelatedTopic(ctx context.Context, bootstrapServers string, workerUuid string) error {
 	adminClient, err := messaging.GetDefaultAdminClient(bootstrapServers)
 	if err != nil {
