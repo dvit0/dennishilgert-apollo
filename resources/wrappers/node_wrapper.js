@@ -11,8 +11,6 @@ let handlerFunctionName = '';
 console.log = (message) => logInfo(message);
 console.error = (message) => logError(message);
 
-process.stdin.setEncoding('utf8');
-
 function logJson(type, properties) {
   origConsoleLog(JSON.stringify({
     timestamp: Date.now(),
@@ -27,7 +25,7 @@ function logInfo(message) {
 
 function logError(error) {
   logJson('error', {
-    code: error.code || 'UNKNOWN',
+    code: error.code || 520, // 520 Unknown Error
     message: error.message,
     cause: error.cause || 'UNKNOWN',
     stack: error.stack || 'UNKNOWN'
@@ -71,9 +69,13 @@ async function processRequest(data) {
   }
 }
 
+process.stdin.setEncoding('utf8');
+
+// Declare the buffer outside of the event listener because the data can be sent in multiple chunks.
+let buffer = '';
 process.stdin.on('data', (chunk) => {
-  let buffer = '';
   buffer += chunk;
+  // Check if the end of the data has been reached by looking for a newline character.
   let boundary = buffer.indexOf('\n');
   while (boundary !== -1) {
     const data = buffer.substring(0, boundary);
