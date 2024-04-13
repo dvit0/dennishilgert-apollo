@@ -85,8 +85,7 @@ type runnerInstance struct {
 func NewInstance(ctx context.Context, cfg *Config) (RunnerInstance, error) {
 	log.Debugf("validating machine configuration for machine with id: %s", cfg.RunnerUuid)
 	if err := validate(cfg); err != nil {
-		log.Error("failed to validate machine configuration")
-		return nil, err
+		return nil, fmt.Errorf("machine configuration validation failed: %w", err)
 	}
 
 	fnCtx, fnCtxCancel := context.WithCancel(ctx)
@@ -128,16 +127,14 @@ func (r *runnerInstance) CreateAndStart(ctx context.Context) error {
 	// Stdout will be directed to this file.
 	stdout, err := os.OpenFile(r.cfg.StdOutFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Errorf("failed to open stdout file")
-		return err
+		return fmt.Errorf("failed to open stdout file: %w", err)
 	}
 	r.stdout = stdout
 
 	// Stderr will be directed to this file.
 	stderr, err := os.OpenFile(r.cfg.StdErrFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Errorf("failed to open stderr file")
-		return err
+		return fmt.Errorf("failed to open stderr file: %w", err)
 	}
 	r.stderr = stderr
 
@@ -156,13 +153,11 @@ func (r *runnerInstance) CreateAndStart(ctx context.Context) error {
 	log.Debugf("creating new firecracker machine with id: %s", fcCfg.VMID)
 	machine, err := firecracker.NewMachine(r.ctx, fcCfg, machineOpts...)
 	if err != nil {
-		log.Error("failed to create a new firecracker machine")
-		return err
+		return fmt.Errorf("failed to create firecracker machine: %w", err)
 	}
 	log.Debugf("starting firecracker machine with id: %s", fcCfg.VMID)
 	if err := machine.Start(r.ctx); err != nil {
-		log.Error("failed to start firecracker machine")
-		return err
+		return fmt.Errorf("failed to start firecracker machine: %w", err)
 	}
 	r.machine = machine
 	r.ip = machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr.IP
@@ -176,11 +171,20 @@ func (r *runnerInstance) CreateAndStart(ctx context.Context) error {
 func (r *runnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
 	log.Debugf("shutting down runner: %s", r.cfg.RunnerUuid)
 
+	// If the runner is already in the shutdown state, return immediately.
+	if r.State() == RunnerStateShutdown {
+		log.Debugf("runner already in shutdown state: %s", r.cfg.RunnerUuid)
+		return nil
+	}
+
 	// Close logging files and connection after the machine has been shut down.
 	defer func() {
-		r.stdout.Close()
-		r.stderr.Close()
-
+		if r.stdout != nil {
+			r.stdout.Close()
+		}
+		if r.stderr != nil {
+			r.stderr.Close()
+		}
 		if r.clientConn != nil {
 			r.clientConn.Close()
 		}
@@ -193,8 +197,7 @@ func (r *runnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
 	r.SetState(RunnerStateShutdown)
 
 	if err := r.machine.Shutdown(parentCtx); err != nil {
-		log.Errorf("failed to shutdown runner: %v", err)
-		return err
+		return fmt.Errorf("failed to shut down runner: %w", err)
 	}
 	timeout := 3 * time.Second
 	ctx, cancel := context.WithTimeout(parentCtx, timeout)
@@ -212,11 +215,10 @@ func (r *runnerInstance) ShutdownAndDestroy(parentCtx context.Context) error {
 				return nil
 			}
 		case <-ctx.Done():
-			log.Debugf("force stopping runner: %s", r.cfg.RunnerUuid)
+			log.Debugf("graceful stop timeout reached - force stopping runner: %s", r.cfg.RunnerUuid)
 
 			if err := r.machine.StopVMM(); err != nil {
-				log.Error("failed to force stop the runner")
-				return err
+				return fmt.Errorf("failed to stop runner forcefully: %w", err)
 			} else {
 				log.Warnf("runner has been stopped forcefully: %s", r.cfg.RunnerUuid)
 				return nil
@@ -275,8 +277,7 @@ func (r *runnerInstance) Ready(ctx context.Context) error {
 		return fmt.Errorf("timeout while waiting for the agent in runner to become ready")
 	case err := <-r.readyCh:
 		if err != nil {
-			log.Errorf("error while waiting for agent inside runner to become ready: %v", err)
-			return err
+			return fmt.Errorf("agent inside runner failed to become ready: %w", err)
 		}
 	}
 
@@ -339,16 +340,16 @@ func (r *runnerInstance) establishConnection(ctx context.Context) error {
 			return nil
 		} else {
 			conn.Close()
-			log.Debugf("failed to establish agent connection in runner: %s - reason: %v", r.cfg.RunnerUuid, err)
+			log.Errorf("failed to establish agent connection in runner: %s - reason: %v", r.cfg.RunnerUuid, err)
 		}
 		// Wait before retrying, but stop if context is done.
 		select {
 		case <-ctx.Done():
 			log.Errorf("context done before connection could be established to agent in runner: %s", r.cfg.RunnerUuid)
-			return ctx.Err() // send context cancellation error
+			return ctx.Err() // Send context cancellation error.
 		case <-time.After(time.Duration(math.Round(1000/retriesPerSecond)) * time.Millisecond): // retry delay
 			continue
 		}
 	}
-	return fmt.Errorf("failed to establish agent connection in runner: %s", r.cfg.RunnerUuid)
+	return fmt.Errorf("failed to establish connection to agent in runner: %s", r.cfg.RunnerUuid)
 }
