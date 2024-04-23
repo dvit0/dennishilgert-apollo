@@ -8,11 +8,13 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/fleet/api"
 	"github.com/dennishilgert/apollo/internal/app/fleet/initializer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging"
-	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/consumer"
+	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/handler"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
+	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/pkg/messaging/consumer"
 	"github.com/dennishilgert/apollo/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/pkg/storage"
 	"github.com/dennishilgert/apollo/pkg/utils"
@@ -98,10 +100,22 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		return nil, fmt.Errorf("error while creating messaging producer: %v", err)
 	}
 
-	messagingConsumer, err := consumer.NewMessagingConsumer(
+	messagingHandler := handler.NewMessagingHandler(
 		runnerOperator,
+		handler.Options{
+			WorkerUuid: workerUuid,
+		},
+	)
+	messagingHandler.RegisterAll()
+
+	messagingConsumer, err := consumer.NewMessagingConsumer(
+		messagingHandler,
 		consumer.Options{
-			WorkerUuid:       workerUuid,
+			GroupId: "apollo_fleet_manager",
+			Topics: []string{
+				naming.MessagingFunctionInitializationTopic,
+				naming.MessagingWorkerRelatedAgentReadyTopic(workerUuid),
+			},
 			BootstrapServers: opts.MessagingBootstrapServers,
 			WorkerCount:      opts.MessagingWorkerCount,
 		},
@@ -132,7 +146,7 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 
 // Run starts the fleet manager.
 func (m *fleetManager) Run(ctx context.Context) error {
-	log.Info("apollo manager is starting")
+	log.Info("apollo runner manager is starting")
 
 	// Cleanup after context done
 	defer func() {

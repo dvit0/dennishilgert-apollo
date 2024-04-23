@@ -7,19 +7,18 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/dennishilgert/apollo/internal/app/fleet/messaging/handler"
-	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
-	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
 	"github.com/dennishilgert/apollo/pkg/logger"
 )
 
-var log = logger.NewLogger("apollo.manager.messaging.consumer")
+var log = logger.NewLogger("apollo.messaging.consumer")
 
 type Options struct {
-	WorkerUuid       string
 	BootstrapServers string
 	WorkerCount      int
+	GroupId          string
+	Topics           []string
 }
 
 type MessagingConsumer interface {
@@ -28,18 +27,18 @@ type MessagingConsumer interface {
 }
 
 type messagingConsumer struct {
-	workerUuid  string
 	worker      worker.WorkerManager
 	consumer    *kafka.Consumer
+	topics      []string
 	handlers    map[string]func(msg *kafka.Message)
 	setupDoneCh chan bool
 }
 
 // NewMessagingConsumer creates a new MessagingConsumer instance.
-func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) (MessagingConsumer, error) {
+func NewMessagingConsumer(messagingHandler handler.MessagingHandler, opts Options) (MessagingConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": opts.BootstrapServers,
-		"group.id":          "fleet_manager_group",
+		"group.id":          opts.GroupId,
 		"auto.offset.reset": "earliest",
 	})
 	if err != nil {
@@ -47,15 +46,10 @@ func NewMessagingConsumer(runnerOperator operator.RunnerOperator, opts Options) 
 		return nil, err
 	}
 
-	messagingHandler := handler.NewMessagingHandler(runnerOperator, handler.Options{
-		WorkerUuid: opts.WorkerUuid,
-	})
-	messagingHandler.RegisterAll()
-
 	return &messagingConsumer{
-		workerUuid:  opts.WorkerUuid,
 		worker:      worker.NewWorkerManager(opts.WorkerCount),
 		consumer:    consumer,
+		topics:      opts.Topics,
 		handlers:    messagingHandler.Handlers(),
 		setupDoneCh: make(chan bool, 1),
 	}, nil
@@ -71,12 +65,8 @@ func (m *messagingConsumer) Start(ctx context.Context) error {
 	log.Info("waiting until messaging setup is done")
 	<-m.setupDoneCh
 
-	subscribedTopics := []string{
-		naming.MessagingFunctionInitializationTopic,
-		naming.MessagingWorkerRelatedAgentReadyTopic(m.workerUuid),
-	}
-	log.Debugf("subscribing to topics: %s", subscribedTopics)
-	if err := m.consumer.SubscribeTopics(subscribedTopics, nil); err != nil {
+	log.Debugf("subscribing to topics: %s", m.topics)
+	if err := m.consumer.SubscribeTopics(m.topics, nil); err != nil {
 		log.Error("failed to subscribe to topics")
 		return err
 	}
