@@ -127,6 +127,28 @@ func (a *apiServer) Acquire(ctx context.Context, req *registrypb.AcquireLeaseReq
 	}
 }
 
+// Release releases a lease for a service or worker instance.
 func (a *apiServer) Release(ctx context.Context, req *registrypb.ReleaseLeaseRequest) (*sharedpb.EmptyResponse, error) {
-	return nil, nil
+	switch req.ServiceType {
+	case registrypb.ServiceType_FLEET_MANAGER:
+		if err := a.cacheClient.RemoveWorker(ctx, req.InstanceUuid); err != nil {
+			return nil, fmt.Errorf("failed to remove worker instance from cache: %w", err)
+		}
+	default:
+		if err := a.cacheClient.RemoveInstance(ctx, req.ServiceType, req.InstanceUuid); err != nil {
+			return nil, fmt.Errorf("failed to remove service instance from cache: %w", err)
+		}
+	}
+	return nil, errors.New("unknown service type")
+}
+
+// Instance returns an available instance for a given service type.
+func (a *apiServer) Instance(ctx context.Context, req *registrypb.AvailableInstanceRequest) (*registrypb.AvailableInstanceResponse, error) {
+	instance, err := a.cacheClient.AvailableInstance(ctx, req.ServiceType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get available instance from cache: %w", err)
+	}
+	return &registrypb.AvailableInstanceResponse{
+		Instance: instance,
+	}, nil
 }

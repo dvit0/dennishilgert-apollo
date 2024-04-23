@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/registry/scoring"
+	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 	"github.com/redis/go-redis/v9"
@@ -25,9 +26,14 @@ type Options struct {
 }
 
 type CacheClient interface {
+	Listen(ctx context.Context) error
+	Close() error
 	AttemptLeaderElection(ctx context.Context, instanceType string) (bool, error)
 	AddInstance(ctx context.Context, serviceInstance *registrypb.ServiceInstance) error
+	ExtendExpiration(ctx context.Context, key string) error
 	UpdateScore(ctx context.Context, scoringResult scoring.ScoringResult) error
+	AvailableInstance(ctx context.Context, serviceType registrypb.ServiceType) (*registrypb.ServiceInstance, error)
+	RemoveInstance(ctx context.Context, serviceType registrypb.ServiceType, instanceUuid string) error
 	AddWorker(ctx context.Context, workerInstance *registrypb.WorkerInstance) error
 	Worker(ctx context.Context, workerUuid string) (*registrypb.WorkerInstance, error)
 	WorkersByArchitecture(ctx context.Context, architecture string) ([]string, error)
@@ -66,12 +72,27 @@ func (c *cacheClient) Listen(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			log.Info("shutting down cache listener")
-			return ctx.Err()
+			return nil
 		case msg := <-pubsub.Channel():
 			if msg == nil {
 				return nil
 			}
 			log.Warnf("key in cache expired: %s", msg.Payload)
+			if naming.CacheIsServiceInstanceKey(msg.Payload) {
+				instanceUuid := naming.CacheExtractServiceInstanceUuid(msg.Payload)
+				if err := c.RemoveInstance(ctx, registrypb.ServiceType_WORKER_MANAGER, instanceUuid); err != nil {
+					log.Errorf("failed to remove instance from cache: %v", err)
+				}
+				continue
+			}
+			if naming.CacheIsWorkerInstanceKey(msg.Payload) {
+				workerUuid := naming.CacheExtractWorkerInstanceUuid(msg.Payload)
+				if err := c.RemoveWorker(ctx, workerUuid); err != nil {
+					log.Errorf("failed to remove worker from cache: %v", err)
+				}
+				continue
+			}
+			log.Errorf("unknown key type: %s", msg.Payload)
 		}
 	}
 }
@@ -93,25 +114,31 @@ func (c *cacheClient) AttemptLeaderElection(ctx context.Context, forGroup string
 
 // AddInstance adds a service instance to the cache.
 func (c *cacheClient) AddInstance(ctx context.Context, serviceInstance *registrypb.ServiceInstance) error {
-	key := fmt.Sprintf("instance:%s", serviceInstance.InstanceUuid)
+	key := naming.CacheServiceInstanceKeyName(serviceInstance.InstanceUuid)
 
-	// Serialize metadata
+	// Serialize metadata.
 	metadataBytes, err := json.Marshal(serviceInstance.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	metadata := string(metadataBytes)
-
 	if err := c.client.HSet(ctx, key, map[string]interface{}{
 		"serviceType": serviceInstance.ServiceType.String(),
 		"host":        serviceInstance.Host,
 		"port":        serviceInstance.Port,
-		"metadata":    metadata,
+		"metadata":    string(metadataBytes),
 	}).Err(); err != nil {
 		return fmt.Errorf("failed to add service instance to cache: %w", err)
 	}
-	if err := c.client.ExpireGT(ctx, key, c.expirationTimeout).Err(); err != nil {
+	if err := c.client.Expire(ctx, key, c.expirationTimeout).Err(); err != nil {
 		return fmt.Errorf("failed to set expiration time for service instance: %w", err)
+	}
+	return nil
+}
+
+// ExtendExpiration extends the expiration time of a service instance.
+func (c *cacheClient) ExtendExpiration(ctx context.Context, key string) error {
+	if err := c.client.Expire(ctx, key, c.expirationTimeout).Err(); err != nil {
+		return fmt.Errorf("failed to extend expiration time for service instance: %w", err)
 	}
 	return nil
 }
@@ -128,7 +155,7 @@ func (c *cacheClient) UpdateScore(ctx context.Context, scoringResult scoring.Sco
 }
 
 // TopInstanceByType returns the top service instance by type.
-func (c *cacheClient) TopInstanceByType(ctx context.Context, serviceType registrypb.ServiceType) (*registrypb.ServiceInstance, error) {
+func (c *cacheClient) AvailableInstance(ctx context.Context, serviceType registrypb.ServiceType) (*registrypb.ServiceInstance, error) {
 	result, err := c.client.ZRevRangeWithScores(ctx, serviceType.String(), 0, 0).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get next instance by type: %w", err)
@@ -136,9 +163,8 @@ func (c *cacheClient) TopInstanceByType(ctx context.Context, serviceType registr
 	if len(result) == 0 {
 		return nil, fmt.Errorf("no instances found for service type %s", serviceType.String())
 	}
-
 	instanceUuid := result[0].Member.(string)
-	key := fmt.Sprintf("instance:%s", instanceUuid)
+	key := naming.CacheServiceInstanceKeyName(instanceUuid)
 	values, err := c.client.HGetAll(ctx, key).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get instance from cache: %w", err)
@@ -164,7 +190,7 @@ func (c *cacheClient) TopInstanceByType(ctx context.Context, serviceType registr
 
 // RemoveInstance removes a service instance from the cache.
 func (c *cacheClient) RemoveInstance(ctx context.Context, serviceType registrypb.ServiceType, instanceUuid string) error {
-	key := fmt.Sprintf("instance:%s", instanceUuid)
+	key := naming.CacheServiceInstanceKeyName(instanceUuid)
 	if err := c.client.Del(ctx, key).Err(); err != nil {
 		return fmt.Errorf("failed to remove instance from cache: %w", err)
 	}
@@ -176,23 +202,26 @@ func (c *cacheClient) RemoveInstance(ctx context.Context, serviceType registrypb
 
 // AddWorker adds a worker node to the cache.
 func (c *cacheClient) AddWorker(ctx context.Context, workerInstance *registrypb.WorkerInstance) error {
-	runtimesJson, err := json.Marshal(workerInstance.InitializedRuntimes)
+	key := naming.CacheWorkerInstanceKeyName(workerInstance.WorkerUuid)
+
+	// Serialize initialized runtimes.
+	runtimesBytes, err := json.Marshal(workerInstance.InitializedRuntimes)
 	if err != nil {
 		return fmt.Errorf("failed to marshal runtimes: %w", err)
 	}
-	if err := c.client.HSet(ctx, workerInstance.WorkerUuid, map[string]interface{}{
+	if err := c.client.HSet(ctx, key, map[string]interface{}{
 		"architecture": workerInstance.Architecture,
 		"host":         workerInstance.Host,
 		"port":         workerInstance.Port,
-		"runtimes":     string(runtimesJson),
+		"runtimes":     string(runtimesBytes),
 	}).Err(); err != nil {
 		return fmt.Errorf("failed to add worker node to cache: %w", err)
 	}
-	if err := c.client.SAdd(ctx, fmt.Sprintf("arch:%s", workerInstance.Architecture), workerInstance.WorkerUuid).Err(); err != nil {
+	if err := c.client.SAdd(ctx, naming.CacheArchitectureSetKey(workerInstance.Architecture), workerInstance.WorkerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to add worker node to architecture set: %w", err)
 	}
 	for _, runtime := range workerInstance.InitializedRuntimes {
-		if err := c.client.SAdd(ctx, fmt.Sprintf("runtime:%s-%s", runtime.Name, runtime.Version), workerInstance.WorkerUuid).Err(); err != nil {
+		if err := c.client.SAdd(ctx, naming.CacheRuntimeSetKey(runtime.Name, runtime.Version), workerInstance.WorkerUuid).Err(); err != nil {
 			return fmt.Errorf("failed to add worker node to runtime set: %w", err)
 		}
 	}
@@ -221,44 +250,44 @@ func (c *cacheClient) Worker(ctx context.Context, workerUuid string) (*registryp
 
 // WorkersByArchitecture returns a list of worker nodes by architecture.
 func (c *cacheClient) WorkersByArchitecture(ctx context.Context, architecture string) ([]string, error) {
-	result, err := c.client.SMembers(ctx, fmt.Sprintf("arch:%s", architecture)).Result()
+	members, err := c.client.SMembers(ctx, naming.CacheArchitectureSetKey(architecture)).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get worker nodes by architecture: %w", err)
 	}
-	return result, nil
+	return members, nil
 }
 
 // WorkersByRuntime returns a list of worker nodes by runtime.
-func (c *cacheClient) WorkersByRuntime(ctx context.Context, runtimeName, runtimeVersion string) ([]string, error) {
-	result, err := c.client.SMembers(ctx, fmt.Sprintf("runtime:%s-%s", runtimeName, runtimeVersion)).Result()
+func (c *cacheClient) WorkersByRuntime(ctx context.Context, runtimeName string, runtimeVersion string) ([]string, error) {
+	members, err := c.client.SMembers(ctx, naming.CacheRuntimeSetKey(runtimeName, runtimeVersion)).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get worker nodes by runtime: %w", err)
 	}
-	return result, nil
+	return members, nil
 }
 
 // RemoveWorker removes a worker node from the cache.
 func (c *cacheClient) RemoveWorker(ctx context.Context, workerUuid string) error {
-	result, err := c.client.HGetAll(ctx, workerUuid).Result()
+	values, err := c.client.HGetAll(ctx, workerUuid).Result()
 	if err != nil {
 		return fmt.Errorf("failed to get worker node from cache: %w", err)
 	}
-	keys := make([]string, 0, len(result))
-	for key := range result {
+	keys := make([]string, 0, len(values))
+	for key := range values {
 		keys = append(keys, key)
 	}
 	if err := c.client.HDel(ctx, workerUuid, keys...).Err(); err != nil {
 		return fmt.Errorf("failed to remove worker node from cache: %w", err)
 	}
-	if err := c.client.SRem(ctx, fmt.Sprintf("arch:%s", result["architecture"]), workerUuid).Err(); err != nil {
+	if err := c.client.SRem(ctx, naming.CacheArchitectureSetKey(values["architecture"]), workerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to remove worker node from architecture set: %w", err)
 	}
 	initializedRuntimes := make([]*registrypb.Runtime, 0)
-	if err := json.Unmarshal([]byte(result["runtimes"]), &initializedRuntimes); err != nil {
+	if err := json.Unmarshal([]byte(values["runtimes"]), &initializedRuntimes); err != nil {
 		return fmt.Errorf("failed to unmarshal runtimes: %w", err)
 	}
 	for _, runtime := range initializedRuntimes {
-		if err := c.client.SRem(ctx, fmt.Sprintf("runtime:%s-%s", runtime.Name, runtime.Version), workerUuid).Err(); err != nil {
+		if err := c.client.SRem(ctx, naming.CacheRuntimeSetKey(runtime.Name, runtime.Version), workerUuid).Err(); err != nil {
 			return fmt.Errorf("failed to remove worker node from runtime set: %w", err)
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -20,6 +21,38 @@ var (
 	// Name of the function storage bucket.
 	StorageFunctionBucketName = "apollo-functions"
 )
+
+func CacheServiceInstanceKeyName(instanceUuid string) string {
+	return fmt.Sprintf("instance:%s", instanceUuid)
+}
+
+func CacheIsServiceInstanceKey(key string) bool {
+	return strings.Split(key, ":")[0] == "instance"
+}
+
+func CacheExtractServiceInstanceUuid(key string) string {
+	return strings.Split(key, ":")[1]
+}
+
+func CacheWorkerInstanceKeyName(workerUuid string) string {
+	return fmt.Sprintf("worker:%s", workerUuid)
+}
+
+func CacheIsWorkerInstanceKey(key string) bool {
+	return strings.Split(key, ":")[0] == "worker"
+}
+
+func CacheExtractWorkerInstanceUuid(key string) string {
+	return strings.Split(key, ":")[1]
+}
+
+func CacheArchitectureSetKey(architecture string) string {
+	return fmt.Sprintf("arch:%s", architecture)
+}
+
+func CacheRuntimeSetKey(runtimeName string, runtimeVersion string) string {
+	return fmt.Sprintf("runtime:%s-%s", runtimeName, runtimeVersion)
+}
 
 func MessagingWorkerRelatedAgentReadyTopic(workerUuid string) string {
 	return fmt.Sprintf("apollo_agent_ready_related_%s", workerUuid)

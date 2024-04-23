@@ -20,8 +20,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ServiceRegistry_Acquire_FullMethodName = "/apollo.proto.registry.v1.ServiceRegistry/Acquire"
-	ServiceRegistry_Release_FullMethodName = "/apollo.proto.registry.v1.ServiceRegistry/Release"
+	ServiceRegistry_Acquire_FullMethodName  = "/apollo.proto.registry.v1.ServiceRegistry/Acquire"
+	ServiceRegistry_Release_FullMethodName  = "/apollo.proto.registry.v1.ServiceRegistry/Release"
+	ServiceRegistry_Instance_FullMethodName = "/apollo.proto.registry.v1.ServiceRegistry/Instance"
 )
 
 // ServiceRegistryClient is the client API for ServiceRegistry service.
@@ -30,6 +31,7 @@ const (
 type ServiceRegistryClient interface {
 	Acquire(ctx context.Context, in *AcquireLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
 	Release(ctx context.Context, in *ReleaseLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
+	Instance(ctx context.Context, in *AvailableInstanceRequest, opts ...grpc.CallOption) (*AvailableInstanceResponse, error)
 }
 
 type serviceRegistryClient struct {
@@ -58,12 +60,22 @@ func (c *serviceRegistryClient) Release(ctx context.Context, in *ReleaseLeaseReq
 	return out, nil
 }
 
+func (c *serviceRegistryClient) Instance(ctx context.Context, in *AvailableInstanceRequest, opts ...grpc.CallOption) (*AvailableInstanceResponse, error) {
+	out := new(AvailableInstanceResponse)
+	err := c.cc.Invoke(ctx, ServiceRegistry_Instance_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServiceRegistryServer is the server API for ServiceRegistry service.
 // All implementations should embed UnimplementedServiceRegistryServer
 // for forward compatibility
 type ServiceRegistryServer interface {
 	Acquire(context.Context, *AcquireLeaseRequest) (*v1.EmptyResponse, error)
 	Release(context.Context, *ReleaseLeaseRequest) (*v1.EmptyResponse, error)
+	Instance(context.Context, *AvailableInstanceRequest) (*AvailableInstanceResponse, error)
 }
 
 // UnimplementedServiceRegistryServer should be embedded to have forward compatible implementations.
@@ -75,6 +87,9 @@ func (UnimplementedServiceRegistryServer) Acquire(context.Context, *AcquireLease
 }
 func (UnimplementedServiceRegistryServer) Release(context.Context, *ReleaseLeaseRequest) (*v1.EmptyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Release not implemented")
+}
+func (UnimplementedServiceRegistryServer) Instance(context.Context, *AvailableInstanceRequest) (*AvailableInstanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Instance not implemented")
 }
 
 // UnsafeServiceRegistryServer may be embedded to opt out of forward compatibility for this service.
@@ -124,6 +139,24 @@ func _ServiceRegistry_Release_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServiceRegistry_Instance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AvailableInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServiceRegistryServer).Instance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ServiceRegistry_Instance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServiceRegistryServer).Instance(ctx, req.(*AvailableInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ServiceRegistry_ServiceDesc is the grpc.ServiceDesc for ServiceRegistry service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -138,6 +171,10 @@ var ServiceRegistry_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Release",
 			Handler:    _ServiceRegistry_Release_Handler,
+		},
+		{
+			MethodName: "Instance",
+			Handler:    _ServiceRegistry_Instance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

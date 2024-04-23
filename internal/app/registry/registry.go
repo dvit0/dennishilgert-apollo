@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/registry/api"
 	"github.com/dennishilgert/apollo/internal/app/registry/cache"
@@ -44,10 +45,11 @@ func NewServiceRegistry(opts Options) (ServiceRegistry, error) {
 	cacheClient := cache.NewCacheClient(
 		instanceUuid,
 		cache.Options{
-			Address:  opts.CacheAddress,
-			Username: opts.CacheUsername,
-			Password: opts.CachePassword,
-			Database: opts.CacheDatabase,
+			Address:           opts.CacheAddress,
+			Username:          opts.CacheUsername,
+			Password:          opts.CachePassword,
+			Database:          opts.CacheDatabase,
+			ExpirationTimeout: 10 * time.Second,
 		},
 	)
 
@@ -87,6 +89,7 @@ func NewServiceRegistry(opts Options) (ServiceRegistry, error) {
 	}, nil
 }
 
+// Run starts the service registry and all its components.
 func (s *serviceRegistry) Run(ctx context.Context) error {
 	log.Info("apollo service registry is starting")
 
@@ -95,6 +98,16 @@ func (s *serviceRegistry) Run(ctx context.Context) error {
 	})
 
 	runner := runner.NewRunnerManager(
+		func(ctx context.Context) error {
+			log.Info("starting cache client listener")
+			if err := s.cacheClient.Listen(ctx); err != nil {
+				log.Error("failed to start cache client listener")
+				return err
+			}
+
+			s.cacheClient.Close()
+			return nil
+		},
 		func(ctx context.Context) error {
 			log.Info("starting api server")
 			if err := s.apiServer.Run(ctx, healthStatusProvider); err != nil {

@@ -10,6 +10,7 @@ option go_package = "github.com/dennishilgert/apollo/pkg/proto/registry/v1;regis
 service ServiceRegistry {
   rpc Acquire(AcquireLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc Release(ReleaseLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc Instance(AvailableInstanceRequest) returns (AvailableInstanceResponse) {}
 }
 
 enum ServiceType {
@@ -54,4 +55,13 @@ message AcquireLeaseRequest {
 
 message ReleaseLeaseRequest {
   string instance_uuid = 1;
+  ServiceType service_type = 2;
+}
+
+message AvailableInstanceRequest {
+  ServiceType service_type = 1;
+}
+
+message AvailableInstanceResponse {
+  ServiceInstance instance = 1;
 }
