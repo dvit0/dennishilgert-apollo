@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package apollo.proto.registry.v1;
+
+import "google/protobuf/struct.proto";
+import "apollo/proto/shared/v1/shared.proto";
+
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/registry/v1;registrypb";
+
+service ServiceRegistry {
+  rpc Acquire(AcquireLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc Release(ReleaseLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+}
+
+enum ServiceType {
+  SERVICE_TYPE_UNSPECIFIED = 0;
+  FLEET_MANAGER = 1;
+  WORKER_MANAGER = 2;
+}
+
+message Runtime {
+  string name = 1;
+  string version = 2;
+}
+
+message ServiceInstance {
+  string instance_uuid = 1;
+  ServiceType service_type = 2;
+  string host = 4;
+  int32 port = 5;
+  google.protobuf.Struct metadata = 6;
+}
+
+message WorkerInstance {
+  string worker_uuid = 1;
+  string architecture = 2;
+  string host = 3;
+  int32 port = 4;
+  repeated Runtime initialized_runtimes = 5;
+}
+
+message InstanceMetrics {
+  int32 cpu_usage = 1;
+  int32 memory_usage = 2;
+}
+
+message AcquireLeaseRequest {
+  oneof instance {
+    ServiceInstance service_instance = 1;
+    WorkerInstance worker_instance = 2;
+  }
+  InstanceMetrics metrics = 3;
+}
+
+message ReleaseLeaseRequest {
+  string instance_uuid = 1;
+}

@@ -1,25 +1,6 @@
 version: "3.9"
 
 services:
-  image-registry:
-    container_name: image-registry
-    image: registry:2
-    volumes:
-      - "image_registry_data:/var/lib/registry"
-    ports:
-      - "5000:5000"
-    restart: always
-
-  image-registry-ui:
-    container_name: image-registry-ui
-    image: konradkleine/docker-registry-frontend:v2
-    ports:
-      - "5001:80"
-    restart: always
-    environment:
-      - ENV_DOCKER_REGISTRY_HOST=image-registry
-      - ENV_DOCKER_REGISTRY_PORT=5000
-
   kafka:
     container_name: kafka
     image: docker.io/bitnami/kafka:3.7
@@ -52,6 +33,33 @@ services:
     environment:
       - MINIO_ROOT_USER=root
       - MINIO_ROOT_PASSWORD=7dbcf34172f78a6719f410a64bdb94fc
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    command: redis-server --notify-keyspace-events KEA
+    ports:
+      - "6379:6379"
+    restart: always
+
+  image-registry:
+    container_name: image-registry
+    image: registry:2
+    volumes:
+      - "image_registry_data:/var/lib/registry"
+    ports:
+      - "5000:5000"
+    restart: always
+
+  image-registry-ui:
+    container_name: image-registry-ui
+    image: konradkleine/docker-registry-frontend:v2
+    ports:
+      - "5001:80"
+    restart: always
+    environment:
+      - ENV_DOCKER_REGISTRY_HOST=image-registry
+      - ENV_DOCKER_REGISTRY_PORT=5000
 
 volumes:
   image_registry_data:

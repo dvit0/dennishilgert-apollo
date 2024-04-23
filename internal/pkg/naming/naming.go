@@ -12,6 +12,7 @@ var (
 
 	// Messaging topics.
 	MessagingFunctionInitializationTopic = "apollo_function_initialization"
+	MessagingInstanceHeartbeatTopic      = "apollo_instance_heartbeat"
 
 	// Name of the kernel storage bucket.
 	StorageKernelBucketName = "apollo-kernels"
