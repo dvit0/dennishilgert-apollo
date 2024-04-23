@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package apollo.proto.messages.v1;
 
+import "apollo/proto/registry/v1/registry.proto";
+
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/messages/v1;messagespb";
 
 message FunctionInitializationMessage {
@@ -16,4 +18,10 @@ message RunnerAgentReadyMessage {
   string runner_uuid = 2;
   string reason = 3;
   bool success = 4;
+}
+
+message InstanceHeartbeatMessage {
+  string instance_uuid = 1;
+  apollo.proto.registry.v1.ServiceType service_type = 2;
+  apollo.proto.registry.v1.InstanceMetrics metrics = 3;
 }
