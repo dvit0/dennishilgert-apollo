@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  kafka:
+  apollo-messaging:
     container_name: kafka
     image: docker.io/bitnami/kafka:3.7
     volumes:
@@ -22,7 +22,7 @@ services:
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
 
-  minio:
+  apollo-storage:
     container_name: minio
     image: bitnami/minio:latest
     volumes:
@@ -34,7 +34,7 @@ services:
       - MINIO_ROOT_USER=root
       - MINIO_ROOT_PASSWORD=7dbcf34172f78a6719f410a64bdb94fc
 
-  redis:
+  apollo-cache:
     container_name: redis
     image: redis:latest
     command: redis-server --notify-keyspace-events KEA
@@ -42,7 +42,7 @@ services:
       - "6379:6379"
     restart: always
 
-  image-registry:
+  apollo-image-registry:
     container_name: image-registry
     image: registry:2
     volumes:
