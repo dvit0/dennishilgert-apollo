@@ -24,7 +24,7 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	log.Infof("starting apollo manager -- version %s", "TO_BE_IMPLEMENTED")
+	log.Infof("starting apollo fleet manager -- version %s", "TO_BE_IMPLEMENTED")
 	log.Infof("log level set to: %s", log.LogLevel())
 
 	ctx := signals.Context()
@@ -46,15 +46,15 @@ func Run() {
 		},
 	)
 	if err != nil {
-		log.Fatalf("error while creating manager: %v", err)
+		log.Fatalf("error while creating fleet manager: %v", err)
 	}
 
 	err = runner.NewRunnerManager(
 		manager.Run,
 	).Run(ctx)
 	if err != nil {
-		log.Fatalf("error while running manager: %v", err)
+		log.Fatalf("error while running fleet manager: %v", err)
 	}
 
-	log.Info("manager shut down gracefully")
+	log.Info("fleet manager shut down gracefully")
 }

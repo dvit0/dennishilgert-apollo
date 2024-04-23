@@ -12,7 +12,7 @@ import (
 	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
 )
 
-var log = logger.NewLogger("apollo.manager.messaging.handler")
+var log = logger.NewLogger("apollo.fleet.messaging.handler")
 
 type Options struct {
 	WorkerUuid string

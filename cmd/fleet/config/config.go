@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var log = logger.NewLogger("apollo.agent.config")
+var log = logger.NewLogger("apollo.fleet.config")
 
 type Config struct {
 	ApiPort                   int
