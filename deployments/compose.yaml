@@ -2,8 +2,8 @@ version: "3.9"
 
 services:
   apollo-messaging:
-    container_name: kafka
-    image: docker.io/bitnami/kafka:3.7
+    container_name: apollo-messaging
+    image: bitnami/kafka:3.7
     volumes:
       - "kafka_data:/bitnami"
     ports:
@@ -23,7 +23,7 @@ services:
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
 
   apollo-storage:
-    container_name: minio
+    container_name: apollo-storage
     image: bitnami/minio:latest
     volumes:
       - "minio_data:/bitnami/minio/data"
@@ -35,7 +35,7 @@ services:
       - MINIO_ROOT_PASSWORD=7dbcf34172f78a6719f410a64bdb94fc
 
   apollo-cache:
-    container_name: redis
+    container_name: apollo-cache
     image: redis:latest
     command: redis-server --notify-keyspace-events KEA
     ports:
@@ -43,7 +43,7 @@ services:
     restart: always
 
   apollo-image-registry:
-    container_name: image-registry
+    container_name: apollo-image-registry
     image: registry:2
     volumes:
       - "image_registry_data:/var/lib/registry"
@@ -51,8 +51,8 @@ services:
       - "5000:5000"
     restart: always
 
-  image-registry-ui:
-    container_name: image-registry-ui
+  apollo-image-registry-ui:
+    container_name: apollo-image-registry-ui
     image: konradkleine/docker-registry-frontend:v2
     ports:
       - "5001:80"
