@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package apollo.proto.worker.v1;
+
+import "apollo/proto/shared/v1/shared.proto";
+
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/worker/v1;workerpb";
+
+service WorkerManager {
+  rpc Initialize(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+}
+
+message KernelSpecs {
+  string name = 1;
+  string version = 2;
+}
+
+message RuntimeSpecs {
+  string name = 1;
+  string version = 2;
+}
+
+message InitializeFunctionRequest {
+  string function_uuid = 1;
+  KernelSpecs kernel = 2;
+  RuntimeSpecs runtime = 3;
+}
