@@ -1,0 +1,339 @@
+<mxfile host="app.diagrams.net" modified="2024-04-28T16:23:16.383Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" etag="eUF8It0jIHUsflj0UP9J" version="24.2.2" type="device">
+  <diagram id="sBmdEcDEbHxzQZXR0Bjp" name="Seite-1">
+    <mxGraphModel dx="3480" dy="876" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-329" value="Creating presigned URL to upload the code package to the Object Storage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="680" y="3230" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-330" value="Package Service" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="640" y="3180" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-331" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-332" target="JDl2sX8EHS2qrtAxxwI8-335">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-332" value="Requesting the network location of an available Package Service instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="680" y="2930" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-333" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-335" target="JDl2sX8EHS2qrtAxxwI8-329">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-334" value="gRPC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-333">
+          <mxGeometry x="-0.102" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-335" value="Proxying the HTTP-request to the Package Service as a gRPC-request" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="680" y="3030" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-336" value="API Gateway" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="640" y="2880" width="280" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-337" value="Saving the file in the corresponding Bucket" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="2930" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-338" value="Object Storage" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="960" y="2880" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-339" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="840" y="2640" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-340" value="&lt;b&gt;Create / Update function&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-339">
+          <mxGeometry y="20" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-341" value="Client" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-339">
+          <mxGeometry width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-342" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-339" target="JDl2sX8EHS2qrtAxxwI8-353">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="40" y="80" as="sourcePoint" />
+            <mxPoint x="90" y="30" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="40" y="110" />
+              <mxPoint x="-380" y="110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-343" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-339" target="JDl2sX8EHS2qrtAxxwI8-355">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="80" as="sourcePoint" />
+            <mxPoint x="210" y="30" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-344" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-339" target="JDl2sX8EHS2qrtAxxwI8-354">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="80" as="sourcePoint" />
+            <mxPoint x="150" y="30" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="100" y="130" />
+              <mxPoint x="-60" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-345" value="Loading available runtimes and machine architectures as well as the function metadata if performing an update" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="3230" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-346" value="Frontend" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="320" y="3180" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-347" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-348" target="JDl2sX8EHS2qrtAxxwI8-351">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-348" value="Requesting the network location of an available Frontend instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="360" y="2930" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-349" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-351" target="JDl2sX8EHS2qrtAxxwI8-345">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-350" value="gRPC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-349">
+          <mxGeometry x="-0.102" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-351" value="Proxying the HTTP-request to the Frontend as a gRPC-request" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="3030" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-352" value="API Gateway" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="320" y="2880" width="280" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-353" value="On page load" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="2800" width="280" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-354" value="On select file to upload" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="640" y="2800" width="280" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-355" value="On create / update function" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="960" y="2800" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-356" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="458.56999999999994" y="2840" as="sourcePoint" />
+            <mxPoint x="459" y="2930" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-357" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="778.5699999999999" y="2840" as="sourcePoint" />
+            <mxPoint x="779" y="2930" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-358" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1098.5699999999997" y="2840" as="sourcePoint" />
+            <mxPoint x="1099" y="2930" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-359" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-360" target="JDl2sX8EHS2qrtAxxwI8-363">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-360" value="Requesting the network location of an available Frontend instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="2930" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-361" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-363" target="JDl2sX8EHS2qrtAxxwI8-366">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-362" value="gRPC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-361">
+          <mxGeometry x="-0.1429" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-363" value="Proxying the HTTP-request to the Frontend as a gRPC-request" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="3030" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-364" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-366" target="JDl2sX8EHS2qrtAxxwI8-370">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-365" value="On code upload" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-364">
+          <mxGeometry x="-0.0667" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-366" value="Creating / Updating database entry with the submitted function metadata" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="3230" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-367" value="API Gateway" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="2880" width="280" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-368" value="Frontend" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="3180" width="280" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-369" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-368" source="JDl2sX8EHS2qrtAxxwI8-370" target="JDl2sX8EHS2qrtAxxwI8-371">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-370" value="Requesting the network location of an available Package Service instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-368">
+          <mxGeometry x="40" y="150" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-371" value="Instructing the Package Service with the creation of the container image for the new function" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-368">
+          <mxGeometry x="40" y="250" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-372" value="Package Service" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="3580" width="280" height="440" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-373" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-372" source="JDl2sX8EHS2qrtAxxwI8-374" target="JDl2sX8EHS2qrtAxxwI8-376">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-374" value="Pulling the runtime image from the container image registry" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-372">
+          <mxGeometry x="40" y="150" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-375" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-372" source="JDl2sX8EHS2qrtAxxwI8-376" target="JDl2sX8EHS2qrtAxxwI8-377">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-376" value="Building the image for the function and upload it to the container image registry with a new tag" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-372">
+          <mxGeometry x="40" y="250" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-377" value="Sending a function creation status update" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-372">
+          <mxGeometry x="40" y="350" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-378" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-379" target="JDl2sX8EHS2qrtAxxwI8-374">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-379" value="Downloading the code package from the Object Storage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="3630" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-380" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-371" target="JDl2sX8EHS2qrtAxxwI8-379">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-381" value="Messaging" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-380">
+          <mxGeometry x="-0.1497" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-382" value="Optional, depending on user input" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="2520" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-386" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1419.5499999999997" y="2840" as="sourcePoint" />
+            <mxPoint x="1419.98" y="2930" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-419" value="Request at&lt;br&gt;Service Registry" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="2520" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-458" value="Future improvement or functionality" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="2520" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-459" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="2480" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-468" value="Frontend" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="4080" width="280" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-469" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-468" source="JDl2sX8EHS2qrtAxxwI8-471" target="JDl2sX8EHS2qrtAxxwI8-474">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-470" value="After code upload" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-469">
+          <mxGeometry x="-0.019" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-471" value="Updating the state of the function in the database entry" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-468">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-472" value="Sending the function initialization request to the worker manager" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-468">
+          <mxGeometry x="40" y="250" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-473" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-468" source="JDl2sX8EHS2qrtAxxwI8-474" target="JDl2sX8EHS2qrtAxxwI8-472">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-474" value="Requesting the network location of an available Worker Manager instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-468">
+          <mxGeometry x="40" y="150" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-475" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-377" target="JDl2sX8EHS2qrtAxxwI8-471">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-476" value="Messaging" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-475">
+          <mxGeometry x="-0.1311" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-487" value="Worker Manager" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="4480" width="280" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-488" value="Registering the route to the selected worker nodes" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-487">
+          <mxGeometry x="39.929999999999836" y="250" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-489" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-487" source="JDl2sX8EHS2qrtAxxwI8-490" target="JDl2sX8EHS2qrtAxxwI8-492">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-490" value="Determination of a suitable Worker node, taking capacity utilisation and workload distribution into account" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-487">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-491" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-487" source="JDl2sX8EHS2qrtAxxwI8-492" target="JDl2sX8EHS2qrtAxxwI8-488">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-492" value="Sending a runner initialization request to the selected Worker node" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-487">
+          <mxGeometry x="40" y="150" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-493" value="Shared Cache" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;verticalAlign=top;align=left;spacingLeft=30;dashed=0;fillColor=none;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="4590" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-494" value="Information about the registered Worker nodes and their metrics" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-493">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-495" value="Fleet Manager" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="960" y="4690" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-496" value="Downloading runner image and creating rootfs image for the runners" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-495">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-515" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-492" target="JDl2sX8EHS2qrtAxxwI8-496">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-516" value="gRPC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-515">
+          <mxGeometry x="-0.1314" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-517" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-472">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1420" y="4530" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-518" value="gRPC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-517">
+          <mxGeometry x="-0.1095" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-519" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1320" y="3260" as="sourcePoint" />
+            <mxPoint x="1320" y="4360" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1200" y="3260" />
+              <mxPoint x="1200" y="4360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-520" value="Without code&lt;br&gt;upload" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-519">
+          <mxGeometry x="-0.0386" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-521" value="Shared Cache" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;verticalAlign=top;align=left;spacingLeft=30;dashed=0;fillColor=none;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="4790" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-522" value="Routes to the worker nodes for a specific function" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-521">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-523" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-488" target="JDl2sX8EHS2qrtAxxwI8-521">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-524" value="Add" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-523">
+          <mxGeometry x="-0.0797" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-525" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-490" target="JDl2sX8EHS2qrtAxxwI8-493">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-526" value="Get" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-525">
+          <mxGeometry x="-0.0526" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

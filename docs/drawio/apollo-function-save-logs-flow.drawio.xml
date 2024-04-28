@@ -1,0 +1,78 @@
+<mxfile host="app.diagrams.net" modified="2024-04-28T16:26:18.335Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" etag="uu0Z0PDA5q2bVh-Cit0x" version="24.2.2" type="device">
+  <diagram id="sBmdEcDEbHxzQZXR0Bjp" name="Seite-1">
+    <mxGraphModel dx="-3338" dy="-838" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-382" value="Optional, depending on user input" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="5220" y="2520" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-419" value="Request at&lt;br&gt;Service Registry" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="5380" y="2520" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-458" value="Future improvement or functionality" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="5540" y="2520" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-459" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="5220" y="2480" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-692" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="5120" y="2640" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-693" value="&lt;b&gt;Store logs&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-692">
+          <mxGeometry y="20" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-694" value="Micro Manager" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-692">
+          <mxGeometry width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-695" value="Fleet Manager" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="5080" y="2800" width="280" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-696" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-695" source="JDl2sX8EHS2qrtAxxwI8-697" target="JDl2sX8EHS2qrtAxxwI8-698">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-697" value="Collecting system and invocation logs after function execution" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-695">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-698" value="Sending system and invocation logs to the Logging Service" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-695">
+          <mxGeometry x="40" y="150" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-699" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-693" target="JDl2sX8EHS2qrtAxxwI8-697">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-700" value="Logging Service" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="5080" y="3100" width="280" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-701" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="JDl2sX8EHS2qrtAxxwI8-700" source="JDl2sX8EHS2qrtAxxwI8-702" target="JDl2sX8EHS2qrtAxxwI8-703">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-702" value="Saving system and invocation logs as separate documents to the NoSQL database" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-700">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-703" value="Implement a log collection and monitoring tool, maybe with connection to the compute infrastructure" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-700">
+          <mxGeometry x="40" y="150" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-704" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-698" target="JDl2sX8EHS2qrtAxxwI8-702">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-705" value="Messaging" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JDl2sX8EHS2qrtAxxwI8-704">
+          <mxGeometry x="-0.1657" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-706" value="NoSQL Database" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;verticalAlign=top;align=left;spacingLeft=30;dashed=0;fillColor=none;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="5400" y="3210" width="280" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-707" value="System logs of each invocation identified by its invocation id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-706">
+          <mxGeometry x="40" y="50" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-708" value="Invocation logs of each invocation identified by its invocation id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="JDl2sX8EHS2qrtAxxwI8-706">
+          <mxGeometry x="40" y="150" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JDl2sX8EHS2qrtAxxwI8-709" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JDl2sX8EHS2qrtAxxwI8-702" target="JDl2sX8EHS2qrtAxxwI8-706">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
