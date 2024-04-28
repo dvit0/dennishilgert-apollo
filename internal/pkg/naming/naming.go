@@ -22,28 +22,33 @@ var (
 	StorageFunctionBucketName = "apollo-functions"
 )
 
+func CacheAddLeaseDeclaration(key string) string {
+	return fmt.Sprintf("lease:%s", key)
+}
+
+func CacheStripLeaseDeclaration(key string) string {
+	stripped, _ := strings.CutPrefix(key, "lease:")
+	return stripped
+}
+
+func CacheIsLeaseKey(key string) bool {
+	return strings.HasPrefix(key, "lease:")
+}
+
 func CacheServiceInstanceKeyName(instanceUuid string) string {
-	return fmt.Sprintf("instance:%s", instanceUuid)
+	return fmt.Sprintf("service:%s", instanceUuid)
 }
 
-func CacheIsServiceInstanceKey(key string) bool {
-	return strings.Split(key, ":")[0] == "instance"
-}
-
-func CacheExtractServiceInstanceUuid(key string) string {
-	return strings.Split(key, ":")[1]
+func CacheIsServiceInstanceLease(key string) bool {
+	return strings.Split(key, ":")[0] == "service"
 }
 
 func CacheWorkerInstanceKeyName(workerUuid string) string {
 	return fmt.Sprintf("worker:%s", workerUuid)
 }
 
-func CacheIsWorkerInstanceKey(key string) bool {
+func CacheIsWorkerInstanceLease(key string) bool {
 	return strings.Split(key, ":")[0] == "worker"
-}
-
-func CacheExtractWorkerInstanceUuid(key string) string {
-	return strings.Split(key, ":")[1]
 }
 
 func CacheArchitectureSetKey(architecture string) string {
@@ -52,6 +57,15 @@ func CacheArchitectureSetKey(architecture string) string {
 
 func CacheRuntimeSetKey(runtimeName string, runtimeVersion string) string {
 	return fmt.Sprintf("runtime:%s-%s", runtimeName, runtimeVersion)
+}
+
+func CacheExtractInstanceUuid(key string) string {
+	parts := strings.Split(key, ":")
+	return parts[len(parts)-1]
+}
+
+func CacheExtractServiceInstanceType(key string) string {
+	return strings.Split(key, ":")[1]
 }
 
 func MessagingWorkerRelatedAgentReadyTopic(workerUuid string) string {

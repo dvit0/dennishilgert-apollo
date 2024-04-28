@@ -22,6 +22,9 @@ message RunnerAgentReadyMessage {
 
 message InstanceHeartbeatMessage {
   string instance_uuid = 1;
-  apollo.proto.registry.v1.ServiceType service_type = 2;
-  apollo.proto.registry.v1.InstanceMetrics metrics = 3;
+  apollo.proto.registry.v1.InstanceType instance_type = 2;
+  oneof metrics {
+    apollo.proto.registry.v1.ServiceInstanceMetrics service_instance_metrics = 3;
+    apollo.proto.registry.v1.WorkerInstanceMetrics worker_instance_metrics = 4;
+  }
 }

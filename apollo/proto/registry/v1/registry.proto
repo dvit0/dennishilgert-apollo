@@ -13,8 +13,8 @@ service ServiceRegistry {
   rpc Instance(AvailableInstanceRequest) returns (AvailableInstanceResponse) {}
 }
 
-enum ServiceType {
-  SERVICE_TYPE_UNSPECIFIED = 0;
+enum InstanceType {
+  INSTANCE_TYPE_UNSPECIFIED = 0;
   FLEET_MANAGER = 1;
   WORKER_MANAGER = 2;
 }
@@ -26,7 +26,7 @@ message Runtime {
 
 message ServiceInstance {
   string instance_uuid = 1;
-  ServiceType service_type = 2;
+  InstanceType instance_type = 2;
   string host = 4;
   int32 port = 5;
   google.protobuf.Struct metadata = 6;
@@ -40,9 +40,18 @@ message WorkerInstance {
   repeated Runtime initialized_runtimes = 5;
 }
 
-message InstanceMetrics {
+message ServiceInstanceMetrics {
   int32 cpu_usage = 1;
   int32 memory_usage = 2;
+}
+
+message WorkerInstanceMetrics {
+  int32 cpu_usage = 1;
+  int32 memory_usage = 2;
+  int32 storage_usage = 3;
+  int32 light_functions_load = 4;
+  int32 medium_functions_load = 5;
+  int32 heavy_functions_load = 6;
 }
 
 message AcquireLeaseRequest {
@@ -50,16 +59,19 @@ message AcquireLeaseRequest {
     ServiceInstance service_instance = 1;
     WorkerInstance worker_instance = 2;
   }
-  InstanceMetrics metrics = 3;
+  oneof metrics {
+    ServiceInstanceMetrics service_instance_metrics = 3;
+    WorkerInstanceMetrics worker_instance_metrics = 4;
+  }
 }
 
 message ReleaseLeaseRequest {
   string instance_uuid = 1;
-  ServiceType service_type = 2;
+  InstanceType instance_type = 2;
 }
 
 message AvailableInstanceRequest {
-  ServiceType service_type = 1;
+  InstanceType instance_type = 1;
 }
 
 message AvailableInstanceResponse {

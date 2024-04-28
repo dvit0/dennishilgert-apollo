@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"net"
 	"sync/atomic"
+	"time"
 
-	"github.com/dennishilgert/apollo/internal/app/registry/cache"
+	"github.com/dennishilgert/apollo/internal/app/registry/lease"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
@@ -29,18 +30,18 @@ type ApiServer interface {
 type apiServer struct {
 	registrypb.UnimplementedServiceRegistryServer
 
-	port        int
-	cacheClient cache.CacheClient
-	readyCh     chan struct{}
-	running     atomic.Bool
+	port         int
+	leaseService lease.LeaseService
+	readyCh      chan struct{}
+	running      atomic.Bool
 }
 
 // NewApiServer creates a new ApiServer instance.
-func NewApiServer(cacheClient cache.CacheClient, opts Options) ApiServer {
+func NewApiServer(leaseService lease.LeaseService, opts Options) ApiServer {
 	return &apiServer{
-		port:        opts.Port,
-		cacheClient: cacheClient,
-		readyCh:     make(chan struct{}),
+		port:         opts.Port,
+		leaseService: leaseService,
+		readyCh:      make(chan struct{}),
 	}
 }
 
@@ -90,7 +91,21 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 	}
 
 	// Perform graceful shutdown and close the listener regardless of the select outcome.
-	server.GracefulStop()
+	stopped := make(chan bool, 1)
+	go func() {
+		server.GracefulStop()
+		close(stopped)
+	}()
+
+	timer := time.NewTimer(5 * time.Second)
+	select {
+	case <-timer.C:
+		log.Warn("api server did not stop gracefully in time - forcing shutdown")
+		server.Stop()
+	case <-stopped:
+		timer.Stop()
+	}
+
 	if cErr := lis.Close(); cErr != nil && !errors.Is(cErr, net.ErrClosed) && serveErr == nil {
 		log.Error("error while closing api server listener")
 		return cErr
@@ -111,42 +126,25 @@ func (a *apiServer) Ready(ctx context.Context) error {
 
 // Acquire acquires a lease for a service or worker instance.
 func (a *apiServer) Acquire(ctx context.Context, req *registrypb.AcquireLeaseRequest) (*sharedpb.EmptyResponse, error) {
-	switch instance := req.Instance.(type) {
-	case *registrypb.AcquireLeaseRequest_ServiceInstance:
-		if err := a.cacheClient.AddInstance(ctx, instance.ServiceInstance); err != nil {
-			return nil, fmt.Errorf("failed to add service instance to cache: %w", err)
-		}
-		return &sharedpb.EmptyResponse{}, nil
-	case *registrypb.AcquireLeaseRequest_WorkerInstance:
-		if err := a.cacheClient.AddWorker(ctx, instance.WorkerInstance); err != nil {
-			return nil, fmt.Errorf("failed to add worker instance to cache: %w", err)
-		}
-		return &sharedpb.EmptyResponse{}, nil
-	default:
-		return nil, errors.New("unknown instance type")
+	if err := a.leaseService.AquireLease(ctx, req); err != nil {
+		return nil, fmt.Errorf("failed to acquire lease: %w", err)
 	}
+	return &sharedpb.EmptyResponse{}, nil
 }
 
 // Release releases a lease for a service or worker instance.
 func (a *apiServer) Release(ctx context.Context, req *registrypb.ReleaseLeaseRequest) (*sharedpb.EmptyResponse, error) {
-	switch req.ServiceType {
-	case registrypb.ServiceType_FLEET_MANAGER:
-		if err := a.cacheClient.RemoveWorker(ctx, req.InstanceUuid); err != nil {
-			return nil, fmt.Errorf("failed to remove worker instance from cache: %w", err)
-		}
-	default:
-		if err := a.cacheClient.RemoveInstance(ctx, req.ServiceType, req.InstanceUuid); err != nil {
-			return nil, fmt.Errorf("failed to remove service instance from cache: %w", err)
-		}
+	if err := a.leaseService.ReleaseLease(ctx, req.InstanceUuid, req.InstanceType.String()); err != nil {
+		return nil, fmt.Errorf("failed to release lease: %w", err)
 	}
-	return nil, errors.New("unknown service type")
+	return &sharedpb.EmptyResponse{}, nil
 }
 
 // Instance returns an available instance for a given service type.
 func (a *apiServer) Instance(ctx context.Context, req *registrypb.AvailableInstanceRequest) (*registrypb.AvailableInstanceResponse, error) {
-	instance, err := a.cacheClient.AvailableInstance(ctx, req.ServiceType)
+	instance, err := a.leaseService.AvailableServiceInstance(ctx, req.InstanceType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available instance from cache: %w", err)
+		return nil, fmt.Errorf("failed to get available service instance from cache: %w", err)
 	}
 	return &registrypb.AvailableInstanceResponse{
 		Instance: instance,
