@@ -84,11 +84,15 @@ func (l *leaseService) Listen(ctx context.Context) error {
 func (l *leaseService) AquireLease(ctx context.Context, request *registrypb.AcquireLeaseRequest) error {
 	switch instance := request.Instance.(type) {
 	case *registrypb.AcquireLeaseRequest_WorkerInstance:
+		log.Debugf("acquiring lease for worker instance: %s", instance.WorkerInstance.WorkerUuid)
+
 		if err := l.addWorkerInstance(ctx, instance.WorkerInstance, request.GetWorkerInstanceMetrics()); err != nil {
 			return fmt.Errorf("failed to add worker instance to cache: %w", err)
 		}
 		return nil
 	case *registrypb.AcquireLeaseRequest_ServiceInstance:
+		log.Debugf("acquiring lease for service instance: %s", instance.ServiceInstance.InstanceUuid)
+
 		if err := l.addServiceInstance(ctx, instance.ServiceInstance); err != nil {
 			return fmt.Errorf("failed to add service instance to cache: %w", err)
 		}
@@ -105,6 +109,8 @@ func (l *leaseService) AquireLease(ctx context.Context, request *registrypb.Acqu
 
 // RenewLease renews the lease for the given instance.
 func (l *leaseService) RenewLease(ctx context.Context, request *messagespb.InstanceHeartbeatMessage) error {
+	log.Debugf("renewing lease for instance: %s", request.InstanceUuid)
+
 	var key string
 	switch instanceMetrics := request.Metrics.(type) {
 	case *messagespb.InstanceHeartbeatMessage_WorkerInstanceMetrics:
@@ -130,6 +136,8 @@ func (l *leaseService) RenewLease(ctx context.Context, request *messagespb.Insta
 
 // ReleaseLease releases the lease for the given instance.
 func (l *leaseService) ReleaseLease(ctx context.Context, instanceUuid string, instanceType string) error {
+	log.Debugf("releasing lease for instance: %s", instanceUuid)
+
 	switch instanceType {
 	case registrypb.InstanceType_FLEET_MANAGER.String():
 		if err := l.removeWorkerInstance(ctx, instanceUuid); err != nil {
