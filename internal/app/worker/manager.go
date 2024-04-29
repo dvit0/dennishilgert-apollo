@@ -150,6 +150,13 @@ func (w *workerManager) Run(ctx context.Context) error {
 				return fmt.Errorf("failed to send heartbeat: %w", err)
 			}
 
+			log.Info("releasing lease")
+			releaseCtx, releaseCtxCancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer releaseCtxCancel()
+			if err := w.serviceRegistryClient.ReleaseLease(releaseCtx); err != nil {
+				return fmt.Errorf("failed to release lease: %w", err)
+			}
+
 			log.Info("shutting down service registry connection")
 			w.serviceRegistryClient.CloseConnection()
 
