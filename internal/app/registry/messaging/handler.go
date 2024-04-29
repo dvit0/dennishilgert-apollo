@@ -11,9 +11,16 @@ import (
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
+	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 )
 
 var log = logger.NewLogger("apollo.registry.messaging.handler")
+
+type TempInstanceHeartbeatMessage struct {
+	InstanceUuid string                  `json:"instance_uuid"`
+	InstanceType registrypb.InstanceType `json:"instance_type"`
+	Metrics      json.RawMessage         `json:"Metrics"`
+}
 
 type Options struct{}
 
@@ -40,14 +47,42 @@ func NewMessagingHandler(leaseService lease.LeaseService, opts Options) Messagin
 func (m *messagingHandler) RegisterAll() {
 	// Handle MessagingFunctionInitializationTopic messages
 	m.add(naming.MessagingInstanceHeartbeatTopic, func(msg *kafka.Message) {
-		var message messagespb.InstanceHeartbeatMessage
-		if err := json.Unmarshal(msg.Value, &message); err != nil {
-			log.Errorf("failed to unmarshal kafka message: %v", err)
+		var tempMessage TempInstanceHeartbeatMessage
+		// Unmarshal the message into a temporary struct to determine the type of metrics.
+		if err := json.Unmarshal(msg.Value, &tempMessage); err != nil {
+			log.Errorf("failed to unmarshal kafka message into temp struct: %v", err)
+			return
+		}
+		// Copy the instanceUuid and instanceType into the real message.
+		message := &messagespb.InstanceHeartbeatMessage{
+			InstanceUuid: tempMessage.InstanceUuid,
+			InstanceType: tempMessage.InstanceType,
+		}
+
+		// Determine the type of metrics and unmarshal it into the correct type.
+		if message.InstanceType == registrypb.InstanceType_FLEET_MANAGER {
+			var workerInstanceMetrics registrypb.WorkerInstanceMetrics
+			if err := json.Unmarshal(tempMessage.Metrics, &workerInstanceMetrics); err != nil {
+				log.Errorf("failed to unmarshal worker instance metrics: %v", err)
+				return
+			}
+			message.Metrics = &messagespb.InstanceHeartbeatMessage_WorkerInstanceMetrics{
+				WorkerInstanceMetrics: &workerInstanceMetrics,
+			}
+		} else {
+			var serviceInstanceMetrics registrypb.ServiceInstanceMetrics
+			if err := json.Unmarshal(tempMessage.Metrics, &serviceInstanceMetrics); err != nil {
+				log.Errorf("failed to unmarshal service instance metrics: %v", err)
+				return
+			}
+			message.Metrics = &messagespb.InstanceHeartbeatMessage_ServiceInstanceMetrics{
+				ServiceInstanceMetrics: &serviceInstanceMetrics,
+			}
 		}
 
 		// Create a new context with a timeout of 3 seconds.
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		if err := m.leaseService.RenewLease(ctx, &message); err != nil {
+		if err := m.leaseService.RenewLease(ctx, message); err != nil {
 			log.Errorf("failed to renew lease: %v", err)
 		}
 		// Cancel context after the score has been updated.
