@@ -3,25 +3,30 @@ syntax = "proto3";
 package apollo.proto.worker.v1;
 
 import "apollo/proto/shared/v1/shared.proto";
+import "apollo/proto/fleet/v1/fleet.proto";
 
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/worker/v1;workerpb";
 
 service WorkerManager {
-  rpc Initialize(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
-}
-
-message KernelSpecs {
-  string name = 1;
-  string version = 2;
-}
-
-message RuntimeSpecs {
-  string name = 1;
-  string version = 2;
+  rpc InitializeFunction(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc AllocateRunner(AllocateRunnerRequest) returns (AllocateRunnerResponse) {}
 }
 
 message InitializeFunctionRequest {
   string function_uuid = 1;
-  KernelSpecs kernel = 2;
-  RuntimeSpecs runtime = 3;
+  apollo.proto.fleet.v1.KernelSpecs kernel = 2;
+  apollo.proto.fleet.v1.RuntimeSpecs runtime = 3;
+  apollo.proto.fleet.v1.MachineSpecs machine = 4;
+}
+
+message AllocateRunnerRequest {
+  string function_uuid = 1;
+  apollo.proto.fleet.v1.KernelSpecs kernel = 2;
+  apollo.proto.fleet.v1.RuntimeExecutionSpecs runtime = 3;
+  apollo.proto.fleet.v1.MachineSpecs machine = 4;
+}
+
+message AllocateRunnerResponse {
+  string runner_uuid = 1;
+  string runner_address = 2;
 }

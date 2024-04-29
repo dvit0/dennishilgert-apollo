@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dennishilgert/apollo/internal/app/worker/api"
 	"github.com/dennishilgert/apollo/internal/app/worker/placement"
@@ -9,6 +10,11 @@ import (
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/pkg/messaging/producer"
+	"github.com/dennishilgert/apollo/pkg/metrics"
+	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
+	"github.com/dennishilgert/apollo/pkg/registry"
+	"github.com/dennishilgert/apollo/pkg/utils"
 	"github.com/google/uuid"
 )
 
@@ -29,14 +35,43 @@ type WorkerManager interface {
 }
 
 type workerManager struct {
-	instanceUuid     string
-	apiServer        api.ApiServer
-	cacheClient      cache.CacheClient
-	placementService placement.PlacementService
+	instanceUuid          string
+	instanceType          registrypb.InstanceType
+	ipAddress             string
+	apiPort               int
+	apiServer             api.ApiServer
+	cacheClient           cache.CacheClient
+	placementService      placement.PlacementService
+	messagingProducer     producer.MessagingProducer
+	serviceRegistryClient registry.ServiceRegistryClient
 }
 
 func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 	instanceUuid := uuid.NewString()
+	instanceType := registrypb.InstanceType_WORKER_MANAGER
+
+	ipAddress, err := utils.PrimaryIp()
+	if err != nil {
+		return nil, fmt.Errorf("getting primary ip failed: %w", err)
+	}
+
+	metricsService := metrics.NewMetricsService()
+
+	messagingProducer, err := producer.NewMessagingProducer(
+		ctx,
+		producer.Options{
+			BootstrapServers: opts.MessagingBootstrapServers,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating messaging producer failed: %w", err)
+	}
+
+	serviceRegistryClient := registry.NewServiceRegistryClient(
+		metricsService,
+		messagingProducer,
+		registry.Options{},
+	)
 
 	cacheClient := cache.NewCacheClient(
 		instanceUuid,
@@ -58,10 +93,15 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 	})
 
 	return &workerManager{
-		instanceUuid:     instanceUuid,
-		apiServer:        apiServer,
-		cacheClient:      cacheClient,
-		placementService: placementService,
+		instanceUuid:          instanceUuid,
+		instanceType:          instanceType,
+		ipAddress:             ipAddress,
+		apiPort:               opts.ApiPort,
+		apiServer:             apiServer,
+		cacheClient:           cacheClient,
+		placementService:      placementService,
+		messagingProducer:     messagingProducer,
+		serviceRegistryClient: serviceRegistryClient,
 	}, nil
 }
 
@@ -69,10 +109,44 @@ func (w *workerManager) Run(ctx context.Context) error {
 	log.Info("apollo worker manager is starting")
 
 	healthStatusProvider := health.NewHealthStatusProvider(health.ProviderOptions{
-		Targets: 1,
+		Targets: 2,
 	})
 
 	runner := runner.NewRunnerManager(
+		func(ctx context.Context) error {
+			log.Info("establishing connection to service registry")
+			if err := w.serviceRegistryClient.EstablishConnection(ctx); err != nil {
+				return fmt.Errorf("failed to establish connection to service registry: %w", err)
+			}
+
+			log.Info("acquiring lease")
+			acquireLeaseRequest := &registrypb.AcquireLeaseRequest{
+				Instance: &registrypb.AcquireLeaseRequest_ServiceInstance{
+					ServiceInstance: &registrypb.ServiceInstance{
+						InstanceUuid: w.instanceUuid,
+						InstanceType: w.instanceType,
+						Host:         w.ipAddress,
+						Port:         int32(w.apiPort),
+						Metadata:     nil,
+					},
+				},
+			}
+			if err := w.serviceRegistryClient.AcquireLease(ctx, acquireLeaseRequest); err != nil {
+				return fmt.Errorf("failed to acquire lease: %w", err)
+			}
+
+			healthStatusProvider.Ready()
+			log.Info("lease acquired successfully")
+
+			if err := w.serviceRegistryClient.SendHeartbeat(ctx); err != nil {
+				return fmt.Errorf("failed to send heartbeat: %w", err)
+			}
+
+			log.Info("shutting down service registry connection")
+			w.serviceRegistryClient.CloseConnection()
+
+			return nil
+		},
 		func(ctx context.Context) error {
 			// Wait for the main context to be done.
 			<-ctx.Done()

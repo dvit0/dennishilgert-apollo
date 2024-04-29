@@ -121,6 +121,10 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) Initialize(ctx context.Context, req *workerpb.InitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
+func (a *apiServer) InitializeFunction(ctx context.Context, req *workerpb.InitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
 	return &sharedpb.EmptyResponse{}, nil
+}
+
+func (a *apiServer) AllocateRunner(ctx context.Context, req *workerpb.AllocateRunnerRequest) (*workerpb.AllocateRunnerResponse, error) {
+	return &workerpb.AllocateRunnerResponse{}, nil
 }
