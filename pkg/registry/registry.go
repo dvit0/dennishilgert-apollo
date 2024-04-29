@@ -158,7 +158,9 @@ func (s *serviceRegistryClient) EstablishConnection(ctx context.Context) error {
 			log.Info("connection to service registry established")
 			return nil
 		} else {
-			conn.Close()
+			if conn != nil {
+				conn.Close()
+			}
 			log.Errorf("failed to establish connection to service registry - reason: %v", err)
 		}
 		// Wait before retrying, but stop if context is done.

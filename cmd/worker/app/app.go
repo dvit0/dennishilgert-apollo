@@ -34,6 +34,8 @@ func Run() {
 			CacheUsername:             cfg.CacheUsername,
 			CachePassword:             cfg.CachePassword,
 			CacheDatabase:             cfg.CacheDatabase,
+			ServiceRegistryAddress:    cfg.ServiceRegistryAddress,
+			HeartbeatInterval:         cfg.HeartbeatInterval,
 		},
 	)
 	if err != nil {
