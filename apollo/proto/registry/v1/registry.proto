@@ -8,9 +8,9 @@ import "apollo/proto/shared/v1/shared.proto";
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/registry/v1;registrypb";
 
 service ServiceRegistry {
-  rpc Acquire(AcquireLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
-  rpc Release(ReleaseLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
-  rpc Instance(AvailableInstanceRequest) returns (AvailableInstanceResponse) {}
+  rpc AcquireLease(AcquireLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc ReleaseLease(ReleaseLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc AvailableServiceInstance(AvailableInstanceRequest) returns (AvailableInstanceResponse) {}
 }
 
 enum InstanceType {
@@ -19,9 +19,8 @@ enum InstanceType {
   WORKER_MANAGER = 2;
 }
 
-message Runtime {
-  string name = 1;
-  string version = 2;
+message Function {
+  string uuid = 1;
 }
 
 message ServiceInstance {
@@ -37,7 +36,7 @@ message WorkerInstance {
   string architecture = 2;
   string host = 3;
   int32 port = 4;
-  repeated Runtime initialized_runtimes = 5;
+  repeated Function initialized_functions = 5;
 }
 
 message ServiceInstanceMetrics {

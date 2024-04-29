@@ -55,8 +55,8 @@ func CacheArchitectureSetKey(architecture string) string {
 	return fmt.Sprintf("arch:%s", architecture)
 }
 
-func CacheRuntimeSetKey(runtimeName string, runtimeVersion string) string {
-	return fmt.Sprintf("runtime:%s-%s", runtimeName, runtimeVersion)
+func CacheFunctionSetKey(functionUuid string) string {
+	return fmt.Sprintf("function:%s", functionUuid)
 }
 
 func CacheExtractInstanceUuid(key string) string {

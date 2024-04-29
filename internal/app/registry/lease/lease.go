@@ -233,10 +233,10 @@ func (l *leaseService) setServiceInstanceScore(ctx context.Context, instanceUuid
 func (l *leaseService) addWorkerInstance(ctx context.Context, instance *registrypb.WorkerInstance, metrics *registrypb.WorkerInstanceMetrics) error {
 	key := naming.CacheWorkerInstanceKeyName(instance.WorkerUuid)
 
-	// Serialize initialized runtimes.
-	runtimesBytes, err := json.Marshal(instance.InitializedRuntimes)
+	// Serialize initialized functions.
+	functionsBytes, err := json.Marshal(instance.InitializedFunctions)
 	if err != nil {
-		return fmt.Errorf("failed to marshal runtimes: %w", err)
+		return fmt.Errorf("failed to marshal functions: %w", err)
 	}
 	// Serialize metrics.
 	metricsBytes, err := json.Marshal(metrics)
@@ -247,7 +247,7 @@ func (l *leaseService) addWorkerInstance(ctx context.Context, instance *registry
 		"architecture": instance.Architecture,
 		"host":         instance.Host,
 		"port":         instance.Port,
-		"runtimes":     string(runtimesBytes),
+		"functions":    string(functionsBytes),
 		"metrics":      string(metricsBytes),
 	}).Err(); err != nil {
 		return fmt.Errorf("failed to add worker instance to cache: %w", err)
@@ -258,9 +258,9 @@ func (l *leaseService) addWorkerInstance(ctx context.Context, instance *registry
 	if err := l.cacheClient.Client().SAdd(ctx, naming.CacheArchitectureSetKey(instance.Architecture), instance.WorkerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to add worker instance to architecture set: %w", err)
 	}
-	for _, runtime := range instance.InitializedRuntimes {
-		if err := l.cacheClient.Client().SAdd(ctx, naming.CacheRuntimeSetKey(runtime.Name, runtime.Version), instance.WorkerUuid).Err(); err != nil {
-			return fmt.Errorf("failed to add worker instance to runtime set: %w", err)
+	for _, function := range instance.InitializedFunctions {
+		if err := l.cacheClient.Client().SAdd(ctx, naming.CacheFunctionSetKey(function.Uuid), instance.WorkerUuid).Err(); err != nil {
+			return fmt.Errorf("failed to add worker instance to function set: %w", err)
 		}
 	}
 	return nil
@@ -282,13 +282,13 @@ func (l *leaseService) removeWorkerInstance(ctx context.Context, workerUuid stri
 	if err := l.cacheClient.Client().SRem(ctx, naming.CacheArchitectureSetKey(values["architecture"]), workerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to remove worker instance from architecture set: %w", err)
 	}
-	initializedRuntimes := make([]*registrypb.Runtime, 0)
-	if err := json.Unmarshal([]byte(values["runtimes"]), &initializedRuntimes); err != nil {
-		return fmt.Errorf("failed to unmarshal runtimes: %w", err)
+	initializedFunctions := make([]*registrypb.Function, 0)
+	if err := json.Unmarshal([]byte(values["functions"]), &initializedFunctions); err != nil {
+		return fmt.Errorf("failed to unmarshal functions: %w", err)
 	}
-	for _, runtime := range initializedRuntimes {
-		if err := l.cacheClient.Client().SRem(ctx, naming.CacheRuntimeSetKey(runtime.Name, runtime.Version), workerUuid).Err(); err != nil {
-			return fmt.Errorf("failed to remove worker instance from runtime set: %w", err)
+	for _, function := range initializedFunctions {
+		if err := l.cacheClient.Client().SRem(ctx, naming.CacheFunctionSetKey(function.Uuid), workerUuid).Err(); err != nil {
+			return fmt.Errorf("failed to remove worker instance from function set: %w", err)
 		}
 	}
 	return nil

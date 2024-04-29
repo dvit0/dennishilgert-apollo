@@ -20,18 +20,18 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ServiceRegistry_Acquire_FullMethodName  = "/apollo.proto.registry.v1.ServiceRegistry/Acquire"
-	ServiceRegistry_Release_FullMethodName  = "/apollo.proto.registry.v1.ServiceRegistry/Release"
-	ServiceRegistry_Instance_FullMethodName = "/apollo.proto.registry.v1.ServiceRegistry/Instance"
+	ServiceRegistry_AcquireLease_FullMethodName             = "/apollo.proto.registry.v1.ServiceRegistry/AcquireLease"
+	ServiceRegistry_ReleaseLease_FullMethodName             = "/apollo.proto.registry.v1.ServiceRegistry/ReleaseLease"
+	ServiceRegistry_AvailableServiceInstance_FullMethodName = "/apollo.proto.registry.v1.ServiceRegistry/AvailableServiceInstance"
 )
 
 // ServiceRegistryClient is the client API for ServiceRegistry service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServiceRegistryClient interface {
-	Acquire(ctx context.Context, in *AcquireLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
-	Release(ctx context.Context, in *ReleaseLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
-	Instance(ctx context.Context, in *AvailableInstanceRequest, opts ...grpc.CallOption) (*AvailableInstanceResponse, error)
+	AcquireLease(ctx context.Context, in *AcquireLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
+	ReleaseLease(ctx context.Context, in *ReleaseLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
+	AvailableServiceInstance(ctx context.Context, in *AvailableInstanceRequest, opts ...grpc.CallOption) (*AvailableInstanceResponse, error)
 }
 
 type serviceRegistryClient struct {
@@ -42,27 +42,27 @@ func NewServiceRegistryClient(cc grpc.ClientConnInterface) ServiceRegistryClient
 	return &serviceRegistryClient{cc}
 }
 
-func (c *serviceRegistryClient) Acquire(ctx context.Context, in *AcquireLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
+func (c *serviceRegistryClient) AcquireLease(ctx context.Context, in *AcquireLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
 	out := new(v1.EmptyResponse)
-	err := c.cc.Invoke(ctx, ServiceRegistry_Acquire_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ServiceRegistry_AcquireLease_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *serviceRegistryClient) Release(ctx context.Context, in *ReleaseLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
+func (c *serviceRegistryClient) ReleaseLease(ctx context.Context, in *ReleaseLeaseRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
 	out := new(v1.EmptyResponse)
-	err := c.cc.Invoke(ctx, ServiceRegistry_Release_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ServiceRegistry_ReleaseLease_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *serviceRegistryClient) Instance(ctx context.Context, in *AvailableInstanceRequest, opts ...grpc.CallOption) (*AvailableInstanceResponse, error) {
+func (c *serviceRegistryClient) AvailableServiceInstance(ctx context.Context, in *AvailableInstanceRequest, opts ...grpc.CallOption) (*AvailableInstanceResponse, error) {
 	out := new(AvailableInstanceResponse)
-	err := c.cc.Invoke(ctx, ServiceRegistry_Instance_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ServiceRegistry_AvailableServiceInstance_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -73,23 +73,23 @@ func (c *serviceRegistryClient) Instance(ctx context.Context, in *AvailableInsta
 // All implementations should embed UnimplementedServiceRegistryServer
 // for forward compatibility
 type ServiceRegistryServer interface {
-	Acquire(context.Context, *AcquireLeaseRequest) (*v1.EmptyResponse, error)
-	Release(context.Context, *ReleaseLeaseRequest) (*v1.EmptyResponse, error)
-	Instance(context.Context, *AvailableInstanceRequest) (*AvailableInstanceResponse, error)
+	AcquireLease(context.Context, *AcquireLeaseRequest) (*v1.EmptyResponse, error)
+	ReleaseLease(context.Context, *ReleaseLeaseRequest) (*v1.EmptyResponse, error)
+	AvailableServiceInstance(context.Context, *AvailableInstanceRequest) (*AvailableInstanceResponse, error)
 }
 
 // UnimplementedServiceRegistryServer should be embedded to have forward compatible implementations.
 type UnimplementedServiceRegistryServer struct {
 }
 
-func (UnimplementedServiceRegistryServer) Acquire(context.Context, *AcquireLeaseRequest) (*v1.EmptyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Acquire not implemented")
+func (UnimplementedServiceRegistryServer) AcquireLease(context.Context, *AcquireLeaseRequest) (*v1.EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AcquireLease not implemented")
 }
-func (UnimplementedServiceRegistryServer) Release(context.Context, *ReleaseLeaseRequest) (*v1.EmptyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Release not implemented")
+func (UnimplementedServiceRegistryServer) ReleaseLease(context.Context, *ReleaseLeaseRequest) (*v1.EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReleaseLease not implemented")
 }
-func (UnimplementedServiceRegistryServer) Instance(context.Context, *AvailableInstanceRequest) (*AvailableInstanceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Instance not implemented")
+func (UnimplementedServiceRegistryServer) AvailableServiceInstance(context.Context, *AvailableInstanceRequest) (*AvailableInstanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AvailableServiceInstance not implemented")
 }
 
 // UnsafeServiceRegistryServer may be embedded to opt out of forward compatibility for this service.
@@ -103,56 +103,56 @@ func RegisterServiceRegistryServer(s grpc.ServiceRegistrar, srv ServiceRegistryS
 	s.RegisterService(&ServiceRegistry_ServiceDesc, srv)
 }
 
-func _ServiceRegistry_Acquire_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ServiceRegistry_AcquireLease_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AcquireLeaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServiceRegistryServer).Acquire(ctx, in)
+		return srv.(ServiceRegistryServer).AcquireLease(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ServiceRegistry_Acquire_FullMethodName,
+		FullMethod: ServiceRegistry_AcquireLease_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServiceRegistryServer).Acquire(ctx, req.(*AcquireLeaseRequest))
+		return srv.(ServiceRegistryServer).AcquireLease(ctx, req.(*AcquireLeaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServiceRegistry_Release_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ServiceRegistry_ReleaseLease_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReleaseLeaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServiceRegistryServer).Release(ctx, in)
+		return srv.(ServiceRegistryServer).ReleaseLease(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ServiceRegistry_Release_FullMethodName,
+		FullMethod: ServiceRegistry_ReleaseLease_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServiceRegistryServer).Release(ctx, req.(*ReleaseLeaseRequest))
+		return srv.(ServiceRegistryServer).ReleaseLease(ctx, req.(*ReleaseLeaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServiceRegistry_Instance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ServiceRegistry_AvailableServiceInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AvailableInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServiceRegistryServer).Instance(ctx, in)
+		return srv.(ServiceRegistryServer).AvailableServiceInstance(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ServiceRegistry_Instance_FullMethodName,
+		FullMethod: ServiceRegistry_AvailableServiceInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServiceRegistryServer).Instance(ctx, req.(*AvailableInstanceRequest))
+		return srv.(ServiceRegistryServer).AvailableServiceInstance(ctx, req.(*AvailableInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -165,16 +165,16 @@ var ServiceRegistry_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ServiceRegistryServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Acquire",
-			Handler:    _ServiceRegistry_Acquire_Handler,
+			MethodName: "AcquireLease",
+			Handler:    _ServiceRegistry_AcquireLease_Handler,
 		},
 		{
-			MethodName: "Release",
-			Handler:    _ServiceRegistry_Release_Handler,
+			MethodName: "ReleaseLease",
+			Handler:    _ServiceRegistry_ReleaseLease_Handler,
 		},
 		{
-			MethodName: "Instance",
-			Handler:    _ServiceRegistry_Instance_Handler,
+			MethodName: "AvailableServiceInstance",
+			Handler:    _ServiceRegistry_AvailableServiceInstance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
