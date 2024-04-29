@@ -128,7 +128,7 @@ func (l *leaseService) RenewLease(ctx context.Context, request *messagespb.Insta
 		return errors.New("unknown metrics type")
 	}
 
-	if err := l.cacheClient.Client().Expire(ctx, key, l.leaseTimeout).Err(); err != nil {
+	if err := l.cacheClient.Client().Expire(ctx, naming.CacheAddLeaseDeclaration(key), l.leaseTimeout).Err(); err != nil {
 		return fmt.Errorf("failed to extend lease expiration time for instance: %w", err)
 	}
 	return nil
