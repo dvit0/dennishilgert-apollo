@@ -45,6 +45,7 @@ type workerManager struct {
 	apiServer             api.ApiServer
 	cacheClient           cache.CacheClient
 	placementService      placement.PlacementService
+	metricsService        metrics.MetricsService
 	messagingProducer     producer.MessagingProducer
 	serviceRegistryClient registry.ServiceRegistryClient
 }
@@ -107,6 +108,7 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 		apiPort:               opts.ApiPort,
 		apiServer:             apiServer,
 		cacheClient:           cacheClient,
+		metricsService:        metricsService,
 		placementService:      placementService,
 		messagingProducer:     messagingProducer,
 		serviceRegistryClient: serviceRegistryClient,
@@ -128,6 +130,7 @@ func (w *workerManager) Run(ctx context.Context) error {
 			}
 
 			log.Info("acquiring lease")
+			metrics := w.metricsService.ServiceInstanceMetrics()
 			acquireLeaseRequest := &registrypb.AcquireLeaseRequest{
 				Instance: &registrypb.AcquireLeaseRequest_ServiceInstance{
 					ServiceInstance: &registrypb.ServiceInstance{
@@ -137,6 +140,9 @@ func (w *workerManager) Run(ctx context.Context) error {
 						Port:         int32(w.apiPort),
 						Metadata:     nil,
 					},
+				},
+				Metrics: &registrypb.AcquireLeaseRequest_ServiceInstanceMetrics{
+					ServiceInstanceMetrics: metrics,
 				},
 			}
 			if err := w.serviceRegistryClient.AcquireLease(ctx, acquireLeaseRequest); err != nil {
