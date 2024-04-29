@@ -111,9 +111,9 @@ func (s *serviceRegistryClient) SendHeartbeat(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			var heartbeatMessage *messagespb.InstanceHeartbeatMessage
+			var heartbeatMessage messagespb.InstanceHeartbeatMessage
 			if s.instanceType == registrypb.InstanceType_FLEET_MANAGER {
-				heartbeatMessage = &messagespb.InstanceHeartbeatMessage{
+				heartbeatMessage = messagespb.InstanceHeartbeatMessage{
 					InstanceUuid: s.instanceUuid,
 					InstanceType: s.instanceType,
 					Metrics: &messagespb.InstanceHeartbeatMessage_WorkerInstanceMetrics{
@@ -121,7 +121,7 @@ func (s *serviceRegistryClient) SendHeartbeat(ctx context.Context) error {
 					},
 				}
 			} else {
-				heartbeatMessage = &messagespb.InstanceHeartbeatMessage{
+				heartbeatMessage = messagespb.InstanceHeartbeatMessage{
 					InstanceUuid: s.instanceUuid,
 					InstanceType: s.instanceType,
 					Metrics: &messagespb.InstanceHeartbeatMessage_ServiceInstanceMetrics{
@@ -129,7 +129,7 @@ func (s *serviceRegistryClient) SendHeartbeat(ctx context.Context) error {
 					},
 				}
 			}
-			s.messagingProducer.Publish(ctx, naming.MessagingInstanceHeartbeatTopic, heartbeatMessage)
+			s.messagingProducer.Publish(ctx, naming.MessagingInstanceHeartbeatTopic, &heartbeatMessage)
 		}
 	}
 }
