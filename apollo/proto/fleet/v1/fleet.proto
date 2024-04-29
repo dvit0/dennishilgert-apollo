@@ -36,7 +36,8 @@ message MachineSpecs {
   int32 memory_limit = 1;
   int32 vcpu_cores = 2;
   int32 idle_ttl = 3;
-  optional string log_level = 4;
+  string architecture = 4;
+  optional string log_level = 5;
 }
 
 message EventSpecs {
