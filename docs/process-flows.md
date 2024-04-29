@@ -1,6 +1,6 @@
 # System process flows
 
-The following images show the internal process flows of the main functions of the Apollo platform.
+The following images show the internal process flows for the main functions of the Apollo platform.
 
 ### Function creation or update
 
