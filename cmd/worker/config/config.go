@@ -16,6 +16,8 @@ type Config struct {
 	CacheUsername             string
 	CachePassword             string
 	CacheDatabase             int
+	ServiceRegistryAddress    string
+	HeartbeatInterval         int
 }
 
 // Load loads the configuration from the environment.
@@ -36,6 +38,9 @@ func Load() (*Config, error) {
 	configuration.LoadOrDefault("CacheUsername", "APOLLO_CACHE_USERNAME", "")
 	configuration.LoadOrDefault("CachePassword", "APOLLO_CACHE_PASSWORD", "")
 	configuration.LoadOrDefault("CacheDatabase", "APOLLO_CACHE_DATABASE", 0)
+
+	configuration.LoadOrDefault("ServiceRegistryAddress", "APOLLO_SERVICE_REGISTRY_ADDRESS", nil)
+	configuration.LoadOrDefault("HeartbeatInterval", "APOLLO_HEARTBEAT_INTERVAL", 3)
 
 	// unmarshalling the Config struct
 	if err := viper.Unmarshal(&config); err != nil {

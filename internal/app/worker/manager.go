@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/worker/api"
 	"github.com/dennishilgert/apollo/internal/app/worker/placement"
@@ -28,6 +29,8 @@ type Options struct {
 	CacheUsername             string
 	CachePassword             string
 	CacheDatabase             int
+	ServiceRegistryAddress    string
+	HeartbeatInterval         int
 }
 
 type WorkerManager interface {
@@ -70,7 +73,12 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 	serviceRegistryClient := registry.NewServiceRegistryClient(
 		metricsService,
 		messagingProducer,
-		registry.Options{},
+		registry.Options{
+			Address:           opts.ServiceRegistryAddress,
+			HeartbeatInterval: time.Duration(opts.HeartbeatInterval) * time.Second,
+			InstanceUuid:      instanceUuid,
+			InstanceType:      instanceType,
+		},
 	)
 
 	cacheClient := cache.NewCacheClient(
