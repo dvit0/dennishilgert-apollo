@@ -61,23 +61,19 @@ func (m *messagingHandler) RegisterAll() {
 
 		// Determine the type of metrics and unmarshal it into the correct type.
 		if message.InstanceType == registrypb.InstanceType_FLEET_MANAGER {
-			var workerInstanceMetrics registrypb.WorkerInstanceMetrics
+			var workerInstanceMetrics messagespb.InstanceHeartbeatMessage_WorkerInstanceMetrics
 			if err := json.Unmarshal(tempMessage.Metrics, &workerInstanceMetrics); err != nil {
 				log.Errorf("failed to unmarshal worker instance metrics: %v", err)
 				return
 			}
-			message.Metrics = &messagespb.InstanceHeartbeatMessage_WorkerInstanceMetrics{
-				WorkerInstanceMetrics: &workerInstanceMetrics,
-			}
+			message.Metrics = &workerInstanceMetrics
 		} else {
-			var serviceInstanceMetrics registrypb.ServiceInstanceMetrics
+			var serviceInstanceMetrics messagespb.InstanceHeartbeatMessage_ServiceInstanceMetrics
 			if err := json.Unmarshal(tempMessage.Metrics, &serviceInstanceMetrics); err != nil {
 				log.Errorf("failed to unmarshal service instance metrics: %v", err)
 				return
 			}
-			message.Metrics = &messagespb.InstanceHeartbeatMessage_ServiceInstanceMetrics{
-				ServiceInstanceMetrics: &serviceInstanceMetrics,
-			}
+			message.Metrics = &serviceInstanceMetrics
 		}
 
 		// Create a new context with a timeout of 3 seconds.
