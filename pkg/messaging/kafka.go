@@ -23,6 +23,9 @@ func CreateTopic(ctx context.Context, client *kafka.AdminClient, log logger.Logg
 		NumPartitions:     3,
 		ReplicationFactor: 1,
 	}})
+	if (result == nil) || (len(result) == 0) {
+		return kafka.TopicResult{}, err
+	}
 	return result[0], err
 }
 
