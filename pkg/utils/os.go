@@ -13,17 +13,17 @@ import (
 type OsArch int32
 
 const (
-	Unknown OsArch = iota
+	Arch_Unknown OsArch = iota
 	Arch_x86_64
 	Arch_Arm_64
-	Other
+	Arch_Other
 )
 
 // DetectArchitecture detects the architecture of the system.
 func DetectArchitecture() OsArch {
 	var utsname unix.Utsname
 	if err := unix.Uname(&utsname); err != nil {
-		return Unknown
+		return Arch_Unknown
 	}
 	machine := string(utsname.Machine[:])
 	switch machine {
@@ -32,7 +32,7 @@ func DetectArchitecture() OsArch {
 	case "arm64", "aarch64":
 		return Arch_Arm_64
 	}
-	return Other
+	return Arch_Other
 }
 
 // String returns the string representation of the OsArch.
