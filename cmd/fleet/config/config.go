@@ -21,6 +21,8 @@ type Config struct {
 	StorageSecretAccessKey    string
 	WatchdogCheckInterval     int
 	WatchdogWorkerCount       int
+	ServiceRegistryAddress    string
+	HeartbeatInterval         int
 }
 
 // Load loads the configuration from the environment.
@@ -51,6 +53,9 @@ func Load() (*Config, error) {
 
 	configuration.LoadOrDefault("WatchdogCheckInterval", "APOLLO_WATCHDOG_CHECK_INTERVAL", 3)
 	configuration.LoadOrDefault("WatchdogWorkerCount", "APOLLO_WATCHDOG_WORKER_COUNT", 10)
+
+	configuration.LoadOrDefault("ServiceRegistryAddress", "APOLLO_SERVICE_REGISTRY_ADDRESS", nil)
+	configuration.LoadOrDefault("HeartbeatInterval", "APOLLO_HEARTBEAT_INTERVAL", 3)
 
 	// unmarshalling the Config struct
 	if err := viper.Unmarshal(&config); err != nil {

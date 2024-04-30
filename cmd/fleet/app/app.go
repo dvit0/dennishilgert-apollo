@@ -43,6 +43,8 @@ func Run() {
 			StorageSecretAccessKey:    cfg.StorageSecretAccessKey,
 			WatchdogCheckInterval:     time.Duration(cfg.WatchdogCheckInterval) * time.Second,
 			WatchdogWorkerCount:       cfg.WatchdogWorkerCount,
+			ServiceRegistryAddress:    cfg.ServiceRegistryAddress,
+			HeartbeatInterval:         cfg.HeartbeatInterval,
 		},
 	)
 	if err != nil {
