@@ -108,7 +108,21 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 	}
 
 	// Perform graceful shutdown and close the listener regardless of the select outcome.
-	server.GracefulStop()
+	stopped := make(chan bool, 1)
+	go func() {
+		server.GracefulStop()
+		close(stopped)
+	}()
+
+	timer := time.NewTimer(5 * time.Second)
+	select {
+	case <-timer.C:
+		log.Warn("api server did not stop gracefully in time - forcing shutdown")
+		server.Stop()
+	case <-stopped:
+		timer.Stop()
+	}
+
 	if cErr := lis.Close(); cErr != nil && !errors.Is(cErr, net.ErrClosed) && serveErr == nil {
 		log.Error("error while closing api server listener")
 		return cErr
