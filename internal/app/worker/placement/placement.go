@@ -93,7 +93,8 @@ func (p *placementService) RunnerAllocationWorker(ctx context.Context, request *
 
 // Worker returns the worker instance and its metrics from the cache.
 func (p *placementService) Worker(ctx context.Context, workerUuid string) (*registrypb.WorkerInstance, *registrypb.WorkerInstanceMetrics, error) {
-	values, err := p.cacheClient.Client().HGetAll(ctx, workerUuid).Result()
+	key := naming.CacheWorkerInstanceKeyName(workerUuid)
+	values, err := p.cacheClient.Client().HGetAll(ctx, key).Result()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get worker instance from cache: %w", err)
 	}
