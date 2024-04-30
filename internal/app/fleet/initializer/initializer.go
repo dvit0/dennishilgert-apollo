@@ -11,6 +11,7 @@ import (
 	"github.com/dennishilgert/apollo/pkg/container"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
+	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 	"github.com/dennishilgert/apollo/pkg/storage"
 	"github.com/dennishilgert/apollo/pkg/utils"
 )
@@ -28,6 +29,7 @@ type RunnerInitializer interface {
 	InitializeRunner(ctx context.Context, cfg *runner.Config) error
 	RemoveRunner(ctx context.Context, runnerUuid string) error
 	InitializeFunction(ctx context.Context, request *fleetpb.InitializeFunctionRequest) error
+	InitializedFunctions() []*registrypb.Function
 }
 
 type runnerInitializer struct {
@@ -142,6 +144,31 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 	}
 
 	return nil
+}
+
+// InitializedFunctions returns a list of initialized functions.
+func (r *runnerInitializer) InitializedFunctions() []*registrypb.Function {
+	initializedFunctions := make([]*registrypb.Function, 0)
+	path := naming.FunctionStoragePathBase(r.dataPath)
+	dirs, err := os.ReadDir(path)
+	if err != nil {
+		log.Errorf("failed to read directory: %v", err)
+		return initializedFunctions
+	}
+	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
+		if (dir.Name() == ".") || (dir.Name() == "..") {
+			continue
+		}
+		functionUuid := dir.Name()
+		function := &registrypb.Function{
+			Uuid: functionUuid,
+		}
+		initializedFunctions = append(initializedFunctions, function)
+	}
+	return initializedFunctions
 }
 
 // initializeKernel initializes a kernel.

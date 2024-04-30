@@ -88,6 +88,10 @@ func FunctionStoragePath(dataPath string, functionUuid string) string {
 	return fmt.Sprintf("%s/functions/%s", dataPath, functionUuid)
 }
 
+func FunctionStoragePathBase(dataPath string) string {
+	return fmt.Sprintf("%s/functions", dataPath)
+}
+
 func FunctionImageFileName(functionUuid string) string {
 	return fmt.Sprintf("%s.ext4", functionUuid)
 }
