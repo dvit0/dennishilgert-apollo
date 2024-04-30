@@ -110,7 +110,7 @@ func (r *runnerPool) AvailableRunner(functionUuid string) (runner.RunnerInstance
 	runners := r.pool[functionUuid]
 	if runners == nil || len(runners) < 1 {
 		log.Debugf("pool does not contain runner instances for function uuid: %s", functionUuid)
-		return nil, nil
+		return nil, fmt.Errorf("pool does not contain runner instances for function uuid: %s", functionUuid)
 	}
 	for _, runnerInstance := range runners {
 		if runnerInstance.State() == runner.RunnerStateReady {
