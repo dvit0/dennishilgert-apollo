@@ -19,6 +19,7 @@ type Options struct {
 	WorkerCount      int
 	GroupId          string
 	Topics           []string
+	Debug            bool
 }
 
 type MessagingConsumer interface {
@@ -32,6 +33,7 @@ type messagingConsumer struct {
 	topics      []string
 	handlers    map[string]func(msg *kafka.Message)
 	setupDoneCh chan bool
+	debug       bool
 }
 
 // NewMessagingConsumer creates a new MessagingConsumer instance.
@@ -52,6 +54,7 @@ func NewMessagingConsumer(messagingHandler handler.MessagingHandler, opts Option
 		topics:      opts.Topics,
 		handlers:    messagingHandler.Handlers(),
 		setupDoneCh: make(chan bool, 1),
+		debug:       opts.Debug,
 	}, nil
 }
 
@@ -110,14 +113,18 @@ func (m *messagingConsumer) Start(ctx context.Context) error {
 						}, 10*time.Second)
 						m.worker.Add(task)
 					case kafka.PartitionEOF:
-						log.Debugf("no more kafka messages to read at the moment")
 						// There are no more messages to read at the moment.
+						if m.debug {
+							log.Debugf("no more kafka messages to read at the moment")
+						}
 					case kafka.Error:
 						log.Error("error while polling for kafka messages")
 						return event
 					default:
 						if e != nil {
-							log.Debugf("ignored kafka event: %v", e)
+							if m.debug {
+								log.Debugf("ignored kafka event: %v", e)
+							}
 						}
 					}
 				}

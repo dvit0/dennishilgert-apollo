@@ -13,6 +13,7 @@ var log = logger.NewLogger("apollo.messaging.producer")
 
 type Options struct {
 	BootstrapServers string
+	Debug            bool
 }
 
 type MessagingProducer interface {
@@ -22,6 +23,7 @@ type MessagingProducer interface {
 
 type messagingProducer struct {
 	producer *kafka.Producer
+	debug    bool
 }
 
 // NewMessagingProducer creates a new messaging producer.
@@ -49,13 +51,17 @@ func NewMessagingProducer(ctx context.Context, opts Options) (MessagingProducer,
 					if event.TopicPartition.Error != nil {
 						log.Errorf("failed to deliver message: %v", event.TopicPartition.Error)
 					} else {
-						log.Debugf("successfully delivered message to topic %s [%d] at offset %v", *event.TopicPartition.Topic, event.TopicPartition.Partition, event.TopicPartition.Offset)
+						if opts.Debug {
+							log.Debugf("successfully delivered message to topic %s [%d] at offset %v", *event.TopicPartition.Topic, event.TopicPartition.Partition, event.TopicPartition.Offset)
+						}
 					}
 				case kafka.Error:
 					log.Errorf("failed to send kafka message: %v", event)
 				default:
 					if e != nil {
-						log.Debugf("ignored kafka event: %v", e)
+						if opts.Debug {
+							log.Debugf("ignored kafka event: %v", e)
+						}
 					}
 				}
 			}
@@ -64,6 +70,7 @@ func NewMessagingProducer(ctx context.Context, opts Options) (MessagingProducer,
 
 	return &messagingProducer{
 		producer: producer,
+		debug:    opts.Debug,
 	}, nil
 }
 
@@ -80,7 +87,9 @@ func (m *messagingProducer) Publish(ctx context.Context, topic string, message i
 	}, nil); err != nil {
 		log.Errorf("failed to enqueue message to topic: %s - message: %v - error: %v", topic, message, err)
 	}
-	log.Debugf("enqueued message to topic: %s - message: %v", topic, message)
+	if m.debug {
+		log.Debugf("enqueued message to topic: %s - message: %v", topic, message)
+	}
 }
 
 // Close closes the messaging producer.
