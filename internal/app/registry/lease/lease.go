@@ -277,7 +277,7 @@ func (l *leaseService) addWorkerInstance(ctx context.Context, instance *registry
 // removeWorkerInstance removes a worker instance from the cache.
 func (l *leaseService) removeWorkerInstance(ctx context.Context, workerUuid string) error {
 	key := naming.CacheWorkerInstanceKeyName(workerUuid)
-	values, err := l.cacheClient.Client().HGetAll(ctx, workerUuid).Result()
+	values, err := l.cacheClient.Client().HGetAll(ctx, key).Result()
 	if err != nil {
 		return fmt.Errorf("failed to get worker instance from cache: %w", err)
 	}
@@ -302,6 +302,7 @@ func (l *leaseService) removeWorkerInstance(ctx context.Context, workerUuid stri
 	return nil
 }
 
+// setWokerInstanceMetrics sets the metrics for a worker instance.
 func (l *leaseService) setWokerInstanceMetrics(ctx context.Context, workerUuid string, metrics *registrypb.WorkerInstanceMetrics) error {
 	key := naming.CacheWorkerInstanceKeyName(workerUuid)
 
