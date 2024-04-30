@@ -97,9 +97,12 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 		placement.Options{},
 	)
 
-	apiServer := api.NewApiServer(api.Options{
-		Port: opts.ApiPort,
-	})
+	apiServer := api.NewApiServer(
+		placementService,
+		api.Options{
+			Port: opts.ApiPort,
+		},
+	)
 
 	return &workerManager{
 		instanceUuid:          instanceUuid,

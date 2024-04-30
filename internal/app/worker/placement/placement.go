@@ -38,6 +38,8 @@ func (f FunctionHeaviness) String() string {
 type Options struct{}
 
 type PlacementService interface {
+	FunctionInitializationWorker(ctx context.Context, request *workerpb.InitializeFunctionRequest) (*registrypb.WorkerInstance, error)
+	RunnerAllocationWorker(ctx context.Context, request *workerpb.AllocateRunnerRequest) (*registrypb.WorkerInstance, error)
 	Worker(ctx context.Context, workerUuid string) (*registrypb.WorkerInstance, *registrypb.WorkerInstanceMetrics, error)
 	WorkersByArchitecture(ctx context.Context, architecture string) ([]string, error)
 	WorkersByFunction(ctx context.Context, functionUuid string) ([]string, error)
@@ -53,8 +55,8 @@ func NewPlacementService(cacheClient cache.CacheClient, opts Options) PlacementS
 	}
 }
 
-// MatchingWorker returns a worker instance that matches the function requirements.
-func (p *placementService) MatchingWorker(ctx context.Context, request *workerpb.InitializeFunctionRequest) (*registrypb.WorkerInstance, error) {
+// FunctionInitializationWorker returns a worker instance that matches the function requirements.
+func (p *placementService) FunctionInitializationWorker(ctx context.Context, request *workerpb.InitializeFunctionRequest) (*registrypb.WorkerInstance, error) {
 	functionHeaviness := p.DetermineFunctionHeaviness(int(request.Machine.VcpuCores), int(request.Machine.MemoryLimit))
 	workers, err := p.WorkersByArchitecture(ctx, request.Machine.Architecture)
 	if err != nil {
@@ -66,6 +68,23 @@ func (p *placementService) MatchingWorker(ctx context.Context, request *workerpb
 			return nil, fmt.Errorf("failed to get worker instance: %w", err)
 		}
 		if ok := p.checkPlacement(workerMetrics, functionHeaviness); ok {
+			return workerInstance, nil
+		}
+	}
+	return nil, fmt.Errorf("no worker found for architecture")
+}
+
+func (p *placementService) RunnerAllocationWorker(ctx context.Context, request *workerpb.AllocateRunnerRequest) (*registrypb.WorkerInstance, error) {
+	workers, err := p.WorkersByFunction(ctx, request.FunctionUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workers by function: %w", err)
+	}
+	for _, worker := range workers {
+		workerInstance, workerMetrics, err := p.Worker(ctx, worker)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get worker instance: %w", err)
+		}
+		if ok := p.checkPlacement(workerMetrics, FunctionHeavinessLight); ok {
 			return workerInstance, nil
 		}
 	}
