@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"regexp"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
@@ -25,7 +26,7 @@ func DetectArchitecture() OsArch {
 	if err := unix.Uname(&utsname); err != nil {
 		return Arch_Unknown
 	}
-	machine := string(utsname.Machine[:])
+	machine := strings.Trim(string(utsname.Machine[:]), "\x00")
 	switch machine {
 	case "x86_64":
 		return Arch_x86_64
