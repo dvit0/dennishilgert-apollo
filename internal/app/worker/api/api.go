@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net"
 	"sync/atomic"
 	"time"
@@ -15,7 +14,6 @@ import (
 	sharedpb "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
 	workerpb "github.com/dennishilgert/apollo/pkg/proto/worker/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var log = logger.NewLogger("apollo.manager.api")
@@ -127,59 +125,28 @@ func (a *apiServer) Ready(ctx context.Context) error {
 }
 
 func (a *apiServer) InitializeFunction(ctx context.Context, req *workerpb.InitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
-	workerInstance, err := a.placementService.FunctionInitializationWorker(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get matching worker: %w", err)
-	}
-	clientConn, err := establishConnection(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
-	if err != nil {
-		return nil, fmt.Errorf("failed to establish connection to worker instance: %w", err)
-	}
-	apiClient := workerpb.NewWorkerManagerClient(clientConn)
-	_, err = apiClient.InitializeFunction(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize function on worker instance: %w", err)
+	if err := a.placementService.AllocateFunctionInitialization(ctx, req); err != nil {
+		return nil, fmt.Errorf("failed to allocate function initialization: %w", err)
 	}
 	return &sharedpb.EmptyResponse{}, nil
 }
 
-func (a *apiServer) AllocateRunner(ctx context.Context, req *workerpb.AllocateRunnerRequest) (*workerpb.AllocateRunnerResponse, error) {
-	workerInstance, err := a.placementService.RunnerAllocationWorker(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get matching worker: %w", err)
+func (a *apiServer) AllocateInvocation(ctx context.Context, req *workerpb.AllocateInvocationRequest) (*workerpb.AllocateInvocationResponse, error) {
+	runner, err := a.placementService.FindAvailableRunner(ctx, req)
+	if err == nil {
+		return &workerpb.AllocateInvocationResponse{
+			RunnerUuid:        runner.RunnerUuid,
+			WorkerNodeAddress: runner.WorkerNodeAddress,
+		}, nil
 	}
-	clientConn, err := establishConnection(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
-	if err != nil {
-		return nil, fmt.Errorf("failed to establish connection to worker instance: %w", err)
-	}
-	apiClient := workerpb.NewWorkerManagerClient(clientConn)
-	res, err := apiClient.AllocateRunner(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to allocate runner on worker instance: %w", err)
-	}
-	return res, nil
-}
+	log.Debugf("no runner available: %v", err)
 
-func establishConnection(ctx context.Context, address string) (*grpc.ClientConn, error) {
-	const retrySeconds = 3     // trying to connect for a period of 3 seconds
-	const retriesPerSecond = 2 // trying to connect 2 times per second
-	for i := 0; i < (retrySeconds * retriesPerSecond); i++ {
-		conn, err := grpc.DialContext(ctx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-		if err == nil {
-			return conn, nil
-		} else {
-			if conn != nil {
-				conn.Close()
-			}
-			log.Errorf("failed to establish connection to service registry - reason: %v", err)
-		}
-		// Wait before retrying, but stop if context is done.
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("context done before connection to servie registry could be established: %w", ctx.Err())
-		case <-time.After(time.Duration(math.Round(1000/retriesPerSecond)) * time.Millisecond): // retry delay
-			continue
-		}
+	res, err := a.placementService.AllocateRunnerProvisioning(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to allocate runner provisioning: %w", err)
 	}
-	return nil, fmt.Errorf("failed to establish connection to service registry after %d seconds", retrySeconds)
+	return &workerpb.AllocateInvocationResponse{
+		RunnerUuid:        res.RunnerUuid,
+		WorkerNodeAddress: res.WorkerNodeAddress,
+	}, nil
 }

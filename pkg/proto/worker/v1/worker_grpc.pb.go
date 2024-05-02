@@ -21,7 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	WorkerManager_InitializeFunction_FullMethodName = "/apollo.proto.worker.v1.WorkerManager/InitializeFunction"
-	WorkerManager_AllocateRunner_FullMethodName     = "/apollo.proto.worker.v1.WorkerManager/AllocateRunner"
+	WorkerManager_AllocateInvocation_FullMethodName = "/apollo.proto.worker.v1.WorkerManager/AllocateInvocation"
 )
 
 // WorkerManagerClient is the client API for WorkerManager service.
@@ -29,7 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WorkerManagerClient interface {
 	InitializeFunction(ctx context.Context, in *InitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
-	AllocateRunner(ctx context.Context, in *AllocateRunnerRequest, opts ...grpc.CallOption) (*AllocateRunnerResponse, error)
+	AllocateInvocation(ctx context.Context, in *AllocateInvocationRequest, opts ...grpc.CallOption) (*AllocateInvocationResponse, error)
 }
 
 type workerManagerClient struct {
@@ -49,9 +49,9 @@ func (c *workerManagerClient) InitializeFunction(ctx context.Context, in *Initia
 	return out, nil
 }
 
-func (c *workerManagerClient) AllocateRunner(ctx context.Context, in *AllocateRunnerRequest, opts ...grpc.CallOption) (*AllocateRunnerResponse, error) {
-	out := new(AllocateRunnerResponse)
-	err := c.cc.Invoke(ctx, WorkerManager_AllocateRunner_FullMethodName, in, out, opts...)
+func (c *workerManagerClient) AllocateInvocation(ctx context.Context, in *AllocateInvocationRequest, opts ...grpc.CallOption) (*AllocateInvocationResponse, error) {
+	out := new(AllocateInvocationResponse)
+	err := c.cc.Invoke(ctx, WorkerManager_AllocateInvocation_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (c *workerManagerClient) AllocateRunner(ctx context.Context, in *AllocateRu
 // for forward compatibility
 type WorkerManagerServer interface {
 	InitializeFunction(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error)
-	AllocateRunner(context.Context, *AllocateRunnerRequest) (*AllocateRunnerResponse, error)
+	AllocateInvocation(context.Context, *AllocateInvocationRequest) (*AllocateInvocationResponse, error)
 }
 
 // UnimplementedWorkerManagerServer should be embedded to have forward compatible implementations.
@@ -73,8 +73,8 @@ type UnimplementedWorkerManagerServer struct {
 func (UnimplementedWorkerManagerServer) InitializeFunction(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitializeFunction not implemented")
 }
-func (UnimplementedWorkerManagerServer) AllocateRunner(context.Context, *AllocateRunnerRequest) (*AllocateRunnerResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AllocateRunner not implemented")
+func (UnimplementedWorkerManagerServer) AllocateInvocation(context.Context, *AllocateInvocationRequest) (*AllocateInvocationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AllocateInvocation not implemented")
 }
 
 // UnsafeWorkerManagerServer may be embedded to opt out of forward compatibility for this service.
@@ -106,20 +106,20 @@ func _WorkerManager_InitializeFunction_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WorkerManager_AllocateRunner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AllocateRunnerRequest)
+func _WorkerManager_AllocateInvocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AllocateInvocationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(WorkerManagerServer).AllocateRunner(ctx, in)
+		return srv.(WorkerManagerServer).AllocateInvocation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: WorkerManager_AllocateRunner_FullMethodName,
+		FullMethod: WorkerManager_AllocateInvocation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerManagerServer).AllocateRunner(ctx, req.(*AllocateRunnerRequest))
+		return srv.(WorkerManagerServer).AllocateInvocation(ctx, req.(*AllocateInvocationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -136,8 +136,8 @@ var WorkerManager_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _WorkerManager_InitializeFunction_Handler,
 		},
 		{
-			MethodName: "AllocateRunner",
-			Handler:    _WorkerManager_AllocateRunner_Handler,
+			MethodName: "AllocateInvocation",
+			Handler:    _WorkerManager_AllocateInvocation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -9,7 +9,7 @@ option go_package = "github.com/dennishilgert/apollo/pkg/proto/worker/v1;workerp
 
 service WorkerManager {
   rpc InitializeFunction(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
-  rpc AllocateRunner(AllocateRunnerRequest) returns (AllocateRunnerResponse) {}
+  rpc AllocateInvocation(AllocateInvocationRequest) returns (AllocateInvocationResponse) {}
 }
 
 message InitializeFunctionRequest {
@@ -19,14 +19,14 @@ message InitializeFunctionRequest {
   apollo.proto.fleet.v1.MachineSpecs machine = 4;
 }
 
-message AllocateRunnerRequest {
+message AllocateInvocationRequest {
   string function_uuid = 1;
   apollo.proto.fleet.v1.KernelSpecs kernel = 2;
   apollo.proto.fleet.v1.RuntimeExecutionSpecs runtime = 3;
   apollo.proto.fleet.v1.MachineSpecs machine = 4;
 }
 
-message AllocateRunnerResponse {
+message AllocateInvocationResponse {
   string runner_uuid = 1;
-  string runner_address = 2;
+  string worker_node_address = 2;
 }
