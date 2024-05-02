@@ -41,15 +41,6 @@ func NewMessagingHandler(runnerOperator operator.RunnerOperator, opts Options) M
 
 // RegisterAll registrates all handlers for the subscribed topics in the handler map.
 func (m *messagingHandler) RegisterAll() {
-	// Handle MessagingFunctionInitializationTopic messages
-	m.add(naming.MessagingFunctionInitializationTopic, func(msg *kafka.Message) {
-		var message messagespb.FunctionInitializationMessage
-		if err := json.Unmarshal(msg.Value, &message); err != nil {
-			log.Errorf("failed to unmarshal kafka message: %v", err)
-		}
-		log.Infof("NOT IMPLEMENTED: handling message in topic: %s - value: %v", *msg.TopicPartition.Topic, &message)
-	})
-
 	// Handle MessagingRunnerAgentReadyTopic messages
 	m.add(naming.MessagingWorkerRelatedAgentReadyTopic(m.workerUuid), func(msg *kafka.Message) {
 		var message messagespb.RunnerAgentReadyMessage
