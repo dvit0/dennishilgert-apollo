@@ -170,9 +170,6 @@ func (s *serviceRegistry) Run(ctx context.Context) error {
 						log.Errorf("error while attempting leader election: %v", err)
 						continue
 					}
-					if elected && !s.cacheClient.IsLeader() {
-						log.Debugf("elected as leader for group: %s", group)
-					}
 					s.cacheClient.SetLeader(elected)
 				}
 			}
