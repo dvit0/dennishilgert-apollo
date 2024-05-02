@@ -213,7 +213,7 @@ func ImageBuild(ctx context.Context, client *docker.Client, log logger.Logger, s
 }
 
 // ImageExport exports the rootfs from the container to the rootfs image file.
-func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, destPath string, imageTag string, imageFileName string) error {
+func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, destPath string, imageTag string, imageFileName string, includeDirs []string) error {
 	cleanup := defers.NewDefers()
 	defer cleanup.CallAll()
 
@@ -225,7 +225,7 @@ func ImageExport(ctx context.Context, client *docker.Client, log logger.Logger, 
 		return fmt.Errorf("error while creating image file: %v", err)
 	}
 	log.Info("copying rootfs from container to image ...")
-	if err := copyRootFsToImage(ctx, client, log, destPath, imgFilePath, imageTag); err != nil {
+	if err := copyRootFsToImage(ctx, client, log, destPath, imgFilePath, imageTag, includeDirs); err != nil {
 		return fmt.Errorf("error while copying rootfs to image file: %v", err)
 	}
 	log.Info("finalizing image ...")
@@ -391,7 +391,7 @@ func createImage(ctx context.Context, client *docker.Client, log logger.Logger, 
 }
 
 // copyRootFsToImage copys the rootfs from inside the container to the rootfs image file.
-func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Logger, destPath string, imgFilePath string, imageTag string) error {
+func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Logger, destPath string, imgFilePath string, imageTag string, includeDirs []string) error {
 	cleanup := defers.NewDefers()
 	defer cleanup.CallAll()
 
@@ -450,12 +450,16 @@ func copyRootFsToImage(ctx context.Context, client *docker.Client, log logger.Lo
 	log.Debug("copying directories and symlinks")
 	for _, dir := range findExecLines {
 		log.Debugf("handling directory or symlink: %s", dir)
+		if len(includeDirs) > 0 && !slices.Contains(includeDirs, dir) {
+			log.Debug("directory is excluded")
+			continue
+		}
 		if slices.Contains([]string{config.ContainerDestMountTarget, config.ContainerImageMountTarget}, dir) {
-			log.Debugf("directory is working directory: %s", dir)
+			log.Debug("directory is working directory")
 			continue
 		}
 		if !strings.HasPrefix(dir, "/") || !utils.IsValidDirName(dir) {
-			log.Debugf("directory is not a valid directory: %s", dir)
+			log.Debug("directory is not a valid directory")
 			continue
 		}
 		// Only create empty directory on the rootfs image.

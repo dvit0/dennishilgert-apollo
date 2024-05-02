@@ -139,7 +139,7 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 		return err
 	}
 	log.Infof("exporting function image: %s", refString)
-	if err := container.ImageExport(ctx, dockerClient, log, path, refString, filename); err != nil {
+	if err := container.ImageExport(ctx, dockerClient, log, path, refString, filename, []string{"/code"}); err != nil {
 		return err
 	}
 
@@ -223,7 +223,7 @@ func (r *runnerInitializer) initializeRuntime(ctx context.Context, runtimeName s
 		return err
 	}
 	log.Infof("exporting runtime image: %s", refString)
-	if err := container.ImageExport(ctx, dockerClient, log, path, refString, filename); err != nil {
+	if err := container.ImageExport(ctx, dockerClient, log, path, refString, filename, []string{}); err != nil {
 		return err
 	}
 

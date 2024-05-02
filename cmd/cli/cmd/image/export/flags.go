@@ -9,6 +9,7 @@ type commandFlags struct {
 	ImageTag             string
 	ImageFileName        string
 	ImageRegistryAddress string
+	IncludeDirs          []string
 }
 
 type parsedFlags struct {
@@ -27,6 +28,7 @@ func ParseFlags() *parsedFlags {
 	fs.StringVar(&f.ImageTag, "image-tag", "localhost:5000/apollo/baseos:bullseye", "Tag of the Docker image to export")
 	fs.StringVar(&f.ImageFileName, "image-file-name", "export.ext4", "Name of the file to export the image into")
 	fs.StringVar(&f.ImageRegistryAddress, "image-registry-address", "host:port", "Network address of the image registry - optional with APOLLO_IMAGE_REGISTRY_ADDRESS set")
+	fs.StringArrayVar(&f.IncludeDirs, "include-dir", []string{}, "Include directories in the image export (can be specified multiple times)")
 
 	return &parsedFlags{
 		cmdFlags: &f,

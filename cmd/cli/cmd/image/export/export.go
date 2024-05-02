@@ -83,7 +83,7 @@ func processCommand(ctx context.Context) int {
 	}
 
 	log.Infof("exporting image: %s", imageTag)
-	if err := container.ImageExport(ctx, dockerClient, log, cmdFlags.CommandFlags().DistPath, imageTag, cmdFlags.CommandFlags().ImageFileName); err != nil {
+	if err := container.ImageExport(ctx, dockerClient, log, cmdFlags.CommandFlags().DistPath, imageTag, cmdFlags.CommandFlags().ImageFileName, cmdFlags.CommandFlags().IncludeDirs); err != nil {
 		log.Fatalf("failed to export Docker image: %v", err)
 	}
 
