@@ -125,6 +125,9 @@ func (a *agent) Run(ctx context.Context) error {
 				return fmt.Errorf("starting runtime failed: %w", err)
 			}
 
+			// Signalize that the runtime is ready.
+			a.persistentRuntime.Ready()
+
 			healthStatusProvider.Ready()
 			log.Info("persistent runtime started")
 
@@ -134,12 +137,14 @@ func (a *agent) Run(ctx context.Context) error {
 			if err := a.persistentRuntime.Tidy(); err != nil {
 				return fmt.Errorf("tidying runtime failed: %w", err)
 			}
+			a.persistentRuntime.Close()
+
 			return nil
 		},
 		func(ctx context.Context) error {
 			log.Info("setting up runtime crash recovery")
 			const maxRecoveryCount = 3
-			var recoveryCounter int
+			recoveryCounter := 0
 
 			for {
 				if recoveryCounter >= maxRecoveryCount {
@@ -173,6 +178,7 @@ func (a *agent) recoverRuntime(ctx context.Context) error {
 	if err := a.persistentRuntime.Tidy(); err != nil {
 		return fmt.Errorf("tidying runtime failed: %w", err)
 	}
+	a.persistentRuntime.Close()
 
 	runtimeConfig := a.persistentRuntime.Config()
 	newPersistentRuntime, err := runtime.NewPersistentRuntime(ctx, runtimeConfig)
@@ -182,6 +188,10 @@ func (a *agent) recoverRuntime(ctx context.Context) error {
 	if err := newPersistentRuntime.Start(a.runtimeHandler); err != nil {
 		return fmt.Errorf("starting replacement runtime failed: %w", err)
 	}
+
+	// Signalize that the new runtime is ready.
+	a.persistentRuntime.Ready()
+
 	a.persistentRuntime = newPersistentRuntime
 
 	log.Info("runtime recovered")

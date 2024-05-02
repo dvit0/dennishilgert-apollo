@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -63,18 +64,21 @@ type PersistentRuntime interface {
 	Lock()
 	Unlock()
 	Start(handler string) error
+	Close()
+	Ready()
 	Wait() error
 	Tidy() error
 	Invoke(ctx context.Context, fnCtx Context, fnEvt Event) (*Result, error)
 }
 
 type persistentRuntime struct {
-	cfg    Config
-	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
-	stderr io.ReadCloser
-	lock   sync.Mutex
+	cfg     Config
+	cmd     *exec.Cmd
+	stdin   io.WriteCloser
+	stdout  io.ReadCloser
+	stderr  io.ReadCloser
+	lock    sync.Mutex
+	readyCh chan bool
 }
 
 // NewPersistentRuntime creates a new PersistentRuntime instance.
@@ -98,11 +102,12 @@ func NewPersistentRuntime(ctx context.Context, config Config) (PersistentRuntime
 	}
 
 	return &persistentRuntime{
-		cfg:    config,
-		cmd:    cmd,
-		stdin:  stdin,
-		stdout: stdout,
-		stderr: stderr,
+		cfg:     config,
+		cmd:     cmd,
+		stdin:   stdin,
+		stdout:  stdout,
+		stderr:  stderr,
+		readyCh: make(chan bool, 1),
 	}, nil
 }
 
@@ -140,9 +145,29 @@ func (p *persistentRuntime) Start(handler string) error {
 	return nil
 }
 
-// Waits for the command to finish.
+// Close closes the ready channel.
+func (p *persistentRuntime) Close() {
+	close(p.readyCh)
+}
+
+// Ready signals that the runtime is ready.
+func (p *persistentRuntime) Ready() {
+	p.readyCh <- true
+}
+
+// Waits for the runtime to be ready and the command to finish.
 func (p *persistentRuntime) Wait() error {
-	return p.cmd.Wait()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Wait for the runtime to be ready.
+	select {
+	case <-p.readyCh:
+		// Runtime is ready, wait for the command to finish.
+		return p.cmd.Wait()
+	case <-ctx.Done():
+		return errors.New("timeout while waiting for the runtime to be ready")
+	}
 }
 
 // Tidy closes all open command pipes.
