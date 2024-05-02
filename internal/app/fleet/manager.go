@@ -68,7 +68,6 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 	workerUuid := uuid.NewString()
 	instanceType := registrypb.InstanceType_FLEET_MANAGER
 	architecture := utils.DetectArchitecture()
-	log.Warnf("arch: %d", architecture)
 
 	ipAddress, err := utils.PrimaryIp()
 	if err != nil {
@@ -97,6 +96,8 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		runnerInitializer,
 		operator.Options{
 			WorkerUuid:                workerUuid,
+			IpAddress:                 ipAddress,
+			ApiPort:                   opts.ApiPort,
 			AgentApiPort:              opts.AgentApiPort,
 			MessagingBootstrapServers: opts.MessagingBootstrapServers,
 			OsArch:                    architecture,
@@ -109,7 +110,9 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		return nil, fmt.Errorf("error while creating runner operator: %v", err)
 	}
 
-	metricsService := metrics.NewMetricsService()
+	metricsService := metrics.NewMetricsService(
+		runnerOperator.RunnerPoolMetrics,
+	)
 
 	messagingProducer, err := producer.NewMessagingProducer(
 		ctx,
@@ -134,7 +137,6 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		consumer.Options{
 			GroupId: "apollo_fleet_manager",
 			Topics: []string{
-				naming.MessagingFunctionInitializationTopic,
 				naming.MessagingWorkerRelatedAgentReadyTopic(workerUuid),
 			},
 			BootstrapServers: opts.MessagingBootstrapServers,
@@ -161,7 +163,8 @@ func NewManager(ctx context.Context, opts Options) (FleetManager, error) {
 		runnerInitializer,
 		messagingProducer,
 		api.Options{
-			Port: opts.ApiPort,
+			Port:       opts.ApiPort,
+			WorkerUuid: workerUuid,
 		},
 	)
 

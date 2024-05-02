@@ -6,11 +6,14 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/worker/api"
+	"github.com/dennishilgert/apollo/internal/app/worker/messaging"
 	"github.com/dennishilgert/apollo/internal/app/worker/placement"
+	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/cache"
 	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
 	"github.com/dennishilgert/apollo/pkg/health"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/pkg/messaging/consumer"
 	"github.com/dennishilgert/apollo/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/pkg/metrics"
 	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
@@ -47,6 +50,7 @@ type workerManager struct {
 	placementService      placement.PlacementService
 	metricsService        metrics.MetricsService
 	messagingProducer     producer.MessagingProducer
+	messagingConsumer     consumer.MessagingConsumer
 	serviceRegistryClient registry.ServiceRegistryClient
 }
 
@@ -59,7 +63,8 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 		return nil, fmt.Errorf("getting primary ip failed: %w", err)
 	}
 
-	metricsService := metrics.NewMetricsService()
+	// Initialize metrics service with "nil" as the runner pool metrics function is not used in a service instance.
+	metricsService := metrics.NewMetricsService(nil)
 
 	messagingProducer, err := producer.NewMessagingProducer(
 		ctx,
@@ -97,6 +102,28 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 		placement.Options{},
 	)
 
+	messagingHandler := messaging.NewMessagingHandler(
+		placementService,
+		messaging.Options{},
+	)
+	messagingHandler.RegisterAll()
+
+	messagingConsumer, err := consumer.NewMessagingConsumer(
+		messagingHandler,
+		consumer.Options{
+			GroupId: "apollo_worker_manager",
+			Topics: []string{
+				naming.MessagingFunctionInitializationTopic,
+				naming.MessagingFunctionDeinitializationTopic,
+			},
+			BootstrapServers: opts.MessagingBootstrapServers,
+			WorkerCount:      opts.MessagingWorkerCount,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating messaging consumer: %w", err)
+	}
+
 	apiServer := api.NewApiServer(
 		placementService,
 		api.Options{
@@ -114,6 +141,7 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 		metricsService:        metricsService,
 		placementService:      placementService,
 		messagingProducer:     messagingProducer,
+		messagingConsumer:     messagingConsumer,
 		serviceRegistryClient: serviceRegistryClient,
 	}, nil
 }
@@ -196,6 +224,17 @@ func (w *workerManager) Run(ctx context.Context) error {
 
 			// Wait for the main context to be done.
 			<-ctx.Done()
+			return nil
+		},
+		func(ctx context.Context) error {
+			// Signalize that the messaging setup is done.
+			w.messagingConsumer.SetupDone()
+
+			log.Info("starting messaging consumer")
+			if err := w.messagingConsumer.Start(ctx); err != nil {
+				log.Error("failed to start messaging consumer")
+				return err
+			}
 			return nil
 		},
 	)

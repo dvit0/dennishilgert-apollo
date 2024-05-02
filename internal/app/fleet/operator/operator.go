@@ -15,6 +15,7 @@ import (
 	"github.com/dennishilgert/apollo/pkg/logger"
 	agentpb "github.com/dennishilgert/apollo/pkg/proto/agent/v1"
 	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
+	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 	"github.com/dennishilgert/apollo/pkg/utils"
 	"github.com/google/uuid"
 )
@@ -23,6 +24,8 @@ var log = logger.NewLogger("apollo.manager.operator")
 
 type Options struct {
 	WorkerUuid                string
+	IpAddress                 string
+	ApiPort                   int
 	AgentApiPort              int
 	MessagingBootstrapServers string
 	OsArch                    utils.OsArch
@@ -34,6 +37,7 @@ type Options struct {
 type RunnerOperator interface {
 	Init(ctx context.Context) error
 	Runner(functionUuid string, runnerUuid string) (runner.RunnerInstance, error)
+	RunnerPoolMetrics() *registrypb.RunnerPoolMetrics
 	AvailableRunner(request *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error)
 	ProvisionRunner(request *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error)
 	InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error)
@@ -41,6 +45,8 @@ type RunnerOperator interface {
 
 type runnerOperator struct {
 	workerUuid                string
+	ipAddress                 string
+	apiPort                   int
 	osArch                    utils.OsArch
 	firecrackerBinaryPath     string
 	agentApiPort              int
@@ -72,6 +78,8 @@ func NewRunnerOperator(ctx context.Context, runnerInitializer initializer.Runner
 
 	return &runnerOperator{
 		workerUuid:                opts.WorkerUuid,
+		ipAddress:                 opts.IpAddress,
+		apiPort:                   opts.ApiPort,
 		osArch:                    opts.OsArch,
 		firecrackerBinaryPath:     opts.FirecrackerBinaryPath,
 		agentApiPort:              opts.AgentApiPort,
@@ -129,6 +137,35 @@ func (r *runnerOperator) Runner(functionUuid string, runnerUuid string) (runner.
 	return r.runnerPool.Get(functionUuid, runnerUuid)
 }
 
+func (r *runnerOperator) RunnerPoolMetrics() *registrypb.RunnerPoolMetrics {
+	// To iterate over the runner pool, we need to create a deep copy of the pool.
+	// This is necessary because the pool is locked during the iteration and
+	// we don't want to block the pool for a long time.
+	runnerPool := r.runnerPool.DeepCopy()
+
+	lightMachines, mediumMachines, heavyMachines, superHeavyMachines := 0, 0, 0, 0
+	for _, runnersByFunction := range runnerPool {
+		for _, runnerInstance := range runnersByFunction {
+			switch runnerInstance.Config().MachineWeight {
+			case fleetpb.MachineWeight_LIGHT:
+				lightMachines++
+			case fleetpb.MachineWeight_MEDIUM:
+				mediumMachines++
+			case fleetpb.MachineWeight_HEAVY:
+				heavyMachines++
+			case fleetpb.MachineWeight_SUPER_HEAVY:
+				superHeavyMachines++
+			}
+		}
+	}
+	return &registrypb.RunnerPoolMetrics{
+		LightRunnersCount:      int32(lightMachines),
+		MediumRunnersCount:     int32(mediumMachines),
+		HeavyRunnersCount:      int32(heavyMachines),
+		SuperHeavyRunnersCount: int32(superHeavyMachines),
+	}
+}
+
 func (r *runnerOperator) AvailableRunner(request *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error) {
 	instance, err := r.runnerPool.AvailableRunner(request.FunctionUuid)
 	if err != nil {
@@ -146,17 +183,18 @@ func (r *runnerOperator) AvailableRunner(request *fleetpb.AvailableRunnerRequest
 	}(instance)
 
 	response := &fleetpb.AvailableRunnerResponse{
-		RunnerUuid: instance.Config().RunnerUuid,
+		RunnerUuid:        instance.Config().RunnerUuid,
+		WorkerNodeAddress: fmt.Sprintf("%s:%d", r.ipAddress, r.apiPort),
 	}
 	return response, nil
 }
 
 // ProvisionRunner provisions a new runner with specified parameters.
-func (v *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
+func (r *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
 	runnerUuid := uuid.New().String()
 
 	multiThreading := false
-	if v.osArch == utils.Arch_x86_64 {
+	if r.osArch == utils.Arch_x86_64 {
 		multiThreading = true
 	}
 	logLevel := log.LogLevel()
@@ -164,21 +202,21 @@ func (v *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 		logLevel = *request.Machine.LogLevel
 	}
 	cfg := &runner.Config{
-		WorkerUuid:            v.workerUuid,
+		WorkerUuid:            r.workerUuid,
 		FunctionUuid:          request.FunctionUuid,
 		RunnerUuid:            runnerUuid,
-		HostOsArch:            v.osArch,
-		FirecrackerBinaryPath: v.firecrackerBinaryPath,
+		HostOsArch:            r.osArch,
+		FirecrackerBinaryPath: r.firecrackerBinaryPath,
 		KernelImagePath: strings.Join(
 			[]string{
-				naming.KernelStoragePath(v.runnerInitializer.DataPath(), request.Kernel.Name, request.Kernel.Version),
+				naming.KernelStoragePath(r.runnerInitializer.DataPath(), request.Kernel.Name, request.Kernel.Version),
 				naming.KernelFileName(request.Kernel.Name, request.Kernel.Version),
 			},
 			string(os.PathSeparator),
 		),
 		RuntimeDrivePath: strings.Join(
 			[]string{
-				naming.RuntimeStoragePath(v.runnerInitializer.DataPath(), request.Runtime.Name, request.Runtime.Version),
+				naming.RuntimeStoragePath(r.runnerInitializer.DataPath(), request.Runtime.Name, request.Runtime.Version),
 				naming.RuntimeImageFileName(request.Runtime.Name, request.Runtime.Version),
 			},
 			string(os.PathSeparator),
@@ -188,35 +226,35 @@ func (v *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 		RuntimeBinaryArgs: request.Runtime.BinaryArgs,
 		FunctionDrivePath: strings.Join(
 			[]string{
-				naming.FunctionStoragePath(v.runnerInitializer.DataPath(), request.FunctionUuid),
+				naming.FunctionStoragePath(r.runnerInitializer.DataPath(), request.FunctionUuid),
 				naming.FunctionImageFileName(request.FunctionUuid),
 			},
 			string(os.PathSeparator),
 		),
 		SocketPath: strings.Join(
 			[]string{
-				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
+				naming.RunnerStoragePath(r.runnerInitializer.DataPath(), runnerUuid),
 				naming.RunnerSocketFileName(),
 			},
 			string(os.PathSeparator),
 		),
 		LogFilePath: strings.Join(
 			[]string{
-				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
+				naming.RunnerStoragePath(r.runnerInitializer.DataPath(), runnerUuid),
 				naming.RunnerLogFileName(),
 			},
 			string(os.PathSeparator),
 		),
 		StdOutFilePath: strings.Join(
 			[]string{
-				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
+				naming.RunnerStoragePath(r.runnerInitializer.DataPath(), runnerUuid),
 				naming.RunnerStdOutFileName(),
 			},
 			string(os.PathSeparator),
 		),
 		StdErrFilePath: strings.Join(
 			[]string{
-				naming.RunnerStoragePath(v.runnerInitializer.DataPath(), runnerUuid),
+				naming.RunnerStoragePath(r.runnerInitializer.DataPath(), runnerUuid),
 				naming.RunnerStdErrFileName(),
 			},
 			string(os.PathSeparator),
@@ -225,53 +263,55 @@ func (v *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 		MemSizeMib:               int(request.Machine.MemoryLimit),
 		IdleTtl:                  time.Duration(request.Machine.IdleTtl) * time.Minute,
 		Multithreading:           multiThreading,
-		AgentApiPort:             v.agentApiPort,
-		MessagingBoostrapServers: v.messagingBootstrapServers,
+		AgentApiPort:             r.agentApiPort,
+		MessagingBoostrapServers: r.messagingBootstrapServers,
 		LogLevel:                 logLevel,
+		MachineWeight:            request.Machine.Weight,
 	}
 
 	//
-	if err := v.runnerInitializer.InitializeRunner(v.runnerCtx, cfg); err != nil {
+	if err := r.runnerInitializer.InitializeRunner(r.runnerCtx, cfg); err != nil {
 		// We don't care if the runner storage removal throws an error as this is just for cleanup
-		v.runnerInitializer.RemoveRunner(v.runnerCtx, runnerUuid)
+		r.runnerInitializer.RemoveRunner(r.runnerCtx, runnerUuid)
 		return nil, err
 	}
 
 	// Create and start new runner instance.
 	// It is important to use the app context here as the instance would be terminated
 	// after the request is done.
-	instance, err := runner.NewInstance(v.runnerCtx, cfg)
+	instance, err := runner.NewInstance(r.runnerCtx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	if err := instance.CreateAndStart(v.runnerCtx); err != nil {
-		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
+	if err := instance.CreateAndStart(r.runnerCtx); err != nil {
+		if err := instance.ShutdownAndDestroy(r.runnerCtx); err != nil {
 			log.Errorf("failed to shutdown runner instance: %v", err)
 		}
 		return nil, err
 	}
 
 	// Add runner to the runner pool.
-	if err := v.runnerPool.Add(instance); err != nil {
-		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
+	if err := r.runnerPool.Add(instance); err != nil {
+		if err := instance.ShutdownAndDestroy(r.runnerCtx); err != nil {
 			log.Errorf("failed to shutdown runner instance: %v", err)
 		}
 		return nil, err
 	}
 
 	// Waiting for the runner to become ready.
-	if err := instance.Ready(v.runnerCtx); err != nil {
+	if err := instance.Ready(r.runnerCtx); err != nil {
 		// Remove runner from pool.
-		v.runnerPool.Remove(request.FunctionUuid, runnerUuid)
+		r.runnerPool.Remove(request.FunctionUuid, runnerUuid)
 
-		if err := instance.ShutdownAndDestroy(v.runnerCtx); err != nil {
+		if err := instance.ShutdownAndDestroy(r.runnerCtx); err != nil {
 			log.Errorf("failed to shutdown runner instance: %v", err)
 		}
 		return nil, err
 	}
 
 	response := &fleetpb.ProvisionRunnerResponse{
-		RunnerUuid: instance.Config().RunnerUuid,
+		RunnerUuid:        instance.Config().RunnerUuid,
+		WorkerNodeAddress: fmt.Sprintf("%s:%d", r.ipAddress, r.apiPort),
 	}
 	return response, nil
 }
@@ -291,10 +331,14 @@ func (r *runnerOperator) TeardownRunner(ctx context.Context, runnerInstance runn
 
 // TeardownRunners tears down all runners in the pool.
 func (r *runnerOperator) TeardownRunners(ctx context.Context) {
-	functionCount := len(*r.runnerPool.Pool())
+	// To iterate over the runner pool, we need to create a deep copy of the pool.
+	// Even though if this is called on shutdown, we don't want to block the pool for a long time.
+	runnerPool := r.runnerPool.DeepCopy()
+
+	functionCount := len(runnerPool)
 	functionIndex := 1
 
-	for functionUuid, runnersByFunction := range *r.runnerPool.Pool() {
+	for functionUuid, runnersByFunction := range runnerPool {
 		runnerCount := len(runnersByFunction)
 		runnerIndex := 1
 

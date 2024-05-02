@@ -23,7 +23,8 @@ import (
 var log = logger.NewLogger("apollo.manager.api")
 
 type Options struct {
-	Port int
+	Port       int
+	WorkerUuid string
 }
 
 type Server interface {
@@ -38,6 +39,7 @@ type apiServer struct {
 	runnerInitializer initializer.RunnerInitializer
 	messagingProducer producer.MessagingProducer
 	port              int
+	workerUuid        string
 	readyCh           chan struct{}
 	appCtx            context.Context
 	running           atomic.Bool
@@ -55,6 +57,7 @@ func NewApiServer(
 		runnerInitializer: runnerInitializer,
 		messagingProducer: messagingProducer,
 		port:              opts.Port,
+		workerUuid:        opts.WorkerUuid,
 		readyCh:           make(chan struct{}),
 	}
 }
@@ -141,8 +144,8 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-// Initialize initializes a function.
-func (a *apiServer) Initialize(ctx context.Context, req *fleetpb.InitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
+// InitializeFunction initializes a function.
+func (a *apiServer) InitializeFunction(ctx context.Context, req *fleetpb.InitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
 	// Handle preparation request asynchronous and respond immediately.
 	go func() {
 		bgCtx, cancel := context.WithTimeout(a.appCtx, time.Minute*10)
@@ -152,16 +155,18 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleetpb.InitializeFunct
 			log.Errorf("failed to prepare function: %v", err)
 			message := &messagespb.FunctionInitializationMessage{
 				FunctionUuid: req.FunctionUuid,
-				WorkerUuid:   "TO_BE_REPLACED_WITH_WORKER_UUID",
+				WorkerUuid:   a.workerUuid,
 				Reason:       err.Error(),
 				Success:      false,
 			}
 			a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
+			log.Errorf("failed to prepare function: %v", err)
+			return
 		}
 		log.Infof("function has been prepared successfully: %s", req.FunctionUuid)
 		message := &messagespb.FunctionInitializationMessage{
 			FunctionUuid: req.FunctionUuid,
-			WorkerUuid:   "TO_BE_REPLACED_WITH_WORKER_UUID",
+			WorkerUuid:   a.workerUuid,
 			Reason:       "ok",
 			Success:      true,
 		}
@@ -170,8 +175,8 @@ func (a *apiServer) Initialize(ctx context.Context, req *fleetpb.InitializeFunct
 	return &sharedpb.EmptyResponse{}, nil
 }
 
-// Provision provisions a runner.
-func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
+// ProvisionRunner provisions a runner.
+func (a *apiServer) ProvisionRunner(ctx context.Context, req *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error) {
 	result, err := a.runnerOperator.ProvisionRunner(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to provision runner: %w", err)
@@ -179,8 +184,8 @@ func (a *apiServer) Provision(ctx context.Context, req *fleetpb.ProvisionRunnerR
 	return result, nil
 }
 
-// Available checks if a runner for a given function is available.
-func (a *apiServer) Available(ctx context.Context, req *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error) {
+// AvailableRunner checks if a runner for a given function is available.
+func (a *apiServer) AvailableRunner(ctx context.Context, req *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error) {
 	result, err := a.runnerOperator.AvailableRunner(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check runner availability: %w", err)
@@ -188,8 +193,8 @@ func (a *apiServer) Available(ctx context.Context, req *fleetpb.AvailableRunnerR
 	return result, nil
 }
 
-// Invoke invokes a function.
-func (a *apiServer) Invoke(ctx context.Context, req *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
+// InvokeFunction invokes a function.
+func (a *apiServer) InvokeFunction(ctx context.Context, req *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	result, err := a.runnerOperator.InvokeFunction(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to invoke function: %w", err)
