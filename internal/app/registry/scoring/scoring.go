@@ -12,5 +12,5 @@ type ScoringResult struct {
 
 // CalculateScore calculates the score of a service instance based on its metrics.
 func CalculateScore(metrics *registrypb.ServiceInstanceMetrics) float64 {
-	return float64((metrics.CpuUsage + metrics.MemoryUsage) / 2)
+	return 100 - float64((metrics.CpuUsage+metrics.MemoryUsage)/2)
 }
