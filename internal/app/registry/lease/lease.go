@@ -109,17 +109,31 @@ func (l *leaseService) AquireLease(ctx context.Context, request *registrypb.Acqu
 
 // RenewLease renews the lease for the given instance.
 func (l *leaseService) RenewLease(ctx context.Context, request *messagespb.InstanceHeartbeatMessage) error {
-	log.Debugf("renewing lease for instance: %s", request.InstanceUuid)
-
 	var key string
 	switch instanceMetrics := request.Metrics.(type) {
 	case *messagespb.InstanceHeartbeatMessage_WorkerInstanceMetrics:
 		key = naming.CacheWorkerInstanceKeyName(request.InstanceUuid)
+		exists, err := l.cacheClient.Client().HExists(ctx, key, "host").Result()
+		if err != nil {
+			return fmt.Errorf("failed to check if worker instance exists: %w", err)
+		}
+		if !exists {
+			log.Debugf("no active lease for worker instance: %s", request.InstanceUuid)
+			return nil
+		}
 		if err := l.setWokerInstanceMetrics(ctx, request.InstanceUuid, instanceMetrics.WorkerInstanceMetrics); err != nil {
 			return fmt.Errorf("failed to set metrics for worker instance: %w", err)
 		}
 	case *messagespb.InstanceHeartbeatMessage_ServiceInstanceMetrics:
 		key = naming.CacheServiceInstanceKeyName(request.InstanceUuid)
+		exists, err := l.cacheClient.Client().HExists(ctx, key, "host").Result()
+		if err != nil {
+			return fmt.Errorf("failed to check if service instance exists: %w", err)
+		}
+		if !exists {
+			log.Debugf("renewal not possible - no active lease: %s", request.InstanceUuid)
+			return nil
+		}
 		score := scoring.CalculateScore(instanceMetrics.ServiceInstanceMetrics)
 		if err := l.setServiceInstanceScore(ctx, request.InstanceUuid, request.InstanceType.String(), score); err != nil {
 			return fmt.Errorf("failed to update score for service instance: %w", err)
@@ -215,6 +229,9 @@ func (l *leaseService) removeServiceInstance(ctx context.Context, instanceUuid s
 	if err != nil {
 		return fmt.Errorf("failed to get service instance from cache: %w", err)
 	}
+	if len(values) == 0 {
+		return fmt.Errorf("service instance not found: %s", instanceUuid)
+	}
 	if err := l.cacheClient.Client().Del(ctx, key).Err(); err != nil {
 		return fmt.Errorf("failed to remove service instance from cache: %w", err)
 	}
@@ -280,6 +297,9 @@ func (l *leaseService) removeWorkerInstance(ctx context.Context, workerUuid stri
 	values, err := l.cacheClient.Client().HGetAll(ctx, key).Result()
 	if err != nil {
 		return fmt.Errorf("failed to get worker instance from cache: %w", err)
+	}
+	if len(values) == 0 {
+		return fmt.Errorf("worker instance not found: %s", workerUuid)
 	}
 	if err := l.cacheClient.Client().Del(ctx, key).Err(); err != nil {
 		return fmt.Errorf("failed to remove worker instance from cache: %w", err)
