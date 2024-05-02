@@ -124,7 +124,7 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-// Acquire acquires a lease for a service or worker instance.
+// AcquireLease acquires a lease for a service or worker instance.
 func (a *apiServer) AcquireLease(ctx context.Context, req *registrypb.AcquireLeaseRequest) (*sharedpb.EmptyResponse, error) {
 	if err := a.leaseService.AquireLease(ctx, req); err != nil {
 		return nil, fmt.Errorf("failed to acquire lease: %w", err)
@@ -132,7 +132,7 @@ func (a *apiServer) AcquireLease(ctx context.Context, req *registrypb.AcquireLea
 	return &sharedpb.EmptyResponse{}, nil
 }
 
-// Release releases a lease for a service or worker instance.
+// ReleaseLease releases a lease for a service or worker instance.
 func (a *apiServer) ReleaseLease(ctx context.Context, req *registrypb.ReleaseLeaseRequest) (*sharedpb.EmptyResponse, error) {
 	if err := a.leaseService.ReleaseLease(ctx, req.InstanceUuid, req.InstanceType.String()); err != nil {
 		return nil, fmt.Errorf("failed to release lease: %w", err)
@@ -140,8 +140,8 @@ func (a *apiServer) ReleaseLease(ctx context.Context, req *registrypb.ReleaseLea
 	return &sharedpb.EmptyResponse{}, nil
 }
 
-// Instance returns an available instance for a given service type.
-func (a *apiServer) AvailableInstance(ctx context.Context, req *registrypb.AvailableInstanceRequest) (*registrypb.AvailableInstanceResponse, error) {
+// AvailableServiceInstance returns an available instance for a given service type.
+func (a *apiServer) AvailableServiceInstance(ctx context.Context, req *registrypb.AvailableInstanceRequest) (*registrypb.AvailableInstanceResponse, error) {
 	instance, err := a.leaseService.AvailableServiceInstance(ctx, req.InstanceType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get available service instance from cache: %w", err)
