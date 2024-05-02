@@ -20,20 +20,20 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	FleetManager_Initialize_FullMethodName = "/apollo.proto.fleet.v1.FleetManager/Initialize"
-	FleetManager_Available_FullMethodName  = "/apollo.proto.fleet.v1.FleetManager/Available"
-	FleetManager_Provision_FullMethodName  = "/apollo.proto.fleet.v1.FleetManager/Provision"
-	FleetManager_Invoke_FullMethodName     = "/apollo.proto.fleet.v1.FleetManager/Invoke"
+	FleetManager_InitializeFunction_FullMethodName = "/apollo.proto.fleet.v1.FleetManager/InitializeFunction"
+	FleetManager_AvailableRunner_FullMethodName    = "/apollo.proto.fleet.v1.FleetManager/AvailableRunner"
+	FleetManager_ProvisionRunner_FullMethodName    = "/apollo.proto.fleet.v1.FleetManager/ProvisionRunner"
+	FleetManager_InvokeFunction_FullMethodName     = "/apollo.proto.fleet.v1.FleetManager/InvokeFunction"
 )
 
 // FleetManagerClient is the client API for FleetManager service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FleetManagerClient interface {
-	Initialize(ctx context.Context, in *InitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
-	Available(ctx context.Context, in *AvailableRunnerRequest, opts ...grpc.CallOption) (*AvailableRunnerResponse, error)
-	Provision(ctx context.Context, in *ProvisionRunnerRequest, opts ...grpc.CallOption) (*ProvisionRunnerResponse, error)
-	Invoke(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*InvokeFunctionResponse, error)
+	InitializeFunction(ctx context.Context, in *InitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
+	AvailableRunner(ctx context.Context, in *AvailableRunnerRequest, opts ...grpc.CallOption) (*AvailableRunnerResponse, error)
+	ProvisionRunner(ctx context.Context, in *ProvisionRunnerRequest, opts ...grpc.CallOption) (*ProvisionRunnerResponse, error)
+	InvokeFunction(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*InvokeFunctionResponse, error)
 }
 
 type fleetManagerClient struct {
@@ -44,36 +44,36 @@ func NewFleetManagerClient(cc grpc.ClientConnInterface) FleetManagerClient {
 	return &fleetManagerClient{cc}
 }
 
-func (c *fleetManagerClient) Initialize(ctx context.Context, in *InitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
+func (c *fleetManagerClient) InitializeFunction(ctx context.Context, in *InitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
 	out := new(v1.EmptyResponse)
-	err := c.cc.Invoke(ctx, FleetManager_Initialize_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, FleetManager_InitializeFunction_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *fleetManagerClient) Available(ctx context.Context, in *AvailableRunnerRequest, opts ...grpc.CallOption) (*AvailableRunnerResponse, error) {
+func (c *fleetManagerClient) AvailableRunner(ctx context.Context, in *AvailableRunnerRequest, opts ...grpc.CallOption) (*AvailableRunnerResponse, error) {
 	out := new(AvailableRunnerResponse)
-	err := c.cc.Invoke(ctx, FleetManager_Available_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, FleetManager_AvailableRunner_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *fleetManagerClient) Provision(ctx context.Context, in *ProvisionRunnerRequest, opts ...grpc.CallOption) (*ProvisionRunnerResponse, error) {
+func (c *fleetManagerClient) ProvisionRunner(ctx context.Context, in *ProvisionRunnerRequest, opts ...grpc.CallOption) (*ProvisionRunnerResponse, error) {
 	out := new(ProvisionRunnerResponse)
-	err := c.cc.Invoke(ctx, FleetManager_Provision_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, FleetManager_ProvisionRunner_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *fleetManagerClient) Invoke(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*InvokeFunctionResponse, error) {
+func (c *fleetManagerClient) InvokeFunction(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*InvokeFunctionResponse, error) {
 	out := new(InvokeFunctionResponse)
-	err := c.cc.Invoke(ctx, FleetManager_Invoke_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, FleetManager_InvokeFunction_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,27 +84,27 @@ func (c *fleetManagerClient) Invoke(ctx context.Context, in *InvokeFunctionReque
 // All implementations should embed UnimplementedFleetManagerServer
 // for forward compatibility
 type FleetManagerServer interface {
-	Initialize(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error)
-	Available(context.Context, *AvailableRunnerRequest) (*AvailableRunnerResponse, error)
-	Provision(context.Context, *ProvisionRunnerRequest) (*ProvisionRunnerResponse, error)
-	Invoke(context.Context, *InvokeFunctionRequest) (*InvokeFunctionResponse, error)
+	InitializeFunction(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error)
+	AvailableRunner(context.Context, *AvailableRunnerRequest) (*AvailableRunnerResponse, error)
+	ProvisionRunner(context.Context, *ProvisionRunnerRequest) (*ProvisionRunnerResponse, error)
+	InvokeFunction(context.Context, *InvokeFunctionRequest) (*InvokeFunctionResponse, error)
 }
 
 // UnimplementedFleetManagerServer should be embedded to have forward compatible implementations.
 type UnimplementedFleetManagerServer struct {
 }
 
-func (UnimplementedFleetManagerServer) Initialize(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
+func (UnimplementedFleetManagerServer) InitializeFunction(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitializeFunction not implemented")
 }
-func (UnimplementedFleetManagerServer) Available(context.Context, *AvailableRunnerRequest) (*AvailableRunnerResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Available not implemented")
+func (UnimplementedFleetManagerServer) AvailableRunner(context.Context, *AvailableRunnerRequest) (*AvailableRunnerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AvailableRunner not implemented")
 }
-func (UnimplementedFleetManagerServer) Provision(context.Context, *ProvisionRunnerRequest) (*ProvisionRunnerResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Provision not implemented")
+func (UnimplementedFleetManagerServer) ProvisionRunner(context.Context, *ProvisionRunnerRequest) (*ProvisionRunnerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProvisionRunner not implemented")
 }
-func (UnimplementedFleetManagerServer) Invoke(context.Context, *InvokeFunctionRequest) (*InvokeFunctionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
+func (UnimplementedFleetManagerServer) InvokeFunction(context.Context, *InvokeFunctionRequest) (*InvokeFunctionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvokeFunction not implemented")
 }
 
 // UnsafeFleetManagerServer may be embedded to opt out of forward compatibility for this service.
@@ -118,74 +118,74 @@ func RegisterFleetManagerServer(s grpc.ServiceRegistrar, srv FleetManagerServer)
 	s.RegisterService(&FleetManager_ServiceDesc, srv)
 }
 
-func _FleetManager_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _FleetManager_InitializeFunction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InitializeFunctionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FleetManagerServer).Initialize(ctx, in)
+		return srv.(FleetManagerServer).InitializeFunction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FleetManager_Initialize_FullMethodName,
+		FullMethod: FleetManager_InitializeFunction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FleetManagerServer).Initialize(ctx, req.(*InitializeFunctionRequest))
+		return srv.(FleetManagerServer).InitializeFunction(ctx, req.(*InitializeFunctionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FleetManager_Available_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _FleetManager_AvailableRunner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AvailableRunnerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FleetManagerServer).Available(ctx, in)
+		return srv.(FleetManagerServer).AvailableRunner(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FleetManager_Available_FullMethodName,
+		FullMethod: FleetManager_AvailableRunner_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FleetManagerServer).Available(ctx, req.(*AvailableRunnerRequest))
+		return srv.(FleetManagerServer).AvailableRunner(ctx, req.(*AvailableRunnerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FleetManager_Provision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _FleetManager_ProvisionRunner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ProvisionRunnerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FleetManagerServer).Provision(ctx, in)
+		return srv.(FleetManagerServer).ProvisionRunner(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FleetManager_Provision_FullMethodName,
+		FullMethod: FleetManager_ProvisionRunner_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FleetManagerServer).Provision(ctx, req.(*ProvisionRunnerRequest))
+		return srv.(FleetManagerServer).ProvisionRunner(ctx, req.(*ProvisionRunnerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FleetManager_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _FleetManager_InvokeFunction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InvokeFunctionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FleetManagerServer).Invoke(ctx, in)
+		return srv.(FleetManagerServer).InvokeFunction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FleetManager_Invoke_FullMethodName,
+		FullMethod: FleetManager_InvokeFunction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FleetManagerServer).Invoke(ctx, req.(*InvokeFunctionRequest))
+		return srv.(FleetManagerServer).InvokeFunction(ctx, req.(*InvokeFunctionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -198,20 +198,20 @@ var FleetManager_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*FleetManagerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Initialize",
-			Handler:    _FleetManager_Initialize_Handler,
+			MethodName: "InitializeFunction",
+			Handler:    _FleetManager_InitializeFunction_Handler,
 		},
 		{
-			MethodName: "Available",
-			Handler:    _FleetManager_Available_Handler,
+			MethodName: "AvailableRunner",
+			Handler:    _FleetManager_AvailableRunner_Handler,
 		},
 		{
-			MethodName: "Provision",
-			Handler:    _FleetManager_Provision_Handler,
+			MethodName: "ProvisionRunner",
+			Handler:    _FleetManager_ProvisionRunner_Handler,
 		},
 		{
-			MethodName: "Invoke",
-			Handler:    _FleetManager_Invoke_Handler,
+			MethodName: "InvokeFunction",
+			Handler:    _FleetManager_InvokeFunction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

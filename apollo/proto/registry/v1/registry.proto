@@ -44,13 +44,18 @@ message ServiceInstanceMetrics {
   int32 memory_usage = 2;
 }
 
+message RunnerPoolMetrics {
+  int32 light_runners_count = 1;
+  int32 medium_runners_count = 2;
+  int32 heavy_runners_count = 3;
+  int32 super_heavy_runners_count = 4;
+}
+
 message WorkerInstanceMetrics {
   int32 cpu_usage = 1;
   int32 memory_usage = 2;
-  int32 storage_usage = 3;
-  int32 light_functions_load = 4;
-  int32 medium_functions_load = 5;
-  int32 heavy_functions_load = 6;
+  int32 memory_total = 3;
+  RunnerPoolMetrics runner_pool_metrics = 4;
 }
 
 message AcquireLeaseRequest {

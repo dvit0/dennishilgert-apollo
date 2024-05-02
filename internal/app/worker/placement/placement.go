@@ -4,42 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
+	"time"
 
+	"github.com/dennishilgert/apollo/internal/app/worker/evaluation"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/cache"
 	"github.com/dennishilgert/apollo/pkg/logger"
+	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 	workerpb "github.com/dennishilgert/apollo/pkg/proto/worker/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var log = logger.NewLogger("apollo.worker.placement")
 
-type FunctionHeaviness int
-
-const (
-	FunctionHeavinessLight FunctionHeaviness = iota
-	FunctionHeavinessMedium
-	FunctionHeavinessHeavy
-)
-
-func (f FunctionHeaviness) String() string {
-	switch f {
-	case FunctionHeavinessLight:
-		return "LIGHT"
-	case FunctionHeavinessMedium:
-		return "MEDIUM"
-	case FunctionHeavinessHeavy:
-		return "HEAVY"
-	}
-	return "UNKNOWN"
-}
-
 type Options struct{}
 
 type PlacementService interface {
-	FunctionInitializationWorker(ctx context.Context, request *workerpb.InitializeFunctionRequest) (*registrypb.WorkerInstance, error)
-	RunnerAllocationWorker(ctx context.Context, request *workerpb.AllocateRunnerRequest) (*registrypb.WorkerInstance, error)
+	AllocateFunctionInitialization(ctx context.Context, request *workerpb.InitializeFunctionRequest) error
+	FindAvailableRunner(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.AvailableRunnerResponse, error)
+	AllocateRunnerProvisioning(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.ProvisionRunnerResponse, error)
+	AddInitializedFunction(ctx context.Context, workerUuid string, function *registrypb.Function) error
+	RemoveInitializedFunction(ctx context.Context, workerUuid string, functionUuid string) error
 	Worker(ctx context.Context, workerUuid string) (*registrypb.WorkerInstance, *registrypb.WorkerInstanceMetrics, error)
 	WorkersByArchitecture(ctx context.Context, architecture string) ([]string, error)
 	WorkersByFunction(ctx context.Context, functionUuid string) ([]string, error)
@@ -55,40 +44,164 @@ func NewPlacementService(cacheClient cache.CacheClient, opts Options) PlacementS
 	}
 }
 
-// FunctionInitializationWorker returns a worker instance that matches the function requirements.
-func (p *placementService) FunctionInitializationWorker(ctx context.Context, request *workerpb.InitializeFunctionRequest) (*registrypb.WorkerInstance, error) {
-	functionHeaviness := p.DetermineFunctionHeaviness(int(request.Machine.VcpuCores), int(request.Machine.MemoryLimit))
+func (p *placementService) AllocateFunctionInitialization(ctx context.Context, request *workerpb.InitializeFunctionRequest) error {
 	workers, err := p.WorkersByArchitecture(ctx, request.Machine.Architecture)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get workers by architecture: %w", err)
+		return fmt.Errorf("failed to get workers by architecture: %w", err)
 	}
+	if len(workers) == 0 {
+		return fmt.Errorf("no workers found for architecture")
+	}
+	workerEvaluations := make([]evaluation.EvaluationResult, 0)
 	for _, worker := range workers {
 		workerInstance, workerMetrics, err := p.Worker(ctx, worker)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get worker instance: %w", err)
+			return fmt.Errorf("failed to get worker instance: %w", err)
 		}
-		if ok := p.checkPlacement(workerMetrics, functionHeaviness); ok {
-			return workerInstance, nil
-		}
+		eval := evaluation.EvaluateFunctionInitialization(workerInstance, workerMetrics)
+		workerEvaluations = append(workerEvaluations, *eval)
 	}
-	return nil, fmt.Errorf("no worker found for architecture")
+	workerInstance, err := evaluation.SelectWorker(workerEvaluations)
+	if err != nil {
+		return fmt.Errorf("failed to select worker: %w", err)
+	}
+
+	clientConn, err := establishConnection(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
+	if err != nil {
+		return fmt.Errorf("failed to establish connection to worker instance: %w", err)
+	}
+	apiClient := fleetpb.NewFleetManagerClient(clientConn)
+	transformedReq := &fleetpb.InitializeFunctionRequest{
+		FunctionUuid: request.FunctionUuid,
+		Kernel:       request.Kernel,
+		Runtime:      request.Runtime,
+	}
+	_, err = apiClient.InitializeFunction(ctx, transformedReq)
+	if err != nil {
+		return fmt.Errorf("failed to initialize function on worker instance: %w", err)
+	}
+	return nil
 }
 
-func (p *placementService) RunnerAllocationWorker(ctx context.Context, request *workerpb.AllocateRunnerRequest) (*registrypb.WorkerInstance, error) {
+func (p *placementService) FindAvailableRunner(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.AvailableRunnerResponse, error) {
 	workers, err := p.WorkersByFunction(ctx, request.FunctionUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workers by function: %w", err)
 	}
+	if len(workers) == 0 {
+		return nil, fmt.Errorf("no workers found for function")
+	}
+	for _, worker := range workers {
+		workerInstance, _, err := p.Worker(ctx, worker)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get worker instance: %w", err)
+		}
+
+		clientConn, err := establishConnection(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
+		if err != nil {
+			return nil, fmt.Errorf("failed to establish connection to worker instance: %w", err)
+		}
+		apiClient := fleetpb.NewFleetManagerClient(clientConn)
+		transformedReq := &fleetpb.AvailableRunnerRequest{
+			FunctionUuid: request.FunctionUuid,
+		}
+		res, err := apiClient.AvailableRunner(ctx, transformedReq)
+		if err != nil {
+			continue
+		}
+		return res, nil
+	}
+
+	return nil, fmt.Errorf("no available runner found")
+}
+
+func (p *placementService) AllocateRunnerProvisioning(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.ProvisionRunnerResponse, error) {
+	runnerHeaviness := evaluation.EvaluateRunnerHeaviness(int(request.Machine.VcpuCores), int(request.Machine.MemoryLimit))
+	workers, err := p.WorkersByFunction(ctx, request.FunctionUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workers by function: %w", err)
+	}
+	if len(workers) == 0 {
+		return nil, fmt.Errorf("no workers found for function")
+	}
+	workerEvaluations := make([]evaluation.EvaluationResult, 0)
 	for _, worker := range workers {
 		workerInstance, workerMetrics, err := p.Worker(ctx, worker)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get worker instance: %w", err)
 		}
-		if ok := p.checkPlacement(workerMetrics, FunctionHeavinessLight); ok {
-			return workerInstance, nil
+		eval := evaluation.EvaluateRunnerProvisioning(runnerHeaviness, workerInstance, workerMetrics)
+		workerEvaluations = append(workerEvaluations, *eval)
+	}
+	workerInstance, err := evaluation.SelectWorker(workerEvaluations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to select worker: %w", err)
+	}
+
+	clientConn, err := establishConnection(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
+	if err != nil {
+		return nil, fmt.Errorf("failed to establish connection to worker instance: %w", err)
+	}
+	apiClient := fleetpb.NewFleetManagerClient(clientConn)
+	transformedReq := &fleetpb.ProvisionRunnerRequest{
+		FunctionUuid: request.FunctionUuid,
+		Kernel:       request.Kernel,
+		Runtime:      request.Runtime,
+		Machine:      request.Machine,
+	}
+	res, err := apiClient.ProvisionRunner(ctx, transformedReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to provision runner on worker instance: %w", err)
+	}
+
+	return res, nil
+}
+
+func (p *placementService) AddInitializedFunction(ctx context.Context, workerUuid string, function *registrypb.Function) error {
+	workerInstance, _, err := p.Worker(ctx, workerUuid)
+	if err != nil {
+		return fmt.Errorf("failed to add initialized function: %w", err)
+	}
+	initializedFunctions := append(workerInstance.InitializedFunctions, function)
+	initializedFunctionsBytes, err := json.Marshal(initializedFunctions)
+	if err != nil {
+		return fmt.Errorf("failed to marshal initialized functions: %w", err)
+	}
+	if err := p.cacheClient.Client().HSet(ctx, naming.CacheWorkerInstanceKeyName(workerUuid), map[string]interface{}{
+		"functions": string(initializedFunctionsBytes),
+	}).Err(); err != nil {
+		return fmt.Errorf("failed to set initialized functions: %w", err)
+	}
+	if err := p.cacheClient.Client().SAdd(ctx, naming.CacheFunctionSetKey(function.Uuid), workerUuid).Err(); err != nil {
+		return fmt.Errorf("failed to add worker instance to function set: %w", err)
+	}
+	return nil
+}
+
+func (p *placementService) RemoveInitializedFunction(ctx context.Context, workerUuid string, functionUuid string) error {
+	workerInstance, _, err := p.Worker(ctx, workerUuid)
+	if err != nil {
+		return fmt.Errorf("failed to remove initialized function: %w", err)
+	}
+	initializedFunctions := make([]*registrypb.Function, 0)
+	for _, function := range workerInstance.InitializedFunctions {
+		if function.Uuid != functionUuid {
+			initializedFunctions = append(initializedFunctions, function)
 		}
 	}
-	return nil, fmt.Errorf("no worker found for function")
+	initializedFunctionsBytes, err := json.Marshal(initializedFunctions)
+	if err != nil {
+		return fmt.Errorf("failed to marshal initialized functions: %w", err)
+	}
+	if err := p.cacheClient.Client().HSet(ctx, naming.CacheWorkerInstanceKeyName(workerUuid), map[string]interface{}{
+		"functions": string(initializedFunctionsBytes),
+	}).Err(); err != nil {
+		return fmt.Errorf("failed to set initialized functions: %w", err)
+	}
+	if err := p.cacheClient.Client().SRem(ctx, naming.CacheFunctionSetKey(functionUuid), workerUuid).Err(); err != nil {
+		return fmt.Errorf("failed to remove worker instance from function set: %w", err)
+	}
+	return nil
 }
 
 // Worker returns the worker instance and its metrics from the cache.
@@ -97,6 +210,9 @@ func (p *placementService) Worker(ctx context.Context, workerUuid string) (*regi
 	values, err := p.cacheClient.Client().HGetAll(ctx, key).Result()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get worker instance from cache: %w", err)
+	}
+	if len(values) == 0 {
+		return nil, nil, fmt.Errorf("worker instance not found in cache")
 	}
 	initializedFunctions := make([]*registrypb.Function, 0)
 	if err := json.Unmarshal([]byte(values["functions"]), &initializedFunctions); err != nil {
@@ -134,23 +250,26 @@ func (p *placementService) WorkersByFunction(ctx context.Context, functionUuid s
 	return members, nil
 }
 
-// DetermineFunctionHeaviness determines the heaviness of a function based on the number of CPU cores and memory limit.
-func (p *placementService) DetermineFunctionHeaviness(cpuCores int, memoryLimit int) FunctionHeaviness {
-	if cpuCores <= 1 && memoryLimit <= 128 {
-		return FunctionHeavinessLight
-	} else if cpuCores <= 2 && memoryLimit <= 256 {
-		return FunctionHeavinessMedium
+func establishConnection(ctx context.Context, address string) (*grpc.ClientConn, error) {
+	const retrySeconds = 3     // trying to connect for a period of 3 seconds
+	const retriesPerSecond = 2 // trying to connect 2 times per second
+	for i := 0; i < (retrySeconds * retriesPerSecond); i++ {
+		conn, err := grpc.DialContext(ctx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+		if err == nil {
+			return conn, nil
+		} else {
+			if conn != nil {
+				conn.Close()
+			}
+			log.Errorf("failed to establish connection to service registry - reason: %v", err)
+		}
+		// Wait before retrying, but stop if context is done.
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context done before connection to servie registry could be established: %w", ctx.Err())
+		case <-time.After(time.Duration(math.Round(1000/retriesPerSecond)) * time.Millisecond): // retry delay
+			continue
+		}
 	}
-	return FunctionHeavinessHeavy
-}
-
-// checkPlacement checks if the worker instance is suitable for the function placement.
-func (p *placementService) checkPlacement(metrics *registrypb.WorkerInstanceMetrics, functionHeaviness FunctionHeaviness) bool {
-	if (metrics.CpuUsage <= 80) && (metrics.MemoryUsage <= 80) && (metrics.StorageUsage <= 80) {
-		// TODO: Currently only the machine metrics are checked.
-		// In the future the load of the different function heavinesses should be considered as well.
-		log.Infof("worker instance is suitable for function with heaviness %s", functionHeaviness.String())
-		return true
-	}
-	return false
+	return nil, fmt.Errorf("failed to establish connection to service registry after %d seconds", retrySeconds)
 }

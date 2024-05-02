@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	"github.com/dennishilgert/apollo/pkg/utils"
 	"github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
@@ -32,6 +33,7 @@ type Config struct {
 	AgentApiPort             int
 	MessagingBoostrapServers string
 	LogLevel                 string
+	MachineWeight            fleetpb.MachineWeight
 }
 
 func validate(cfg *Config) error {
