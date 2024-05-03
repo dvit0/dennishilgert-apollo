@@ -32,9 +32,9 @@ The core components of Apollo include all services the are necessary for the sys
 
 - **Apollo Fleet Manager** - State: done
 
-- **Apollo Worker Manager** - State: work in progress
+- **Apollo Worker Manager** - State: done
 
-- **Apollo Frontend** - State: to do
+- **Apollo Frontend** - State: work in progress
 
 - **Apollo API Gateway** - State: to do
 
