@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	"github.com/dennishilgert/apollo/pkg/utils"
 	"github.com/firecracker-microvm/firecracker-go-sdk"
@@ -13,6 +14,7 @@ import (
 type Config struct {
 	WorkerUuid               string
 	FunctionUuid             string
+	FunctionVersion          string
 	RunnerUuid               string
 	HostOsArch               utils.OsArch
 	FirecrackerBinaryPath    string
@@ -87,7 +89,7 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 			WithPci("off").
 			WithNoModules(true).
 			WithWorkerUuid(cfg.WorkerUuid).
-			WithFunctionUuid(cfg.FunctionUuid).
+			WithFunctionIdentifier(naming.FunctionIdentifier(cfg.FunctionUuid, cfg.FunctionVersion)).
 			WithRunnerUuid(cfg.RunnerUuid).
 			WithRuntimeHandler(cfg.RuntimeHandler).
 			WithRuntimeBinaryPath(cfg.RuntimeBinaryPath).

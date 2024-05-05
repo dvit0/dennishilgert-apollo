@@ -103,19 +103,19 @@ func (r *runnerPool) Remove(functionUuid string, runnerUuid string) {
 }
 
 // AvailableRunner returns a available runner instance from the pool.
-func (r *runnerPool) AvailableRunner(functionUuid string) (runner.RunnerInstance, error) {
+func (r *runnerPool) AvailableRunner(functionIdentifier string) (runner.RunnerInstance, error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	runners := r.pool[functionUuid]
+	runners := r.pool[functionIdentifier]
 	if runners == nil || len(runners) < 1 {
-		log.Debugf("pool does not contain runner instances for function uuid: %s", functionUuid)
-		return nil, fmt.Errorf("pool does not contain runner instances for function uuid: %s", functionUuid)
+		log.Debugf("pool does not contain runner instances for function identifier: %s", functionIdentifier)
+		return nil, fmt.Errorf("pool does not contain runner instances for function identifier: %s", functionIdentifier)
 	}
 	for _, runnerInstance := range runners {
 		if runnerInstance.State() == runner.RunnerStateReady {
 			return runnerInstance, nil
 		}
 	}
-	return nil, fmt.Errorf("pool does not contain available runner instance function uuid: %s", functionUuid)
+	return nil, fmt.Errorf("pool does not contain available runner instance function identifier: %s", functionIdentifier)
 }

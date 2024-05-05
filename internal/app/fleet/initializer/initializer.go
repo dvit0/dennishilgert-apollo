@@ -11,7 +11,6 @@ import (
 	"github.com/dennishilgert/apollo/pkg/container"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 	"github.com/dennishilgert/apollo/pkg/storage"
 	"github.com/dennishilgert/apollo/pkg/utils"
 )
@@ -29,7 +28,7 @@ type RunnerInitializer interface {
 	InitializeRunner(ctx context.Context, cfg *runner.Config) error
 	RemoveRunner(ctx context.Context, runnerUuid string) error
 	InitializeFunction(ctx context.Context, request *fleetpb.InitializeFunctionRequest) error
-	InitializedFunctions() []*registrypb.Function
+	InitializedFunctions() []string
 }
 
 type runnerInitializer struct {
@@ -106,8 +105,9 @@ func (r *runnerInitializer) RemoveRunner(ctx context.Context, runnerUuid string)
 
 // InitializeFunction initializes a function.
 func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fleetpb.InitializeFunctionRequest) error {
-	path := naming.FunctionStoragePath(r.dataPath, request.FunctionUuid)
-	filename := naming.FunctionImageFileName(request.FunctionUuid)
+	path := naming.FunctionStoragePath(r.dataPath, request.Function.Uuid)
+	filename := naming.FunctionImageFileName(request.Function.Version)
+	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
 
 	log.Debugf("check if function dependencies are already initialized")
 	if err := r.initializeKernel(ctx, request.Kernel.Name, request.Kernel.Version); err != nil {
@@ -119,11 +119,11 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 	log.Debugf("check if function is already initialized")
 	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
 	if exists {
-		log.Infof("function is already initialized: %s", request.FunctionUuid)
+		log.Infof("function is already initialized: %s", functionIdentifier)
 		return nil
 	}
 
-	log.Infof("initializing function: %s", request.FunctionUuid)
+	log.Infof("initializing function: %s", functionIdentifier)
 	if err := prepareTargetDirectory(path); err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 	if err != nil {
 		return err
 	}
-	refString := naming.ImageRefStr(r.imageRegistryAddress, request.FunctionUuid, "latest")
+	refString := naming.ImageRefStr(r.imageRegistryAddress, request.Function.Uuid, request.Function.Version)
 
 	log.Infof("pulling function image: %s", refString)
 	if err := container.ImagePull(ctx, dockerClient, log, refString); err != nil {
@@ -147,8 +147,8 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 }
 
 // InitializedFunctions returns a list of initialized functions.
-func (r *runnerInitializer) InitializedFunctions() []*registrypb.Function {
-	initializedFunctions := make([]*registrypb.Function, 0)
+func (r *runnerInitializer) InitializedFunctions() []string {
+	initializedFunctions := make([]string, 0)
 	path := naming.FunctionStoragePathBase(r.dataPath)
 	dirs, err := os.ReadDir(path)
 	if err != nil {
@@ -163,10 +163,24 @@ func (r *runnerInitializer) InitializedFunctions() []*registrypb.Function {
 			continue
 		}
 		functionUuid := dir.Name()
-		function := &registrypb.Function{
-			Uuid: functionUuid,
+		versionsPath := naming.FunctionStoragePath(r.dataPath, functionUuid)
+		versions, err := os.ReadDir(versionsPath)
+		if err != nil {
+			log.Errorf("failed to read function directory: %v", err)
+			continue
 		}
-		initializedFunctions = append(initializedFunctions, function)
+		for _, version := range versions {
+			if dir.IsDir() {
+				continue
+			}
+			if (dir.Name() == ".") || (dir.Name() == "..") {
+				continue
+			}
+			functionVersion := naming.FunctionExtractVersionFromImageFileName(version.Name())
+
+			functionIdentifier := naming.FunctionIdentifier(functionUuid, functionVersion)
+			initializedFunctions = append(initializedFunctions, functionIdentifier)
+		}
 	}
 	return initializedFunctions
 }

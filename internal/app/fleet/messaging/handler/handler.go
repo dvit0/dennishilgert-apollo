@@ -47,7 +47,7 @@ func (m *messagingHandler) RegisterAll() {
 		if err := json.Unmarshal(msg.Value, &message); err != nil {
 			log.Errorf("failed to unmarshal kafka message: %v", err)
 		}
-		instance, err := m.runnerOperator.Runner(message.FunctionUuid, message.RunnerUuid)
+		instance, err := m.runnerOperator.Runner(message.FunctionIdentifier, message.RunnerUuid)
 		if err != nil {
 			log.Errorf("requested runner instance does not exist in pool: %s", message.RunnerUuid)
 			return

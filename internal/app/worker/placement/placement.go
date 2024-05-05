@@ -27,11 +27,11 @@ type PlacementService interface {
 	AllocateFunctionInitialization(ctx context.Context, request *workerpb.InitializeFunctionRequest) error
 	FindAvailableRunner(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.AvailableRunnerResponse, error)
 	AllocateRunnerProvisioning(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.ProvisionRunnerResponse, error)
-	AddInitializedFunction(ctx context.Context, workerUuid string, function *registrypb.Function) error
-	RemoveInitializedFunction(ctx context.Context, workerUuid string, functionUuid string) error
+	AddInitializedFunction(ctx context.Context, workerUuid string, functionIdentifier string) error
+	RemoveInitializedFunction(ctx context.Context, workerUuid string, functionIdentifier string) error
 	Worker(ctx context.Context, workerUuid string) (*registrypb.WorkerInstance, *registrypb.WorkerInstanceMetrics, error)
 	WorkersByArchitecture(ctx context.Context, architecture string) ([]string, error)
-	WorkersByFunction(ctx context.Context, functionUuid string) ([]string, error)
+	WorkersByFunction(ctx context.Context, functionIdentifier string) ([]string, error)
 }
 
 type placementService struct {
@@ -45,7 +45,7 @@ func NewPlacementService(cacheClient cache.CacheClient, opts Options) PlacementS
 }
 
 func (p *placementService) AllocateFunctionInitialization(ctx context.Context, request *workerpb.InitializeFunctionRequest) error {
-	workers, err := p.WorkersByArchitecture(ctx, request.Machine.Architecture)
+	workers, err := p.WorkersByArchitecture(ctx, request.Kernel.Architecture)
 	if err != nil {
 		return fmt.Errorf("failed to get workers by architecture: %w", err)
 	}
@@ -70,11 +70,13 @@ func (p *placementService) AllocateFunctionInitialization(ctx context.Context, r
 	if err != nil {
 		return fmt.Errorf("failed to establish connection to worker instance: %w", err)
 	}
+	defer clientConn.Close()
+
 	apiClient := fleetpb.NewFleetManagerClient(clientConn)
 	transformedReq := &fleetpb.InitializeFunctionRequest{
-		FunctionUuid: request.FunctionUuid,
-		Kernel:       request.Kernel,
-		Runtime:      request.Runtime,
+		Function: request.Function,
+		Kernel:   request.Kernel,
+		Runtime:  request.Runtime,
 	}
 	_, err = apiClient.InitializeFunction(ctx, transformedReq)
 	if err != nil {
@@ -84,7 +86,8 @@ func (p *placementService) AllocateFunctionInitialization(ctx context.Context, r
 }
 
 func (p *placementService) FindAvailableRunner(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.AvailableRunnerResponse, error) {
-	workers, err := p.WorkersByFunction(ctx, request.FunctionUuid)
+	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
+	workers, err := p.WorkersByFunction(ctx, functionIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workers by function: %w", err)
 	}
@@ -101,9 +104,11 @@ func (p *placementService) FindAvailableRunner(ctx context.Context, request *wor
 		if err != nil {
 			return nil, fmt.Errorf("failed to establish connection to worker instance: %w", err)
 		}
+		defer clientConn.Close()
+
 		apiClient := fleetpb.NewFleetManagerClient(clientConn)
 		transformedReq := &fleetpb.AvailableRunnerRequest{
-			FunctionUuid: request.FunctionUuid,
+			Function: request.Function,
 		}
 		res, err := apiClient.AvailableRunner(ctx, transformedReq)
 		if err != nil {
@@ -117,7 +122,8 @@ func (p *placementService) FindAvailableRunner(ctx context.Context, request *wor
 
 func (p *placementService) AllocateRunnerProvisioning(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.ProvisionRunnerResponse, error) {
 	runnerHeaviness := evaluation.EvaluateRunnerHeaviness(int(request.Machine.VcpuCores), int(request.Machine.MemoryLimit))
-	workers, err := p.WorkersByFunction(ctx, request.FunctionUuid)
+	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
+	workers, err := p.WorkersByFunction(ctx, functionIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workers by function: %w", err)
 	}
@@ -142,12 +148,14 @@ func (p *placementService) AllocateRunnerProvisioning(ctx context.Context, reque
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection to worker instance: %w", err)
 	}
+	defer clientConn.Close()
+
 	apiClient := fleetpb.NewFleetManagerClient(clientConn)
 	transformedReq := &fleetpb.ProvisionRunnerRequest{
-		FunctionUuid: request.FunctionUuid,
-		Kernel:       request.Kernel,
-		Runtime:      request.Runtime,
-		Machine:      request.Machine,
+		Function: request.Function,
+		Kernel:   request.Kernel,
+		Runtime:  request.Runtime,
+		Machine:  request.Machine,
 	}
 	res, err := apiClient.ProvisionRunner(ctx, transformedReq)
 	if err != nil {
@@ -157,12 +165,12 @@ func (p *placementService) AllocateRunnerProvisioning(ctx context.Context, reque
 	return res, nil
 }
 
-func (p *placementService) AddInitializedFunction(ctx context.Context, workerUuid string, function *registrypb.Function) error {
+func (p *placementService) AddInitializedFunction(ctx context.Context, workerUuid string, functionIdentifier string) error {
 	workerInstance, _, err := p.Worker(ctx, workerUuid)
 	if err != nil {
 		return fmt.Errorf("failed to add initialized function: %w", err)
 	}
-	initializedFunctions := append(workerInstance.InitializedFunctions, function)
+	initializedFunctions := append(workerInstance.InitializedFunctions, functionIdentifier)
 	initializedFunctionsBytes, err := json.Marshal(initializedFunctions)
 	if err != nil {
 		return fmt.Errorf("failed to marshal initialized functions: %w", err)
@@ -172,21 +180,21 @@ func (p *placementService) AddInitializedFunction(ctx context.Context, workerUui
 	}).Err(); err != nil {
 		return fmt.Errorf("failed to set initialized functions: %w", err)
 	}
-	if err := p.cacheClient.Client().SAdd(ctx, naming.CacheFunctionSetKey(function.Uuid), workerUuid).Err(); err != nil {
+	if err := p.cacheClient.Client().SAdd(ctx, naming.CacheFunctionSetKey(functionIdentifier), workerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to add worker instance to function set: %w", err)
 	}
 	return nil
 }
 
-func (p *placementService) RemoveInitializedFunction(ctx context.Context, workerUuid string, functionUuid string) error {
+func (p *placementService) RemoveInitializedFunction(ctx context.Context, workerUuid string, functionIdentifier string) error {
 	workerInstance, _, err := p.Worker(ctx, workerUuid)
 	if err != nil {
 		return fmt.Errorf("failed to remove initialized function: %w", err)
 	}
-	initializedFunctions := make([]*registrypb.Function, 0)
-	for _, function := range workerInstance.InitializedFunctions {
-		if function.Uuid != functionUuid {
-			initializedFunctions = append(initializedFunctions, function)
+	initializedFunctions := make([]string, 0)
+	for _, initializedFunction := range workerInstance.InitializedFunctions {
+		if initializedFunction != functionIdentifier {
+			initializedFunctions = append(initializedFunctions, initializedFunction)
 		}
 	}
 	initializedFunctionsBytes, err := json.Marshal(initializedFunctions)
@@ -198,7 +206,7 @@ func (p *placementService) RemoveInitializedFunction(ctx context.Context, worker
 	}).Err(); err != nil {
 		return fmt.Errorf("failed to set initialized functions: %w", err)
 	}
-	if err := p.cacheClient.Client().SRem(ctx, naming.CacheFunctionSetKey(functionUuid), workerUuid).Err(); err != nil {
+	if err := p.cacheClient.Client().SRem(ctx, naming.CacheFunctionSetKey(functionIdentifier), workerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to remove worker instance from function set: %w", err)
 	}
 	return nil
@@ -214,7 +222,7 @@ func (p *placementService) Worker(ctx context.Context, workerUuid string) (*regi
 	if len(values) == 0 {
 		return nil, nil, fmt.Errorf("worker instance not found in cache")
 	}
-	initializedFunctions := make([]*registrypb.Function, 0)
+	initializedFunctions := make([]string, 0)
 	if err := json.Unmarshal([]byte(values["functions"]), &initializedFunctions); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal functions: %w", err)
 	}
@@ -242,8 +250,8 @@ func (p *placementService) WorkersByArchitecture(ctx context.Context, architectu
 }
 
 // WorkersByFunction returns a list of worker nodes by function.
-func (p *placementService) WorkersByFunction(ctx context.Context, functionUuid string) ([]string, error) {
-	members, err := p.cacheClient.Client().SMembers(ctx, naming.CacheFunctionSetKey(functionUuid)).Result()
+func (p *placementService) WorkersByFunction(ctx context.Context, functionIdentifier string) ([]string, error) {
+	members, err := p.cacheClient.Client().SMembers(ctx, naming.CacheFunctionSetKey(functionIdentifier)).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get worker instances by runtime: %w", err)
 	}

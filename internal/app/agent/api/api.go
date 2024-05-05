@@ -111,7 +111,7 @@ func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*age
 	fnEvt := runtime.Event{
 		EventUuid: in.Event.Uuid,
 		EventType: in.Event.Type,
-		Data:      in.Event.Data,
+		Payload:   in.Event.Payload,
 	}
 
 	log.Debugf("invoking function with event: %s", in.Event.Uuid)

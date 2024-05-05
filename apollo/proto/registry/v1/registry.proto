@@ -17,10 +17,7 @@ enum InstanceType {
   INSTANCE_TYPE_UNSPECIFIED = 0;
   FLEET_MANAGER = 1;
   WORKER_MANAGER = 2;
-}
-
-message Function {
-  string uuid = 1;
+  FRONTEND = 3;
 }
 
 message ServiceInstance {
@@ -36,7 +33,7 @@ message WorkerInstance {
   string architecture = 2;
   string host = 3;
   int32 port = 4;
-  repeated Function initialized_functions = 5;
+  repeated string initialized_functions = 5;
 }
 
 message ServiceInstanceMetrics {

@@ -34,6 +34,17 @@ services:
       - MINIO_ROOT_USER=root
       - MINIO_ROOT_PASSWORD=7dbcf34172f78a6719f410a64bdb94fc
 
+  apollo-database:
+    container_name: apollo-database
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    restart: always
+    environment:
+      - POSTGRES_USER=apollo
+      - POSTGRES_PASSWORD=8k2u2GF2tsv2tVRCS025481zbGHAsd23
+      - POSTGRES_DB=apollo
+
   apollo-cache:
     container_name: apollo-cache
     image: redis:latest

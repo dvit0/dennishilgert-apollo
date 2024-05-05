@@ -11,7 +11,6 @@ import (
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	"github.com/dennishilgert/apollo/pkg/logger"
 	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
-	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 )
 
 var log = logger.NewLogger("apollo.messaging.handler")
@@ -53,12 +52,11 @@ func (m *messagingHandler) RegisterAll() {
 
 		// Create a new context with a timeout of 3 seconds.
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		if err := m.placementService.AddInitializedFunction(ctx, message.WorkerUuid, &registrypb.Function{
-			Uuid: message.FunctionUuid,
-		}); err != nil {
+		functionIdentifier := naming.FunctionIdentifier(message.Function.Uuid, message.Function.Version)
+		if err := m.placementService.AddInitializedFunction(ctx, message.WorkerUuid, functionIdentifier); err != nil {
 			log.Errorf("failed to add initialized function: %v", err)
 		}
-		log.Infof("function %s initialized on worker %s", message.FunctionUuid, message.WorkerUuid)
+		log.Infof("function %s initialized on worker %s", functionIdentifier, message.WorkerUuid)
 		// Cancel context after the initialized function has been added.
 		cancel()
 	})
@@ -73,7 +71,8 @@ func (m *messagingHandler) RegisterAll() {
 
 		// Create a new context with a timeout of 3 seconds.
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		if err := m.placementService.RemoveInitializedFunction(ctx, message.WorkerUuid, message.FunctionUuid); err != nil {
+		functionIdentifier := naming.FunctionIdentifier(message.Function.Uuid, message.Function.Version)
+		if err := m.placementService.RemoveInitializedFunction(ctx, message.WorkerUuid, functionIdentifier); err != nil {
 			log.Errorf("failed to remove initialized function: %v", err)
 		}
 		// Cancel context after the initialized function has been removed.

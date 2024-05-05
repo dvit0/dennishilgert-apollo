@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package apollo.proto.frontend.v1;
+
+import "apollo/proto/shared/v1/shared.proto";
+import "apollo/proto/fleet/v1/fleet.proto";
+
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/frontend/v1;frontendpb";
+
+service Frontend {
+  rpc InvokeFunction(apollo.proto.fleet.v1.InvokeFunctionRequest) returns (apollo.proto.fleet.v1.InvokeFunctionResponse) {}
+
+  rpc AddKernel(AddKernelRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc ListKernels(ListKernelsRequest) returns (ListKernelsResponse) {}
+  rpc RemoveKernel(RemoveKernelRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+
+  rpc AddRuntime(AddRuntimeRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc ListRuntimes(ListRuntimesRequest) returns (ListRuntimesResponse) {}
+  rpc RemoveRuntime(RemoveRuntimeRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+
+  rpc CreateFunction(CreateFunctionRequest) returns (CreateFunctionResponse) {}
+  rpc GetFunction(GetFunctionRequest) returns (GetFunctionResponse) {}
+  rpc ListFunctions(ListFunctionsRequest) returns (ListFunctionsResponse) {}
+  rpc UpdateFunction(UpdateFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc DeleteFunction(DeleteFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+}
+
+enum FunctionStatus {
+  FUNCTION_STATUS_UNSPECIFIED = 0;
+  CREATED = 1;
+  PACKED = 2;
+  INITIALIZED = 3;
+}
+
+message KernelSpecs {
+  string name = 1;
+  string version = 2;
+  string architecture = 3;
+}
+
+message RuntimeSpecs {
+  string name = 1;
+  string version = 2;
+  string binary_path = 3;
+  repeated string binary_args = 4;
+  string display_name = 5;
+  string kernel_name = 6;
+  string kernel_version = 7;
+  string kernel_architecture = 8;
+}
+
+message FunctionSpecs {
+  string uuid = 1;
+  string name = 2;
+  string version = 3;
+  string handler = 4;
+  int32 memory_limit = 5;
+  int32 v_cpu_cores = 6;
+  string runtime_name = 7;
+  string runtime_version = 8;
+  string runtime_architecture = 9;
+  string runtime_display_name = 10;
+  string http_trigger_id = 11;
+}
+
+message AddKernelRequest {
+  KernelSpecs kernel = 1;
+}
+
+message ListKernelsRequest {}
+
+message ListKernelsResponse {
+  repeated KernelSpecs kernels = 1;
+}
+
+message RemoveKernelRequest {
+  string name = 1;
+  string version = 2;
+  string architecture = 3;
+}
+
+message AddRuntimeRequest {
+  RuntimeSpecs runtime = 1;
+}
+
+message ListRuntimesRequest {}
+
+message ListRuntimesResponse {
+  repeated RuntimeSpecs runtimes = 1;
+}
+
+message RemoveRuntimeRequest {
+  string name = 1;
+  string version = 2;
+  string architecture = 3;
+}
+
+message CreateFunctionRequest {
+  string name = 1;
+  string version = 2;
+  string handler = 3;
+  int32 memory_limit = 4;
+  int32 v_cpu_cores = 5;
+  string runtime_name = 6;
+  string runtime_version = 7;
+  string runtime_architecture = 8;
+}
+
+message CreateFunctionResponse {
+  string uuid = 1;
+  string http_trigger_id = 2;
+}
+
+message GetFunctionRequest {
+  string uuid = 1;
+}
+
+message GetFunctionResponse {
+  FunctionSpecs function = 1;
+}
+
+message ListFunctionsRequest {}
+
+message ListFunctionsResponse {
+  repeated FunctionSpecs functions = 1;
+}
+
+message UpdateFunctionRequest {
+  string uuid = 1;
+  string name = 2;
+  string version = 3;
+  string handler = 4;
+  int32 memory_limit = 5;
+  int32 v_cpu_cores = 6;
+  string runtime_name = 7;
+  string runtime_version = 8;
+  string runtime_architecture = 9;
+}
+
+message DeleteFunctionRequest {
+  string uuid = 1;
+}

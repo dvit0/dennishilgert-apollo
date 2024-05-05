@@ -18,12 +18,12 @@ var log = logger.NewLogger("apollo.agent")
 
 // Options contains the options for `NewAgent`.
 type Options struct {
-	WorkerUuid        string
-	FunctionUuid      string
-	RunnerUuid        string
-	RuntimeHandler    string
-	RuntimeBinaryPath string
-	RuntimeBinaryArgs []string
+	WorkerUuid         string
+	FunctionIdentifier string
+	RunnerUuid         string
+	RuntimeHandler     string
+	RuntimeBinaryPath  string
+	RuntimeBinaryArgs  []string
 
 	ApiPort                   int
 	MessagingBootstrapServers string
@@ -35,13 +35,13 @@ type Agent interface {
 }
 
 type agent struct {
-	workerUuid        string
-	functionUuid      string
-	runnerUuid        string
-	runtimeHandler    string
-	apiServer         api.Server
-	messagingProducer producer.MessagingProducer
-	persistentRuntime runtime.PersistentRuntime
+	workerUuid         string
+	functionIdentifier string
+	runnerUuid         string
+	runtimeHandler     string
+	apiServer          api.Server
+	messagingProducer  producer.MessagingProducer
+	persistentRuntime  runtime.PersistentRuntime
 }
 
 // NewAgent creates a new Agent instance.
@@ -72,13 +72,13 @@ func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 	)
 
 	return &agent{
-		workerUuid:        opts.WorkerUuid,
-		functionUuid:      opts.FunctionUuid,
-		runnerUuid:        opts.RunnerUuid,
-		runtimeHandler:    opts.RuntimeHandler,
-		apiServer:         apiServer,
-		messagingProducer: messagingProducer,
-		persistentRuntime: persistentRuntime,
+		workerUuid:         opts.WorkerUuid,
+		functionIdentifier: opts.FunctionIdentifier,
+		runnerUuid:         opts.RunnerUuid,
+		runtimeHandler:     opts.RuntimeHandler,
+		apiServer:          apiServer,
+		messagingProducer:  messagingProducer,
+		persistentRuntime:  persistentRuntime,
 	}, nil
 }
 
@@ -92,10 +92,10 @@ func (a *agent) Run(ctx context.Context) error {
 	readyCallback := func() {
 		log.Infof("signalizing agent ready")
 		a.messagingProducer.Publish(ctx, naming.MessagingWorkerRelatedAgentReadyTopic(a.workerUuid), messagespb.RunnerAgentReadyMessage{
-			FunctionUuid: a.functionUuid,
-			RunnerUuid:   a.runnerUuid,
-			Reason:       "ok",
-			Success:      true,
+			FunctionIdentifier: a.functionIdentifier,
+			RunnerUuid:         a.runnerUuid,
+			Reason:             "ok",
+			Success:            true,
 		})
 	}
 	healthStatusProvider.WithCallback(readyCallback)

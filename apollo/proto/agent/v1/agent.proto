@@ -21,7 +21,7 @@ message ContextData {
 message EventData {
   string uuid = 1;
   string type = 2;
-  google.protobuf.Struct data = 3;
+  google.protobuf.Struct payload = 3;
 }
 
 message InvokeRequest {

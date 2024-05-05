@@ -3,25 +3,39 @@ syntax = "proto3";
 package apollo.proto.messages.v1;
 
 import "apollo/proto/registry/v1/registry.proto";
+import "apollo/proto/frontend/v1/frontend.proto";
+import "apollo/proto/fleet/v1/fleet.proto";
 
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/messages/v1;messagespb";
 
 message FunctionInitializationMessage {
-  string function_uuid = 1;
+  apollo.proto.fleet.v1.FunctionSpecs function = 1;
   string worker_uuid = 2;
   string reason = 3;
   bool success = 4;
 }
 
 message FunctionDeinitializationMessage {
-  string function_uuid = 1;
+  apollo.proto.fleet.v1.FunctionSpecs function = 1;
   string worker_uuid = 2;
   string reason = 3;
   bool success = 4;
 }
 
+message FunctionPackageCreationMessage {
+  apollo.proto.fleet.v1.FunctionSpecs function = 1;
+  string runtime_name = 3;
+  string runtime_version = 4;
+  string runtime_architecture = 5;
+}
+
+message FunctionStatusUpdateMessage {
+  apollo.proto.fleet.v1.FunctionSpecs function = 1;
+  apollo.proto.frontend.v1.FunctionStatus status = 2;
+}
+
 message RunnerAgentReadyMessage {
-  string function_uuid = 1;
+  string function_identifier = 1;
   string runner_uuid = 2;
   string reason = 3;
   bool success = 4;

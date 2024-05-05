@@ -167,7 +167,8 @@ func (r *runnerOperator) RunnerPoolMetrics() *registrypb.RunnerPoolMetrics {
 }
 
 func (r *runnerOperator) AvailableRunner(request *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error) {
-	instance, err := r.runnerPool.AvailableRunner(request.FunctionUuid)
+	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
+	instance, err := r.runnerPool.AvailableRunner(functionIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +204,7 @@ func (r *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 	}
 	cfg := &runner.Config{
 		WorkerUuid:            r.workerUuid,
-		FunctionUuid:          request.FunctionUuid,
+		FunctionUuid:          request.Function.Uuid,
 		RunnerUuid:            runnerUuid,
 		HostOsArch:            r.osArch,
 		FirecrackerBinaryPath: r.firecrackerBinaryPath,
@@ -226,8 +227,8 @@ func (r *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 		RuntimeBinaryArgs: request.Runtime.BinaryArgs,
 		FunctionDrivePath: strings.Join(
 			[]string{
-				naming.FunctionStoragePath(r.runnerInitializer.DataPath(), request.FunctionUuid),
-				naming.FunctionImageFileName(request.FunctionUuid),
+				naming.FunctionStoragePath(r.runnerInitializer.DataPath(), request.Function.Uuid),
+				naming.FunctionImageFileName(request.Function.Version),
 			},
 			string(os.PathSeparator),
 		),
@@ -300,8 +301,9 @@ func (r *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 
 	// Waiting for the runner to become ready.
 	if err := instance.Ready(r.runnerCtx); err != nil {
+		functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
 		// Remove runner from pool.
-		r.runnerPool.Remove(request.FunctionUuid, runnerUuid)
+		r.runnerPool.Remove(functionIdentifier, runnerUuid)
 
 		if err := instance.ShutdownAndDestroy(r.runnerCtx); err != nil {
 			log.Errorf("failed to shutdown runner instance: %v", err)
@@ -360,7 +362,8 @@ func (r *runnerOperator) TeardownRunners(ctx context.Context) {
 
 // InvokeFunction invokes the function inside of a specified runner.
 func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
-	instance, err := r.runnerPool.Get(request.FunctionUuid, request.RunnerUuid)
+	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
+	instance, err := r.runnerPool.Get(functionIdentifier, request.RunnerUuid)
 	if err != nil {
 		return nil, fmt.Errorf("runner not found: %w", err)
 	}
@@ -376,9 +379,9 @@ func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.In
 			MemoryLimit:    -1,
 		},
 		Event: &agentpb.EventData{
-			Uuid: request.Event.Uuid,
-			Type: request.Event.Type,
-			Data: request.Event.Data,
+			Uuid:    request.Event.Uuid,
+			Type:    request.Event.Type,
+			Payload: request.Event.Payload,
 		},
 	}
 	// invoke the function code with the data of the event

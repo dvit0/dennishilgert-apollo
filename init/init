@@ -145,7 +145,7 @@ log "network has been set up with ip $client_ip"
 log "exporting env variables for agent"
 
 parse_and_export_env "wkr-uuid" "APOLLO_WORKER_UUID"
-parse_and_export_env "fn-uuid" "APOLLO_FUNCTION_UUID"
+parse_and_export_env "fn-ident" "APOLLO_FUNCTION_IDENTIFIER"
 parse_and_export_env "rn-uuid" "APOLLO_RUNNER_UUID"
 parse_and_export_env "rt-hdlr" "APOLLO_RUNTIME_HANDLER"
 parse_and_export_env "rt-bin-path" "APOLLO_RUNTIME_BINARY_PATH"

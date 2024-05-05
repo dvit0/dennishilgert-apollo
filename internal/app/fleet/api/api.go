@@ -154,21 +154,21 @@ func (a *apiServer) InitializeFunction(ctx context.Context, req *fleetpb.Initial
 		if err := a.runnerInitializer.InitializeFunction(bgCtx, req); err != nil {
 			log.Errorf("failed to prepare function: %v", err)
 			message := &messagespb.FunctionInitializationMessage{
-				FunctionUuid: req.FunctionUuid,
-				WorkerUuid:   a.workerUuid,
-				Reason:       err.Error(),
-				Success:      false,
+				Function:   req.Function,
+				WorkerUuid: a.workerUuid,
+				Reason:     err.Error(),
+				Success:    false,
 			}
 			a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
 			log.Errorf("failed to prepare function: %v", err)
 			return
 		}
-		log.Infof("function has been prepared successfully: %s", req.FunctionUuid)
+		log.Infof("function has been prepared successfully: %s", req.Function.Uuid)
 		message := &messagespb.FunctionInitializationMessage{
-			FunctionUuid: req.FunctionUuid,
-			WorkerUuid:   a.workerUuid,
-			Reason:       "ok",
-			Success:      true,
+			Function:   req.Function,
+			WorkerUuid: a.workerUuid,
+			Reason:     "ok",
+			Success:    true,
 		}
 		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
 	}()

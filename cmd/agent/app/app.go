@@ -31,7 +31,7 @@ func Run() {
 		ctx,
 		agent.Options{
 			WorkerUuid:                cfg.WorkerUuid,
-			FunctionUuid:              cfg.FunctionUuid,
+			FunctionIdentifier:        cfg.FunctionIdentifier,
 			RunnerUuid:                cfg.RunnerUuid,
 			RuntimeHandler:            cfg.RuntimeHandler,
 			RuntimeBinaryPath:         cfg.RuntimeBinaryPath,

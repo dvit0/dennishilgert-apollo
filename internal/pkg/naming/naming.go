@@ -14,6 +14,8 @@ var (
 	// Messaging topics.
 	MessagingFunctionInitializationTopic   = "apollo_function_initialization"
 	MessagingFunctionDeinitializationTopic = "apollo_function_deinitialization"
+	MessagingFunctionPackageCreationTopic  = "apollo_function_package_creation"
+	MessagingFunctionStatusUpdateTopic     = "apollo_function_status_update"
 	MessagingInstanceHeartbeatTopic        = "apollo_instance_heartbeat"
 
 	// Name of the kernel storage bucket.
@@ -56,8 +58,8 @@ func CacheArchitectureSetKey(architecture string) string {
 	return fmt.Sprintf("arch:%s", architecture)
 }
 
-func CacheFunctionSetKey(functionUuid string) string {
-	return fmt.Sprintf("function:%s", functionUuid)
+func CacheFunctionSetKey(functionIdentifier string) string {
+	return fmt.Sprintf("function:%s", functionIdentifier)
 }
 
 func CacheExtractInstanceUuid(key string) string {
@@ -73,16 +75,12 @@ func MessagingWorkerRelatedAgentReadyTopic(workerUuid string) string {
 	return fmt.Sprintf("apollo_agent_ready_related_%s", workerUuid)
 }
 
-func ImageNameRootFs(functionUuid string) string {
-	return fmt.Sprintf("%s-rootfs", functionUuid)
-}
-
-func ImageNameCode(functionUuid string) string {
-	return fmt.Sprintf("%s-code", functionUuid)
-}
-
 func ImageRefStr(imageRegistryAddress string, imageName string, imageTag string) string {
 	return fmt.Sprintf("%s/%s/%s:%s", imageRegistryAddress, ImagePrefix, imageName, imageTag)
+}
+
+func FunctionIdentifier(functionUuid string, functionVersion string) string {
+	return fmt.Sprintf("%s_%s", functionUuid, functionVersion)
 }
 
 func FunctionStoragePath(dataPath string, functionUuid string) string {
@@ -93,8 +91,12 @@ func FunctionStoragePathBase(dataPath string) string {
 	return fmt.Sprintf("%s/functions", dataPath)
 }
 
-func FunctionImageFileName(functionUuid string) string {
-	return fmt.Sprintf("%s.ext4", functionUuid)
+func FunctionImageFileName(functionVersion string) string {
+	return fmt.Sprintf("%s.ext4", functionVersion)
+}
+
+func FunctionExtractVersionFromImageFileName(imageFileName string) string {
+	return strings.Split(imageFileName, ".")[0]
 }
 
 func KernelStoragePath(dataPath string, kernelName string, kernelVersion string) string {

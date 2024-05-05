@@ -25,10 +25,17 @@ enum MachineWeight {
 message KernelSpecs {
   string name = 1;
   string version = 2;
+  string architecture = 3;
 }
 
 message RuntimeSpecs {
   string name = 1;
+  string version = 2;
+  string architecture = 3;
+}
+
+message FunctionSpecs {
+  string uuid = 1;
   string version = 2;
 }
 
@@ -44,7 +51,6 @@ message MachineSpecs {
   int32 memory_limit = 1;
   int32 vcpu_cores = 2;
   int32 idle_ttl = 3;
-  string architecture = 4;
   MachineWeight weight = 5;
   optional string log_level = 6;
 }
@@ -54,17 +60,17 @@ message EventSpecs {
   string type = 2;
   string source_ip = 3;
   map<string, string> params = 4;
-  google.protobuf.Struct data = 5;
+  google.protobuf.Struct payload = 5;
 }
 
 message InitializeFunctionRequest {
-  string function_uuid = 1;
+  FunctionSpecs function = 1;
   KernelSpecs kernel = 2;
   RuntimeSpecs runtime = 3;
 }
 
 message AvailableRunnerRequest {
-  string function_uuid = 1;
+  FunctionSpecs function = 1;
 }
 
 message AvailableRunnerResponse {
@@ -73,7 +79,7 @@ message AvailableRunnerResponse {
 }
 
 message ProvisionRunnerRequest {
-  string function_uuid = 1;
+  FunctionSpecs function = 1;
   KernelSpecs kernel = 2;
   RuntimeExecutionSpecs runtime = 3;
   MachineSpecs machine = 4;
@@ -86,7 +92,7 @@ message ProvisionRunnerResponse {
 
 message InvokeFunctionRequest {
   string runner_uuid = 1;
-  string function_uuid = 2;
+  FunctionSpecs function = 2;
   EventSpecs event = 3; 
 }
 

@@ -34,7 +34,7 @@ type Context struct {
 type Event struct {
 	EventUuid string      `json:"eventUuid"`
 	EventType string      `json:"eventType"`
-	Data      interface{} `json:"data"`
+	Payload   interface{} `json:"payload"`
 }
 
 type DefaultProperties struct {

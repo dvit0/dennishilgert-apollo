@@ -14,7 +14,7 @@ type KernelArgsBuilder interface {
 	WithNoModules(noModules bool) KernelArgsBuilder
 	WithInit(init string) KernelArgsBuilder
 	WithWorkerUuid(workerUuid string) KernelArgsBuilder
-	WithFunctionUuid(functionUuid string) KernelArgsBuilder
+	WithFunctionIdentifier(functionIdentifier string) KernelArgsBuilder
 	WithRunnerUuid(runnerUuid string) KernelArgsBuilder
 	WithRuntimeHandler(handler string) KernelArgsBuilder
 	WithRuntimeBinaryPath(binaryPath string) KernelArgsBuilder
@@ -113,9 +113,9 @@ func (c *kernelArgsBuilder) WithWorkerUuid(workerUuid string) KernelArgsBuilder 
 	return c
 }
 
-// WithFunctionUuid sets the functionUuid argument.
-func (c *kernelArgsBuilder) WithFunctionUuid(functionUuid string) KernelArgsBuilder {
-	c.functionUuid = fmt.Sprintf("fn-uuid=%s", functionUuid)
+// WithFunctionIdentifier sets the functionIdentifier argument.
+func (c *kernelArgsBuilder) WithFunctionIdentifier(functionIdentifier string) KernelArgsBuilder {
+	c.functionUuid = fmt.Sprintf("fn-ident=%s", functionIdentifier)
 	return c
 }
 

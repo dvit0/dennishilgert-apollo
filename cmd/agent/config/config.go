@@ -9,12 +9,12 @@ import (
 var log = logger.NewLogger("apollo.agent.config")
 
 type Config struct {
-	WorkerUuid        string
-	FunctionUuid      string
-	RunnerUuid        string
-	RuntimeHandler    string
-	RuntimeBinaryPath string
-	RuntimeBinaryArgs string
+	WorkerUuid         string
+	FunctionIdentifier string
+	RunnerUuid         string
+	RuntimeHandler     string
+	RuntimeBinaryPath  string
+	RuntimeBinaryArgs  string
 
 	ApiPort                   int
 	MessagingBootstrapServers string
@@ -30,7 +30,7 @@ func Load() (*Config, error) {
 
 	// Loading the application specific values from the environment.
 	configuration.LoadOrDefault("WorkerUuid", "APOLLO_WORKER_UUID", nil)
-	configuration.LoadOrDefault("FunctionUuid", "APOLLO_FUNCTION_UUID", nil)
+	configuration.LoadOrDefault("FunctionIdentifier", "APOLLO_FUNCTION_IDENTIFIER", nil)
 	configuration.LoadOrDefault("RunnerUuid", "APOLLO_RUNNER_UUID", nil)
 	configuration.LoadOrDefault("RuntimeHandler", "APOLLO_RUNTIME_HANDLER", nil)
 	configuration.LoadOrDefault("RuntimeBinaryPath", "APOLLO_RUNTIME_BINARY_PATH", nil)

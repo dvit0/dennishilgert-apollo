@@ -283,8 +283,8 @@ func (l *leaseService) addWorkerInstance(ctx context.Context, instance *registry
 	if err := l.cacheClient.Client().SAdd(ctx, naming.CacheArchitectureSetKey(instance.Architecture), instance.WorkerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to add worker instance to architecture set: %w", err)
 	}
-	for _, function := range instance.InitializedFunctions {
-		if err := l.cacheClient.Client().SAdd(ctx, naming.CacheFunctionSetKey(function.Uuid), instance.WorkerUuid).Err(); err != nil {
+	for _, functionIdentifier := range instance.InitializedFunctions {
+		if err := l.cacheClient.Client().SAdd(ctx, naming.CacheFunctionSetKey(functionIdentifier), instance.WorkerUuid).Err(); err != nil {
 			return fmt.Errorf("failed to add worker instance to function set: %w", err)
 		}
 	}
@@ -310,12 +310,12 @@ func (l *leaseService) removeWorkerInstance(ctx context.Context, workerUuid stri
 	if err := l.cacheClient.Client().SRem(ctx, naming.CacheArchitectureSetKey(values["architecture"]), workerUuid).Err(); err != nil {
 		return fmt.Errorf("failed to remove worker instance from architecture set: %w", err)
 	}
-	initializedFunctions := make([]*registrypb.Function, 0)
+	initializedFunctions := make([]string, 0)
 	if err := json.Unmarshal([]byte(values["functions"]), &initializedFunctions); err != nil {
 		return fmt.Errorf("failed to unmarshal functions: %w", err)
 	}
-	for _, function := range initializedFunctions {
-		if err := l.cacheClient.Client().SRem(ctx, naming.CacheFunctionSetKey(function.Uuid), workerUuid).Err(); err != nil {
+	for _, functionIdentifier := range initializedFunctions {
+		if err := l.cacheClient.Client().SRem(ctx, naming.CacheFunctionSetKey(functionIdentifier), workerUuid).Err(); err != nil {
 			return fmt.Errorf("failed to remove worker instance from function set: %w", err)
 		}
 	}

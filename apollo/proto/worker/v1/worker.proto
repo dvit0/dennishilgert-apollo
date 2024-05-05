@@ -13,14 +13,14 @@ service WorkerManager {
 }
 
 message InitializeFunctionRequest {
-  string function_uuid = 1;
+  apollo.proto.fleet.v1.FunctionSpecs function = 1;
   apollo.proto.fleet.v1.KernelSpecs kernel = 2;
   apollo.proto.fleet.v1.RuntimeSpecs runtime = 3;
   apollo.proto.fleet.v1.MachineSpecs machine = 4;
 }
 
 message AllocateInvocationRequest {
-  string function_uuid = 1;
+  apollo.proto.fleet.v1.FunctionSpecs function = 1;
   apollo.proto.fleet.v1.KernelSpecs kernel = 2;
   apollo.proto.fleet.v1.RuntimeExecutionSpecs runtime = 3;
   apollo.proto.fleet.v1.MachineSpecs machine = 4;
