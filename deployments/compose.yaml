@@ -40,7 +40,7 @@ services:
     volumes:
       - "postgres_data:/var/lib/postgresql/data"
     ports:
-      - "5433:5432" # Changed temporarily from 5432 to 5433 to avoid conflict with local postgres
+      - "5434:5432" # Changed temporarily from 5432 to 5434 to avoid conflict with local postgres
     restart: always
     environment:
       - POSTGRES_USER=apollo
