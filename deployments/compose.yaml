@@ -33,9 +33,9 @@ services:
     environment:
       - MINIO_ROOT_USER=root
       - MINIO_ROOT_PASSWORD=7dbcf34172f78a6719f410a64bdb94fc
-      - MINIO_NOTIFY_KAFKA_ENABLE_primary="on"
-      - MINIO_NOTIFY_KAFKA_BROKERS_primary="10.71.29.50:9092"
-      - MINIO_NOTIFY_KAFKA_TOPIC_primary="apollo_function_code_uploaded"
+      - MINIO_NOTIFY_KAFKA_ENABLE_PRIMARY="on"
+      - MINIO_NOTIFY_KAFKA_BROKERS_PRIMARY="10.71.29.50:9092"
+      - MINIO_NOTIFY_KAFKA_TOPIC_PRIMARY="apollo_function_code_uploaded"
 
   apollo-database:
     container_name: apollo-database
