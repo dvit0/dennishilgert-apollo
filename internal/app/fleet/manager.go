@@ -197,7 +197,7 @@ func (f *fleetManager) Run(ctx context.Context) error {
 	}()
 
 	healthStatusProvider := health.NewHealthStatusProvider(health.ProviderOptions{
-		Targets: 3,
+		Targets: 4,
 	})
 
 	runner := runner.NewRunnerManager(

@@ -156,7 +156,7 @@ func (f *frontend) Run(ctx context.Context) error {
 	log.Info("apollo frontend is starting")
 
 	healthStatusProvider := health.NewHealthStatusProvider(health.ProviderOptions{
-		Targets: 1,
+		Targets: 2,
 	})
 
 	runner := runner.NewRunnerManager(
