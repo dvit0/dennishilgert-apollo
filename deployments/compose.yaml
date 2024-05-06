@@ -37,8 +37,10 @@ services:
   apollo-database:
     container_name: apollo-database
     image: postgres:latest
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
     ports:
-      - "5432:5432"
+      - "5433:5432" # Changed temporarily from 5432 to 5433 to avoid conflict with local postgres
     restart: always
     environment:
       - POSTGRES_USER=apollo
@@ -50,7 +52,7 @@ services:
     image: redis:latest
     command: redis-server --notify-keyspace-events KEA
     ports:
-      - "6379:6379"
+      - "6380:6379" # Changed temporarily from 6379 to 6380 to avoid conflict with local redis
     restart: always
 
   apollo-image-registry:
@@ -78,4 +80,6 @@ volumes:
   kafka_data:
     driver: local
   minio_data:
+    driver: local
+  postgres_data:
     driver: local
