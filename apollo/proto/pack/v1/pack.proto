@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package apollo.proto.pack.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/dennishilgert/apollo/pkg/proto/pack/v1;packpb";
+
+service Package {
+  
+}

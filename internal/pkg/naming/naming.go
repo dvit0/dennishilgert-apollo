@@ -14,15 +14,15 @@ var (
 	// Messaging topics.
 	MessagingFunctionInitializationTopic   = "apollo_function_initialization"
 	MessagingFunctionDeinitializationTopic = "apollo_function_deinitialization"
+	MessagingFunctionCodeUploadedTopic     = "apollo_function_code_uploaded"
 	MessagingFunctionPackageCreationTopic  = "apollo_function_package_creation"
 	MessagingFunctionStatusUpdateTopic     = "apollo_function_status_update"
 	MessagingInstanceHeartbeatTopic        = "apollo_instance_heartbeat"
 
-	// Name of the kernel storage bucket.
-	StorageKernelBucketName = "apollo-kernels"
-
-	// Name of the function storage bucket.
-	StorageFunctionBucketName = "apollo-functions"
+	// Names of the storage buckets.
+	StorageKernelBucketName       = "apollo-kernels"
+	StorageFunctionBucketName     = "apollo-functions"
+	StorageDependenciesBucketName = "apollo-dependencies"
 )
 
 func CacheAddLeaseDeclaration(key string) string {
@@ -99,6 +99,10 @@ func FunctionExtractVersionFromImageFileName(imageFileName string) string {
 	return strings.Split(imageFileName, ".")[0]
 }
 
+func FunctionCodeStorageName(functionUuid string, functionVersion string) string {
+	return fmt.Sprintf("%s/%s.zip", functionUuid, functionVersion)
+}
+
 func KernelStoragePath(dataPath string, kernelName string, kernelVersion string) string {
 	return fmt.Sprintf("%s/kernels/%s-%s", dataPath, kernelName, kernelVersion)
 }
@@ -133,4 +137,12 @@ func RunnerStdErrFileName() string {
 
 func RunnerSocketFileName() string {
 	return fmt.Sprintf("%s_fc.sock", strconv.Itoa(os.Getpid()))
+}
+
+func RuntimeInitialCodeDeclarator() string {
+	return "initial"
+}
+
+func RuntimeInitialImageRefStr(imageRegistryAddress string, runtimeName string, runtimeVersion string, runtimeArchitecture string) string {
+	return ImageRefStr(imageRegistryAddress, fmt.Sprintf("initial-%s", runtimeName), fmt.Sprintf("%s-%s", runtimeVersion, runtimeArchitecture))
 }

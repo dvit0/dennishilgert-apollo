@@ -24,9 +24,7 @@ message FunctionDeinitializationMessage {
 
 message FunctionPackageCreationMessage {
   apollo.proto.fleet.v1.FunctionSpecs function = 1;
-  string runtime_name = 3;
-  string runtime_version = 4;
-  string runtime_architecture = 5;
+  apollo.proto.fleet.v1.RuntimeSpecs runtime = 2;
 }
 
 message FunctionStatusUpdateMessage {
