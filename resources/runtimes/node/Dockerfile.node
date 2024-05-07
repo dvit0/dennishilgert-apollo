@@ -1,7 +1,6 @@
 FROM localhost:5000/apollo/baseos:bookworm
 
-# Set /tmp as the workdir to get rid of downloaded archives after installation.
-WORKDIR /tmp
+WORKDIR /runtime
 
 # Update the cached package lists.
 RUN apt-get update && apt-get install --no-install-recommends -y \
@@ -14,6 +13,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 	apt-get install -y nodejs
 
+COPY ./package.json ./package.json
+COPY ./wrapper.js ./wrapper.js
+
 # Uninstall packages needed for node.js installation only.
 # TODO: This has been disabled temporarily as the node binaries are removed by this!?
 #RUN apt-get purge -y \
@@ -21,7 +23,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 #	ca-certificates \
 #	curl \
 #	gnupg
-#RUN apt-get autoremove -y
 
 # set entrypoint to an inifinity loop as the container is only started for copying the rootfs
 ENTRYPOINT [ "tail", "-f", "/dev/null" ]
