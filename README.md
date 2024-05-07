@@ -34,13 +34,13 @@ The core components of Apollo include all services the are necessary for the sys
 
 - **Apollo Worker Manager** - State: done
 
-- **Apollo Frontend** - State: work in progress
+- **Apollo Frontend** - State: done
 
-- **Apollo API Gateway** - State: to do
+- **Apollo API Gateway** - State: work in progress
 
 - **Apollo Service Registry** - State: done
 
-- **Apollo Package Service** - State: to do
+- **Apollo Package Service** - State: work in progress
 
 - **Apollo CLI** - State: work in progress
 
