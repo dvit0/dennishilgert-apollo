@@ -9,15 +9,16 @@ import (
 var log = logger.NewLogger("apollo.worker.config")
 
 type Config struct {
-	ApiPort                   int
-	MessagingBootstrapServers string
-	MessagingWorkerCount      int
-	CacheAddress              string
-	CacheUsername             string
-	CachePassword             string
-	CacheDatabase             int
-	ServiceRegistryAddress    string
-	HeartbeatInterval         int
+	ApiPort                      int
+	MessagingBootstrapServers    string
+	MessagingWorkerCount         int
+	CacheAddress                 string
+	CacheUsername                string
+	CachePassword                string
+	CacheDatabase                int
+	ServiceRegistryAddress       string
+	HeartbeatInterval            int
+	FunctionInitializationFactor int
 }
 
 // Load loads the configuration from the environment.
@@ -41,6 +42,8 @@ func Load() (*Config, error) {
 
 	configuration.LoadOrDefault("ServiceRegistryAddress", "APOLLO_SERVICE_REGISTRY_ADDRESS", nil)
 	configuration.LoadOrDefault("HeartbeatInterval", "APOLLO_HEARTBEAT_INTERVAL", 3)
+
+	configuration.LoadOrDefault("FunctionInitializationFactor", "APOLLO_FUNCTION_INITIALIZATION_FACTOR", 3)
 
 	// unmarshalling the Config struct
 	if err := viper.Unmarshal(&config); err != nil {

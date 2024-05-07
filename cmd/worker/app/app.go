@@ -27,15 +27,16 @@ func Run() {
 	manager, err := worker.NewManager(
 		ctx,
 		worker.Options{
-			ApiPort:                   cfg.ApiPort,
-			MessagingBootstrapServers: cfg.MessagingBootstrapServers,
-			MessagingWorkerCount:      cfg.MessagingWorkerCount,
-			CacheAddress:              cfg.CacheAddress,
-			CacheUsername:             cfg.CacheUsername,
-			CachePassword:             cfg.CachePassword,
-			CacheDatabase:             cfg.CacheDatabase,
-			ServiceRegistryAddress:    cfg.ServiceRegistryAddress,
-			HeartbeatInterval:         cfg.HeartbeatInterval,
+			ApiPort:                      cfg.ApiPort,
+			MessagingBootstrapServers:    cfg.MessagingBootstrapServers,
+			MessagingWorkerCount:         cfg.MessagingWorkerCount,
+			CacheAddress:                 cfg.CacheAddress,
+			CacheUsername:                cfg.CacheUsername,
+			CachePassword:                cfg.CachePassword,
+			CacheDatabase:                cfg.CacheDatabase,
+			ServiceRegistryAddress:       cfg.ServiceRegistryAddress,
+			HeartbeatInterval:            cfg.HeartbeatInterval,
+			FunctionInitializationFactor: cfg.FunctionInitializationFactor,
 		},
 	)
 	if err != nil {

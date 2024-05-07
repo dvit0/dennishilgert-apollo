@@ -13,7 +13,6 @@ import (
 	"github.com/dennishilgert/apollo/pkg/messaging/producer"
 	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	frontendpb "github.com/dennishilgert/apollo/pkg/proto/frontend/v1"
-	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
 	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 	workerpb "github.com/dennishilgert/apollo/pkg/proto/worker/v1"
 	"github.com/dennishilgert/apollo/pkg/registry"
@@ -27,7 +26,7 @@ var log = logger.NewLogger("apollo.frontend.operator")
 
 type FrontendOperator interface {
 	InitializeFunction(ctx context.Context, functionUuid string, functionVersion string) error
-	InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error)
+	InvokeFunction(ctx context.Context, request *frontendpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error)
 	AddKernel(ctx context.Context, request *frontendpb.AddKernelRequest) error
 	ListKernels(ctx context.Context, request *frontendpb.ListKernelsRequest) (*frontendpb.ListKernelsResponse, error)
 	RemoveKernel(ctx context.Context, request *frontendpb.RemoveKernelRequest) error
@@ -37,7 +36,9 @@ type FrontendOperator interface {
 	CreateFunction(ctx context.Context, request *frontendpb.CreateFunctionRequest) (*frontendpb.CreateFunctionResponse, error)
 	GetFunction(ctx context.Context, request *frontendpb.GetFunctionRequest) (*frontendpb.GetFunctionResponse, error)
 	ListFunctions(ctx context.Context, request *frontendpb.ListFunctionsRequest) (*frontendpb.ListFunctionsResponse, error)
-	UpdateFunction(ctx context.Context, request *frontendpb.UpdateFunctionRequest) error
+	UpdateFunctionCode(ctx context.Context, request *frontendpb.FunctionCodeUploadUrlRequest) (*frontendpb.FunctionCodeUploadUrlResponse, error)
+	UpdateFunctionRuntime(ctx context.Context, request *frontendpb.UpdateFunctionRuntimeRequest) error
+	UpdateFunctionResources(ctx context.Context, request *frontendpb.UpdateFunctionResourcesRequest) error
 	UpdateFunctionStatus(ctx context.Context, functionUuid string, status frontendpb.FunctionStatus) error
 	DeleteFunction(ctx context.Context, request *frontendpb.DeleteFunctionRequest) error
 }
@@ -109,8 +110,12 @@ func (o *frontendOperator) InitializeFunction(ctx context.Context, functionUuid 
 	return nil
 }
 
-func (o *frontendOperator) InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
-	function, err := o.databaseClient.GetFunction(request.Function.Uuid)
+func (o *frontendOperator) InvokeFunction(ctx context.Context, request *frontendpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
+	httpTrigger, err := o.databaseClient.GetHttpTrigger(request.HttpTriggerId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get http trigger: %w", err)
+	}
+	function, err := o.databaseClient.GetFunction(httpTrigger.FunctionUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get function: %w", err)
 	}
@@ -143,6 +148,7 @@ func (o *frontendOperator) InvokeFunction(ctx context.Context, request *fleetpb.
 			MemoryLimit: function.MemoryLimit,
 			VcpuCores:   function.VCpuCores,
 			IdleTtl:     function.IdleTtl,
+			Weight:      o.evaluateMachineWeight(function.MemoryLimit, function.VCpuCores),
 			LogLevel:    &function.LogLevel,
 		},
 	}
@@ -170,8 +176,17 @@ func (o *frontendOperator) InvokeFunction(ctx context.Context, request *fleetpb.
 	fleetApiClient := fleetpb.NewFleetManagerClient(fleetClientConn)
 	invocationResponse, err := fleetApiClient.InvokeFunction(ctx, &fleetpb.InvokeFunctionRequest{
 		RunnerUuid: allocationResponse.RunnerUuid,
-		Function:   request.Function,
-		Event:      request.Event,
+		Function: &fleetpb.FunctionSpecs{
+			Uuid:    function.Uuid,
+			Version: function.Version,
+		},
+		Event: &fleetpb.EventSpecs{
+			Uuid:     uuid.NewString(),
+			Type:     request.Event.Type,
+			SourceIp: request.Event.SourceIp,
+			Params:   request.Event.Params,
+			Payload:  request.Event.Payload,
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to invoke function: %w", err)
@@ -221,6 +236,9 @@ func (o *frontendOperator) AddRuntime(ctx context.Context, request *frontendpb.A
 		BinaryPath:         request.Runtime.BinaryPath,
 		BinaryArgs:         request.Runtime.BinaryArgs,
 		DisplayName:        request.Runtime.DisplayName,
+		DefaultHandler:     request.Runtime.DefaultHandler,
+		DefaultMemoryLimit: request.Runtime.DefaultMemoryLimit,
+		DefaultVCpuCores:   request.Runtime.DefaultVCpuCores,
 		KernelName:         request.Runtime.KernelName,
 		KernelVersion:      request.Runtime.KernelVersion,
 		KernelArchitecture: request.Runtime.KernelArchitecture,
@@ -244,6 +262,9 @@ func (o *frontendOperator) ListRuntimes(ctx context.Context, request *frontendpb
 			BinaryPath:         runtime.BinaryPath,
 			BinaryArgs:         runtime.BinaryArgs,
 			DisplayName:        runtime.DisplayName,
+			DefaultHandler:     runtime.DefaultHandler,
+			DefaultMemoryLimit: runtime.DefaultMemoryLimit,
+			DefaultVCpuCores:   runtime.DefaultVCpuCores,
 			KernelName:         runtime.KernelName,
 			KernelVersion:      runtime.KernelVersion,
 			KernelArchitecture: runtime.KernelArchitecture,
@@ -260,14 +281,20 @@ func (o *frontendOperator) RemoveRuntime(ctx context.Context, request *frontendp
 }
 
 func (o *frontendOperator) CreateFunction(ctx context.Context, request *frontendpb.CreateFunctionRequest) (*frontendpb.CreateFunctionResponse, error) {
+	runtime, err := o.databaseClient.GetRuntime(request.RuntimeName, request.RuntimeVersion, request.RuntimeArchitecture)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get runtime: %w", err)
+	}
 	function := &models.Function{
 		Uuid:                uuid.NewString(),
 		Name:                request.Name,
-		Version:             request.Version,
-		Handler:             request.Handler,
-		MemoryLimit:         request.MemoryLimit,
-		VCpuCores:           request.VCpuCores,
+		Version:             naming.RuntimeInitialCodeDeclarator(),
+		Handler:             runtime.DefaultHandler,
+		MemoryLimit:         runtime.DefaultMemoryLimit,
+		VCpuCores:           runtime.DefaultVCpuCores,
 		Status:              frontendpb.FunctionStatus_CREATED,
+		IdleTtl:             1,
+		LogLevel:            log.LogLevel(),
 		RuntimeName:         request.RuntimeName,
 		RuntimeVersion:      request.RuntimeVersion,
 		RuntimeArchitecture: request.RuntimeArchitecture,
@@ -276,24 +303,17 @@ func (o *frontendOperator) CreateFunction(ctx context.Context, request *frontend
 		return nil, fmt.Errorf("failed to create function: %w", err)
 	}
 	trigger := &models.HttpTrigger{
-		UrlId:        utils.RandomString(8, false, true),
+		UrlId:        utils.RandomString(32, false, true),
 		FunctionUuid: function.Uuid,
 	}
 	if err := o.databaseClient.CreateHttpTrigger(trigger); err != nil {
 		return nil, fmt.Errorf("failed to create http trigger: %w", err)
 	}
-	o.messagingProducer.Publish(ctx, naming.MessagingFunctionPackageCreationTopic, &messagespb.FunctionPackageCreationMessage{
-		Function: &fleetpb.FunctionSpecs{
-			Uuid:    function.Uuid,
-			Version: function.Version,
-		},
-		RuntimeName:         request.RuntimeName,
-		RuntimeVersion:      request.RuntimeVersion,
-		RuntimeArchitecture: request.RuntimeArchitecture,
-	})
+	if err := o.InitializeFunction(ctx, function.Uuid, function.Version); err != nil {
+		return nil, fmt.Errorf("failed to initialize function: %w", err)
+	}
 	return &frontendpb.CreateFunctionResponse{
-		Uuid:          function.Uuid,
-		HttpTriggerId: trigger.UrlId,
+		Uuid: function.Uuid,
 	}, nil
 }
 
@@ -314,6 +334,9 @@ func (o *frontendOperator) GetFunction(ctx context.Context, request *frontendpb.
 			Handler:             function.Handler,
 			MemoryLimit:         function.MemoryLimit,
 			VCpuCores:           function.VCpuCores,
+			Status:              function.Status,
+			IdleTtl:             function.IdleTtl,
+			LogLevel:            function.LogLevel,
 			RuntimeName:         function.RuntimeName,
 			RuntimeVersion:      function.RuntimeVersion,
 			RuntimeArchitecture: function.RuntimeArchitecture,
@@ -341,6 +364,9 @@ func (o *frontendOperator) ListFunctions(ctx context.Context, request *frontendp
 			Handler:             function.Handler,
 			MemoryLimit:         function.MemoryLimit,
 			VCpuCores:           function.VCpuCores,
+			Status:              function.Status,
+			IdleTtl:             function.IdleTtl,
+			LogLevel:            function.LogLevel,
 			RuntimeName:         function.RuntimeName,
 			RuntimeVersion:      function.RuntimeVersion,
 			RuntimeArchitecture: function.RuntimeArchitecture,
@@ -351,24 +377,15 @@ func (o *frontendOperator) ListFunctions(ctx context.Context, request *frontendp
 	return response, nil
 }
 
-func (o *frontendOperator) UpdateFunction(ctx context.Context, request *frontendpb.UpdateFunctionRequest) error {
-	// TODO: Check if the function code has been updated as well and if so set the status to created.
+func (o *frontendOperator) UpdateFunctionCode(ctx context.Context, request *frontendpb.FunctionCodeUploadUrlRequest) (*frontendpb.FunctionCodeUploadUrlResponse, error) {
+	return &frontendpb.FunctionCodeUploadUrlResponse{}, nil
+}
 
-	function, err := o.databaseClient.GetFunction(request.Uuid)
-	if err != nil {
-		return fmt.Errorf("failed to get function: %w", err)
-	}
-	function.Name = request.Name
-	function.Version = request.Version
-	function.Handler = request.Handler
-	function.MemoryLimit = request.MemoryLimit
-	function.VCpuCores = request.VCpuCores
-	function.RuntimeName = request.RuntimeName
-	function.RuntimeVersion = request.RuntimeVersion
-	function.RuntimeArchitecture = request.RuntimeArchitecture
-	if err := o.databaseClient.UpdateFunction(function); err != nil {
-		return fmt.Errorf("failed to update function: %w", err)
-	}
+func (o *frontendOperator) UpdateFunctionRuntime(ctx context.Context, request *frontendpb.UpdateFunctionRuntimeRequest) error {
+	return nil
+}
+
+func (o *frontendOperator) UpdateFunctionResources(ctx context.Context, request *frontendpb.UpdateFunctionResourcesRequest) error {
 	return nil
 }
 
@@ -413,4 +430,15 @@ func establishConnection(ctx context.Context, address string) (*grpc.ClientConn,
 		}
 	}
 	return nil, fmt.Errorf("failed to establish connection to service registry after %d seconds", retrySeconds)
+}
+
+func (o *frontendOperator) evaluateMachineWeight(memoryLimit int32, vCpuCores int32) fleetpb.MachineWeight {
+	if vCpuCores <= 1 && memoryLimit <= 128 {
+		return fleetpb.MachineWeight_LIGHT
+	} else if vCpuCores <= 2 && memoryLimit <= 256 {
+		return fleetpb.MachineWeight_MEDIUM
+	} else if vCpuCores <= 2 && memoryLimit <= 512 {
+		return fleetpb.MachineWeight_HEAVY
+	}
+	return fleetpb.MachineWeight_SUPER_HEAVY
 }

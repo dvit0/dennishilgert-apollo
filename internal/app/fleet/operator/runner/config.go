@@ -15,6 +15,7 @@ type Config struct {
 	WorkerUuid               string
 	FunctionUuid             string
 	FunctionVersion          string
+	FunctionIdentifier       string
 	RunnerUuid               string
 	HostOsArch               utils.OsArch
 	FirecrackerBinaryPath    string

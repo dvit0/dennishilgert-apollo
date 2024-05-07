@@ -47,11 +47,6 @@ func (r RunnerState) String() string {
 	return "UNKNOWN"
 }
 
-type TeardownParams struct {
-	FunctionUuid string
-	RunnerUuid   string
-}
-
 type RunnerInstance interface {
 	Config() Config
 	State() RunnerState

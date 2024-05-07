@@ -21,25 +21,27 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Frontend_InvokeFunction_FullMethodName = "/apollo.proto.frontend.v1.Frontend/InvokeFunction"
-	Frontend_AddKernel_FullMethodName      = "/apollo.proto.frontend.v1.Frontend/AddKernel"
-	Frontend_ListKernels_FullMethodName    = "/apollo.proto.frontend.v1.Frontend/ListKernels"
-	Frontend_RemoveKernel_FullMethodName   = "/apollo.proto.frontend.v1.Frontend/RemoveKernel"
-	Frontend_AddRuntime_FullMethodName     = "/apollo.proto.frontend.v1.Frontend/AddRuntime"
-	Frontend_ListRuntimes_FullMethodName   = "/apollo.proto.frontend.v1.Frontend/ListRuntimes"
-	Frontend_RemoveRuntime_FullMethodName  = "/apollo.proto.frontend.v1.Frontend/RemoveRuntime"
-	Frontend_CreateFunction_FullMethodName = "/apollo.proto.frontend.v1.Frontend/CreateFunction"
-	Frontend_GetFunction_FullMethodName    = "/apollo.proto.frontend.v1.Frontend/GetFunction"
-	Frontend_ListFunctions_FullMethodName  = "/apollo.proto.frontend.v1.Frontend/ListFunctions"
-	Frontend_UpdateFunction_FullMethodName = "/apollo.proto.frontend.v1.Frontend/UpdateFunction"
-	Frontend_DeleteFunction_FullMethodName = "/apollo.proto.frontend.v1.Frontend/DeleteFunction"
+	Frontend_InvokeFunction_FullMethodName           = "/apollo.proto.frontend.v1.Frontend/InvokeFunction"
+	Frontend_AddKernel_FullMethodName                = "/apollo.proto.frontend.v1.Frontend/AddKernel"
+	Frontend_ListKernels_FullMethodName              = "/apollo.proto.frontend.v1.Frontend/ListKernels"
+	Frontend_RemoveKernel_FullMethodName             = "/apollo.proto.frontend.v1.Frontend/RemoveKernel"
+	Frontend_AddRuntime_FullMethodName               = "/apollo.proto.frontend.v1.Frontend/AddRuntime"
+	Frontend_ListRuntimes_FullMethodName             = "/apollo.proto.frontend.v1.Frontend/ListRuntimes"
+	Frontend_RemoveRuntime_FullMethodName            = "/apollo.proto.frontend.v1.Frontend/RemoveRuntime"
+	Frontend_CreateFunction_FullMethodName           = "/apollo.proto.frontend.v1.Frontend/CreateFunction"
+	Frontend_GetFunction_FullMethodName              = "/apollo.proto.frontend.v1.Frontend/GetFunction"
+	Frontend_ListFunctions_FullMethodName            = "/apollo.proto.frontend.v1.Frontend/ListFunctions"
+	Frontend_GetFunctionCodeUploadUrl_FullMethodName = "/apollo.proto.frontend.v1.Frontend/GetFunctionCodeUploadUrl"
+	Frontend_UpdateFunctionRuntime_FullMethodName    = "/apollo.proto.frontend.v1.Frontend/UpdateFunctionRuntime"
+	Frontend_UpdateFunctionResources_FullMethodName  = "/apollo.proto.frontend.v1.Frontend/UpdateFunctionResources"
+	Frontend_DeleteFunction_FullMethodName           = "/apollo.proto.frontend.v1.Frontend/DeleteFunction"
 )
 
 // FrontendClient is the client API for Frontend service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FrontendClient interface {
-	InvokeFunction(ctx context.Context, in *v1.InvokeFunctionRequest, opts ...grpc.CallOption) (*v1.InvokeFunctionResponse, error)
+	InvokeFunction(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*v1.InvokeFunctionResponse, error)
 	AddKernel(ctx context.Context, in *AddKernelRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error)
 	ListKernels(ctx context.Context, in *ListKernelsRequest, opts ...grpc.CallOption) (*ListKernelsResponse, error)
 	RemoveKernel(ctx context.Context, in *RemoveKernelRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error)
@@ -49,7 +51,9 @@ type FrontendClient interface {
 	CreateFunction(ctx context.Context, in *CreateFunctionRequest, opts ...grpc.CallOption) (*CreateFunctionResponse, error)
 	GetFunction(ctx context.Context, in *GetFunctionRequest, opts ...grpc.CallOption) (*GetFunctionResponse, error)
 	ListFunctions(ctx context.Context, in *ListFunctionsRequest, opts ...grpc.CallOption) (*ListFunctionsResponse, error)
-	UpdateFunction(ctx context.Context, in *UpdateFunctionRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error)
+	GetFunctionCodeUploadUrl(ctx context.Context, in *FunctionCodeUploadUrlRequest, opts ...grpc.CallOption) (*FunctionCodeUploadUrlResponse, error)
+	UpdateFunctionRuntime(ctx context.Context, in *UpdateFunctionRuntimeRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error)
+	UpdateFunctionResources(ctx context.Context, in *UpdateFunctionResourcesRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error)
 	DeleteFunction(ctx context.Context, in *DeleteFunctionRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error)
 }
 
@@ -61,7 +65,7 @@ func NewFrontendClient(cc grpc.ClientConnInterface) FrontendClient {
 	return &frontendClient{cc}
 }
 
-func (c *frontendClient) InvokeFunction(ctx context.Context, in *v1.InvokeFunctionRequest, opts ...grpc.CallOption) (*v1.InvokeFunctionResponse, error) {
+func (c *frontendClient) InvokeFunction(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*v1.InvokeFunctionResponse, error) {
 	out := new(v1.InvokeFunctionResponse)
 	err := c.cc.Invoke(ctx, Frontend_InvokeFunction_FullMethodName, in, out, opts...)
 	if err != nil {
@@ -151,9 +155,27 @@ func (c *frontendClient) ListFunctions(ctx context.Context, in *ListFunctionsReq
 	return out, nil
 }
 
-func (c *frontendClient) UpdateFunction(ctx context.Context, in *UpdateFunctionRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error) {
+func (c *frontendClient) GetFunctionCodeUploadUrl(ctx context.Context, in *FunctionCodeUploadUrlRequest, opts ...grpc.CallOption) (*FunctionCodeUploadUrlResponse, error) {
+	out := new(FunctionCodeUploadUrlResponse)
+	err := c.cc.Invoke(ctx, Frontend_GetFunctionCodeUploadUrl_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *frontendClient) UpdateFunctionRuntime(ctx context.Context, in *UpdateFunctionRuntimeRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error) {
 	out := new(v11.EmptyResponse)
-	err := c.cc.Invoke(ctx, Frontend_UpdateFunction_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, Frontend_UpdateFunctionRuntime_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *frontendClient) UpdateFunctionResources(ctx context.Context, in *UpdateFunctionResourcesRequest, opts ...grpc.CallOption) (*v11.EmptyResponse, error) {
+	out := new(v11.EmptyResponse)
+	err := c.cc.Invoke(ctx, Frontend_UpdateFunctionResources_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +195,7 @@ func (c *frontendClient) DeleteFunction(ctx context.Context, in *DeleteFunctionR
 // All implementations should embed UnimplementedFrontendServer
 // for forward compatibility
 type FrontendServer interface {
-	InvokeFunction(context.Context, *v1.InvokeFunctionRequest) (*v1.InvokeFunctionResponse, error)
+	InvokeFunction(context.Context, *InvokeFunctionRequest) (*v1.InvokeFunctionResponse, error)
 	AddKernel(context.Context, *AddKernelRequest) (*v11.EmptyResponse, error)
 	ListKernels(context.Context, *ListKernelsRequest) (*ListKernelsResponse, error)
 	RemoveKernel(context.Context, *RemoveKernelRequest) (*v11.EmptyResponse, error)
@@ -183,7 +205,9 @@ type FrontendServer interface {
 	CreateFunction(context.Context, *CreateFunctionRequest) (*CreateFunctionResponse, error)
 	GetFunction(context.Context, *GetFunctionRequest) (*GetFunctionResponse, error)
 	ListFunctions(context.Context, *ListFunctionsRequest) (*ListFunctionsResponse, error)
-	UpdateFunction(context.Context, *UpdateFunctionRequest) (*v11.EmptyResponse, error)
+	GetFunctionCodeUploadUrl(context.Context, *FunctionCodeUploadUrlRequest) (*FunctionCodeUploadUrlResponse, error)
+	UpdateFunctionRuntime(context.Context, *UpdateFunctionRuntimeRequest) (*v11.EmptyResponse, error)
+	UpdateFunctionResources(context.Context, *UpdateFunctionResourcesRequest) (*v11.EmptyResponse, error)
 	DeleteFunction(context.Context, *DeleteFunctionRequest) (*v11.EmptyResponse, error)
 }
 
@@ -191,7 +215,7 @@ type FrontendServer interface {
 type UnimplementedFrontendServer struct {
 }
 
-func (UnimplementedFrontendServer) InvokeFunction(context.Context, *v1.InvokeFunctionRequest) (*v1.InvokeFunctionResponse, error) {
+func (UnimplementedFrontendServer) InvokeFunction(context.Context, *InvokeFunctionRequest) (*v1.InvokeFunctionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvokeFunction not implemented")
 }
 func (UnimplementedFrontendServer) AddKernel(context.Context, *AddKernelRequest) (*v11.EmptyResponse, error) {
@@ -221,8 +245,14 @@ func (UnimplementedFrontendServer) GetFunction(context.Context, *GetFunctionRequ
 func (UnimplementedFrontendServer) ListFunctions(context.Context, *ListFunctionsRequest) (*ListFunctionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListFunctions not implemented")
 }
-func (UnimplementedFrontendServer) UpdateFunction(context.Context, *UpdateFunctionRequest) (*v11.EmptyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateFunction not implemented")
+func (UnimplementedFrontendServer) GetFunctionCodeUploadUrl(context.Context, *FunctionCodeUploadUrlRequest) (*FunctionCodeUploadUrlResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFunctionCodeUploadUrl not implemented")
+}
+func (UnimplementedFrontendServer) UpdateFunctionRuntime(context.Context, *UpdateFunctionRuntimeRequest) (*v11.EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateFunctionRuntime not implemented")
+}
+func (UnimplementedFrontendServer) UpdateFunctionResources(context.Context, *UpdateFunctionResourcesRequest) (*v11.EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateFunctionResources not implemented")
 }
 func (UnimplementedFrontendServer) DeleteFunction(context.Context, *DeleteFunctionRequest) (*v11.EmptyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFunction not implemented")
@@ -240,7 +270,7 @@ func RegisterFrontendServer(s grpc.ServiceRegistrar, srv FrontendServer) {
 }
 
 func _Frontend_InvokeFunction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.InvokeFunctionRequest)
+	in := new(InvokeFunctionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -252,7 +282,7 @@ func _Frontend_InvokeFunction_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: Frontend_InvokeFunction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FrontendServer).InvokeFunction(ctx, req.(*v1.InvokeFunctionRequest))
+		return srv.(FrontendServer).InvokeFunction(ctx, req.(*InvokeFunctionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -419,20 +449,56 @@ func _Frontend_ListFunctions_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Frontend_UpdateFunction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateFunctionRequest)
+func _Frontend_GetFunctionCodeUploadUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FunctionCodeUploadUrlRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FrontendServer).UpdateFunction(ctx, in)
+		return srv.(FrontendServer).GetFunctionCodeUploadUrl(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Frontend_UpdateFunction_FullMethodName,
+		FullMethod: Frontend_GetFunctionCodeUploadUrl_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FrontendServer).UpdateFunction(ctx, req.(*UpdateFunctionRequest))
+		return srv.(FrontendServer).GetFunctionCodeUploadUrl(ctx, req.(*FunctionCodeUploadUrlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Frontend_UpdateFunctionRuntime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateFunctionRuntimeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FrontendServer).UpdateFunctionRuntime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Frontend_UpdateFunctionRuntime_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FrontendServer).UpdateFunctionRuntime(ctx, req.(*UpdateFunctionRuntimeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Frontend_UpdateFunctionResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateFunctionResourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FrontendServer).UpdateFunctionResources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Frontend_UpdateFunctionResources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FrontendServer).UpdateFunctionResources(ctx, req.(*UpdateFunctionResourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -503,8 +569,16 @@ var Frontend_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Frontend_ListFunctions_Handler,
 		},
 		{
-			MethodName: "UpdateFunction",
-			Handler:    _Frontend_UpdateFunction_Handler,
+			MethodName: "GetFunctionCodeUploadUrl",
+			Handler:    _Frontend_GetFunctionCodeUploadUrl_Handler,
+		},
+		{
+			MethodName: "UpdateFunctionRuntime",
+			Handler:    _Frontend_UpdateFunctionRuntime_Handler,
+		},
+		{
+			MethodName: "UpdateFunctionResources",
+			Handler:    _Frontend_UpdateFunctionResources_Handler,
 		},
 		{
 			MethodName: "DeleteFunction",

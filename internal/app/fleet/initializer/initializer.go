@@ -132,6 +132,10 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 		return err
 	}
 	refString := naming.ImageRefStr(r.imageRegistryAddress, request.Function.Uuid, request.Function.Version)
+	if request.Function.Version == naming.RuntimeInitialCodeDeclarator() {
+		// If the function version is the initial code declarator, then use the runtime specific initial image.
+		refString = naming.RuntimeInitialImageRefStr(r.imageRegistryAddress, request.Runtime.Name, request.Runtime.Version, request.Runtime.Architecture)
+	}
 
 	log.Infof("pulling function image: %s", refString)
 	if err := container.ImagePull(ctx, dockerClient, log, refString); err != nil {
@@ -148,14 +152,20 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 
 // InitializedFunctions returns a list of initialized functions.
 func (r *runnerInitializer) InitializedFunctions() []string {
+	log.Debug("checking for initialized functions")
 	initializedFunctions := make([]string, 0)
 	path := naming.FunctionStoragePathBase(r.dataPath)
+	if exists, _ := utils.FileExists(path); !exists {
+		log.Debugf("no functions are initialized")
+		return initializedFunctions
+	}
 	dirs, err := os.ReadDir(path)
 	if err != nil {
 		log.Errorf("failed to read directory: %v", err)
 		return initializedFunctions
 	}
 	for _, dir := range dirs {
+		log.Debugf("checking function %s for versions", dir.Name())
 		if !dir.IsDir() {
 			continue
 		}
@@ -170,16 +180,17 @@ func (r *runnerInitializer) InitializedFunctions() []string {
 			continue
 		}
 		for _, version := range versions {
-			if dir.IsDir() {
+			if version.IsDir() {
 				continue
 			}
-			if (dir.Name() == ".") || (dir.Name() == "..") {
+			if (version.Name() == ".") || (version.Name() == "..") {
 				continue
 			}
 			functionVersion := naming.FunctionExtractVersionFromImageFileName(version.Name())
 
 			functionIdentifier := naming.FunctionIdentifier(functionUuid, functionVersion)
 			initializedFunctions = append(initializedFunctions, functionIdentifier)
+			log.Debugf("found initialized function: %s", functionIdentifier)
 		}
 	}
 	return initializedFunctions

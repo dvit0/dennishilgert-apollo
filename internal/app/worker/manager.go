@@ -25,15 +25,16 @@ import (
 var log = logger.NewLogger("apollo.manager")
 
 type Options struct {
-	ApiPort                   int
-	MessagingBootstrapServers string
-	MessagingWorkerCount      int
-	CacheAddress              string
-	CacheUsername             string
-	CachePassword             string
-	CacheDatabase             int
-	ServiceRegistryAddress    string
-	HeartbeatInterval         int
+	ApiPort                      int
+	MessagingBootstrapServers    string
+	MessagingWorkerCount         int
+	CacheAddress                 string
+	CacheUsername                string
+	CachePassword                string
+	CacheDatabase                int
+	ServiceRegistryAddress       string
+	HeartbeatInterval            int
+	FunctionInitializationFactor int
 }
 
 type WorkerManager interface {
@@ -99,7 +100,9 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 
 	placementService := placement.NewPlacementService(
 		cacheClient,
-		placement.Options{},
+		placement.Options{
+			FunctionInitializationFactor: opts.FunctionInitializationFactor,
+		},
 	)
 
 	messagingHandler := messaging.NewMessagingHandler(

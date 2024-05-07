@@ -36,7 +36,7 @@ type Options struct {
 
 type RunnerOperator interface {
 	Init(ctx context.Context) error
-	Runner(functionUuid string, runnerUuid string) (runner.RunnerInstance, error)
+	Runner(functionIdentifier string, runnerUuid string) (runner.RunnerInstance, error)
 	RunnerPoolMetrics() *registrypb.RunnerPoolMetrics
 	AvailableRunner(request *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error)
 	ProvisionRunner(request *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error)
@@ -133,8 +133,8 @@ func (v *runnerOperator) Init(ctx context.Context) error {
 	return runnerManager.Run(ctx)
 }
 
-func (r *runnerOperator) Runner(functionUuid string, runnerUuid string) (runner.RunnerInstance, error) {
-	return r.runnerPool.Get(functionUuid, runnerUuid)
+func (r *runnerOperator) Runner(functionIdentifier string, runnerUuid string) (runner.RunnerInstance, error) {
+	return r.runnerPool.Get(functionIdentifier, runnerUuid)
 }
 
 func (r *runnerOperator) RunnerPoolMetrics() *registrypb.RunnerPoolMetrics {
@@ -205,6 +205,8 @@ func (r *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 	cfg := &runner.Config{
 		WorkerUuid:            r.workerUuid,
 		FunctionUuid:          request.Function.Uuid,
+		FunctionVersion:       request.Function.Version,
+		FunctionIdentifier:    naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version),
 		RunnerUuid:            runnerUuid,
 		HostOsArch:            r.osArch,
 		FirecrackerBinaryPath: r.firecrackerBinaryPath,
@@ -301,9 +303,8 @@ func (r *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 
 	// Waiting for the runner to become ready.
 	if err := instance.Ready(r.runnerCtx); err != nil {
-		functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
 		// Remove runner from pool.
-		r.runnerPool.Remove(functionIdentifier, runnerUuid)
+		r.runnerPool.Remove(instance.Config().FunctionIdentifier, runnerUuid)
 
 		if err := instance.ShutdownAndDestroy(r.runnerCtx); err != nil {
 			log.Errorf("failed to shutdown runner instance: %v", err)
@@ -363,6 +364,7 @@ func (r *runnerOperator) TeardownRunners(ctx context.Context) {
 // InvokeFunction invokes the function inside of a specified runner.
 func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
+	log.Debugf("invoking function %s on runner %s", functionIdentifier, request.RunnerUuid)
 	instance, err := r.runnerPool.Get(functionIdentifier, request.RunnerUuid)
 	if err != nil {
 		return nil, fmt.Errorf("runner not found: %w", err)

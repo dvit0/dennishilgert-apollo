@@ -58,7 +58,7 @@ func (m *messagingHandler) RegisterAll() {
 				log.Errorf("failed to initialize function: %v", err)
 			}
 		}
-		// Cancel context after the score has been updated.
+		// Cancel context after the message has been processed.
 		cancel()
 	})
 }

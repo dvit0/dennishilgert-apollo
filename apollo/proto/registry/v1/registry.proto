@@ -18,6 +18,7 @@ enum InstanceType {
   FLEET_MANAGER = 1;
   WORKER_MANAGER = 2;
   FRONTEND = 3;
+  PACKAGE_SERVICE = 4;
 }
 
 message ServiceInstance {

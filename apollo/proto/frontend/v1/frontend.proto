@@ -2,13 +2,14 @@ syntax = "proto3";
 
 package apollo.proto.frontend.v1;
 
+import "google/protobuf/struct.proto";
 import "apollo/proto/shared/v1/shared.proto";
 import "apollo/proto/fleet/v1/fleet.proto";
 
 option go_package = "github.com/dennishilgert/apollo/pkg/proto/frontend/v1;frontendpb";
 
 service Frontend {
-  rpc InvokeFunction(apollo.proto.fleet.v1.InvokeFunctionRequest) returns (apollo.proto.fleet.v1.InvokeFunctionResponse) {}
+  rpc InvokeFunction(InvokeFunctionRequest) returns (apollo.proto.fleet.v1.InvokeFunctionResponse) {}
 
   rpc AddKernel(AddKernelRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc ListKernels(ListKernelsRequest) returns (ListKernelsResponse) {}
@@ -21,7 +22,9 @@ service Frontend {
   rpc CreateFunction(CreateFunctionRequest) returns (CreateFunctionResponse) {}
   rpc GetFunction(GetFunctionRequest) returns (GetFunctionResponse) {}
   rpc ListFunctions(ListFunctionsRequest) returns (ListFunctionsResponse) {}
-  rpc UpdateFunction(UpdateFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc GetFunctionCodeUploadUrl(FunctionCodeUploadUrlRequest) returns (FunctionCodeUploadUrlResponse) {}
+  rpc UpdateFunctionRuntime(UpdateFunctionRuntimeRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc UpdateFunctionResources(UpdateFunctionResourcesRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc DeleteFunction(DeleteFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
 }
 
@@ -29,7 +32,9 @@ enum FunctionStatus {
   FUNCTION_STATUS_UNSPECIFIED = 0;
   CREATED = 1;
   PACKED = 2;
-  INITIALIZED = 3;
+  PACKING_FAILED = 3;
+  INITIALIZED = 4;
+  INITIALIZAION_FAILED = 5;
 }
 
 message KernelSpecs {
@@ -44,9 +49,12 @@ message RuntimeSpecs {
   string binary_path = 3;
   repeated string binary_args = 4;
   string display_name = 5;
-  string kernel_name = 6;
-  string kernel_version = 7;
-  string kernel_architecture = 8;
+  string default_handler = 6;
+  int32 default_memory_limit = 7;
+  int32 default_v_cpu_cores = 8;
+  string kernel_name = 9;
+  string kernel_version = 10;
+  string kernel_architecture = 11;
 }
 
 message FunctionSpecs {
@@ -56,11 +64,26 @@ message FunctionSpecs {
   string handler = 4;
   int32 memory_limit = 5;
   int32 v_cpu_cores = 6;
-  string runtime_name = 7;
-  string runtime_version = 8;
-  string runtime_architecture = 9;
-  string runtime_display_name = 10;
-  string http_trigger_id = 11;
+  FunctionStatus status = 7;
+  int32 idle_ttl = 8;
+  string log_level = 9;
+  string runtime_name = 10;
+  string runtime_version = 11;
+  string runtime_architecture = 12;
+  string runtime_display_name = 13;
+  string http_trigger_id = 14;
+}
+
+message EventSpecs {
+  string type = 1;
+  string source_ip = 2;
+  map<string, string> params = 3;
+  google.protobuf.Struct payload = 4;
+}
+
+message InvokeFunctionRequest {
+  string http_trigger_id = 1;
+  EventSpecs event = 2;
 }
 
 message AddKernelRequest {
@@ -97,18 +120,13 @@ message RemoveRuntimeRequest {
 
 message CreateFunctionRequest {
   string name = 1;
-  string version = 2;
-  string handler = 3;
-  int32 memory_limit = 4;
-  int32 v_cpu_cores = 5;
-  string runtime_name = 6;
-  string runtime_version = 7;
-  string runtime_architecture = 8;
+  string runtime_name = 2;
+  string runtime_version = 3;
+  string runtime_architecture = 4;
 }
 
 message CreateFunctionResponse {
   string uuid = 1;
-  string http_trigger_id = 2;
 }
 
 message GetFunctionRequest {
@@ -125,16 +143,26 @@ message ListFunctionsResponse {
   repeated FunctionSpecs functions = 1;
 }
 
-message UpdateFunctionRequest {
+message FunctionCodeUploadUrlRequest {
   string uuid = 1;
-  string name = 2;
-  string version = 3;
-  string handler = 4;
-  int32 memory_limit = 5;
-  int32 v_cpu_cores = 6;
-  string runtime_name = 7;
-  string runtime_version = 8;
-  string runtime_architecture = 9;
+}
+
+message FunctionCodeUploadUrlResponse {
+  string presigned_upload_url = 1;
+}
+
+message UpdateFunctionRuntimeRequest {
+  string uuid = 1;
+  string handler = 2;
+  string runtime_name = 3;
+  string runtime_version = 4;
+  string runtime_architecture = 5;
+}
+
+message UpdateFunctionResourcesRequest {
+  string uuid = 1;
+  int32 memory_limit = 2;
+  int32 v_cpu_cores = 3;
 }
 
 message DeleteFunctionRequest {

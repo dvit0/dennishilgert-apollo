@@ -16,12 +16,10 @@ import (
 	"github.com/dennishilgert/apollo/pkg/messaging/consumer"
 	"github.com/dennishilgert/apollo/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/pkg/metrics"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
 	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
 	"github.com/dennishilgert/apollo/pkg/registry"
 	"github.com/dennishilgert/apollo/pkg/utils"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var log = logger.NewLogger("apollo.frontend")
@@ -249,70 +247,6 @@ func (f *frontend) Run(ctx context.Context) error {
 				log.Error("failed to start messaging consumer")
 				return err
 			}
-			return nil
-		},
-		func(ctx context.Context) error {
-			time.Sleep(3 * time.Second)
-
-			// f.frontendOperator.AddKernel(ctx, &frontendpb.AddKernelRequest{
-			// 	Kernel: &frontendpb.KernelSpecs{
-			// 		Name:         "vmlinux",
-			// 		Version:      "5.10.204",
-			// 		Architecture: "x86_64",
-			// 	},
-			// })
-
-			// f.frontendOperator.AddRuntime(ctx, &frontendpb.AddRuntimeRequest{
-			// 	Runtime: &frontendpb.RuntimeSpecs{
-			// 		Name:               "node",
-			// 		Version:            "20.x",
-			// 		BinaryPath:         "/usr/bin/node",
-			// 		BinaryArgs:         []string{"/workspace/code/node_wrapper.js"},
-			// 		DisplayName:        "Node.js 20.x",
-			// 		KernelName:         "vmlinux",
-			// 		KernelVersion:      "5.10.204",
-			// 		KernelArchitecture: "x86_64",
-			// 	},
-			// })
-
-			// f.frontendOperator.CreateFunction(ctx, &frontendpb.CreateFunctionRequest{
-			// 	Name:                "test",
-			// 	Version:             "rude-monkey",
-			// 	Handler:             "index.handler",
-			// 	MemoryLimit:         128,
-			// 	VCpuCores:           1,
-			// 	RuntimeName:         "node",
-			// 	RuntimeVersion:      "20.x",
-			// 	RuntimeArchitecture: "x86_64",
-			// })
-
-			if err := f.frontendOperator.InitializeFunction(ctx, "8aa03353-da58-4739-b801-bd2aaf7d1496", "rude-monkey"); err != nil {
-				log.Errorf("failed to initialize function: %v", err)
-			}
-
-			payload, _ := structpb.NewStruct(map[string]interface{}{
-				"name": "dennis",
-			})
-			res, err := f.frontendOperator.InvokeFunction(ctx, &fleetpb.InvokeFunctionRequest{
-				RunnerUuid: "mocked",
-				Function: &fleetpb.FunctionSpecs{
-					Uuid:    "8aa03353-da58-4739-b801-bd2aaf7d1496",
-					Version: "rude-monkey",
-				},
-				Event: &fleetpb.EventSpecs{
-					Uuid:     "mocked",
-					Type:     "http",
-					SourceIp: "127.0.0.1",
-					Params:   map[string]string{},
-					Payload:  payload,
-				},
-			})
-			if err != nil {
-				log.Errorf("failed to invoke function: %v", err)
-			}
-			log.Infof("invoke function response: %v", res)
-
-			<-ctx.Done()
 			return nil
 		},
 	)

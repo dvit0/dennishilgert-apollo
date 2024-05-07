@@ -129,7 +129,7 @@ func (p *runnerPoolWatchdog) createHealthCheckTask(runnerInstance runner.RunnerI
 // teardownRunner removes the runner from the pool and sends the tear down signal to the runner operator.
 func (p *runnerPoolWatchdog) teardownRunner(runnerInstance runner.RunnerInstance) {
 	// Remove runner from pool to prevent further usage.
-	p.runnerPool.Remove(runnerInstance.Config().FunctionUuid, runnerInstance.Config().RunnerUuid)
+	p.runnerPool.Remove(runnerInstance.Config().FunctionIdentifier, runnerInstance.Config().RunnerUuid)
 
 	// Send runner params to runner operator to tear down the runner.
 	p.teardownCh <- runnerInstance

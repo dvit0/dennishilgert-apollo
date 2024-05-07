@@ -55,7 +55,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 
 	log.Infof("starting api server on port %d", a.port)
 	server := grpc.NewServer()
-	// Register server here.
+	frontendpb.RegisterFrontendServer(server, a)
 
 	healthServer := health.NewHealthServer(healthStatusProvider, log)
 	healthServer.Register(server)
@@ -126,7 +126,7 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	}
 }
 
-func (a *apiServer) InvokeFunction(ctx context.Context, req *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
+func (a *apiServer) InvokeFunction(ctx context.Context, req *frontendpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
 	res, err := a.frontendOperator.InvokeFunction(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to invoke function: %w", err)
@@ -202,9 +202,24 @@ func (a *apiServer) ListFunctions(ctx context.Context, req *frontendpb.ListFunct
 	return res, nil
 }
 
-func (a *apiServer) UpdateFunction(ctx context.Context, req *frontendpb.UpdateFunctionRequest) (*sharedpb.EmptyResponse, error) {
-	if err := a.frontendOperator.UpdateFunction(ctx, req); err != nil {
-		return nil, fmt.Errorf("failed to update function: %w", err)
+func (a *apiServer) GetFunctionCodeUploadUrl(ctx context.Context, req *frontendpb.FunctionCodeUploadUrlRequest) (*frontendpb.FunctionCodeUploadUrlResponse, error) {
+	res, err := a.frontendOperator.UpdateFunctionCode(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update function code: %w", err)
+	}
+	return res, nil
+}
+
+func (a *apiServer) UpdateFunctionRuntime(ctx context.Context, req *frontendpb.UpdateFunctionRuntimeRequest) (*sharedpb.EmptyResponse, error) {
+	if err := a.frontendOperator.UpdateFunctionRuntime(ctx, req); err != nil {
+		return nil, fmt.Errorf("failed to update function runtime: %w", err)
+	}
+	return &sharedpb.EmptyResponse{}, nil
+}
+
+func (a *apiServer) UpdateFuntionResources(ctx context.Context, req *frontendpb.UpdateFunctionResourcesRequest) (*sharedpb.EmptyResponse, error) {
+	if err := a.frontendOperator.UpdateFunctionResources(ctx, req); err != nil {
+		return nil, fmt.Errorf("failed to update function resources: %w", err)
 	}
 	return &sharedpb.EmptyResponse{}, nil
 }

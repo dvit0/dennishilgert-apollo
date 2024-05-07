@@ -21,7 +21,9 @@ import (
 
 var log = logger.NewLogger("apollo.worker.placement")
 
-type Options struct{}
+type Options struct {
+	FunctionInitializationFactor int
+}
 
 type PlacementService interface {
 	AllocateFunctionInitialization(ctx context.Context, request *workerpb.InitializeFunctionRequest) error
@@ -35,12 +37,14 @@ type PlacementService interface {
 }
 
 type placementService struct {
-	cacheClient cache.CacheClient
+	functionInitializationFactor int
+	cacheClient                  cache.CacheClient
 }
 
 func NewPlacementService(cacheClient cache.CacheClient, opts Options) PlacementService {
 	return &placementService{
-		cacheClient: cacheClient,
+		functionInitializationFactor: opts.FunctionInitializationFactor,
+		cacheClient:                  cacheClient,
 	}
 }
 
@@ -61,26 +65,28 @@ func (p *placementService) AllocateFunctionInitialization(ctx context.Context, r
 		eval := evaluation.EvaluateFunctionInitialization(workerInstance, workerMetrics)
 		workerEvaluations = append(workerEvaluations, *eval)
 	}
-	workerInstance, err := evaluation.SelectWorker(workerEvaluations)
+	workerInstances, err := evaluation.SelectWorkers(workerEvaluations, p.functionInitializationFactor)
 	if err != nil {
 		return fmt.Errorf("failed to select worker: %w", err)
 	}
 
-	clientConn, err := establishConnection(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
-	if err != nil {
-		return fmt.Errorf("failed to establish connection to worker instance: %w", err)
-	}
-	defer clientConn.Close()
+	for _, workerInstance := range workerInstances {
+		clientConn, err := establishConnection(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
+		if err != nil {
+			return fmt.Errorf("failed to establish connection to worker instance: %w", err)
+		}
+		defer clientConn.Close()
 
-	apiClient := fleetpb.NewFleetManagerClient(clientConn)
-	transformedReq := &fleetpb.InitializeFunctionRequest{
-		Function: request.Function,
-		Kernel:   request.Kernel,
-		Runtime:  request.Runtime,
-	}
-	_, err = apiClient.InitializeFunction(ctx, transformedReq)
-	if err != nil {
-		return fmt.Errorf("failed to initialize function on worker instance: %w", err)
+		apiClient := fleetpb.NewFleetManagerClient(clientConn)
+		transformedReq := &fleetpb.InitializeFunctionRequest{
+			Function: request.Function,
+			Kernel:   request.Kernel,
+			Runtime:  request.Runtime,
+		}
+		_, err = apiClient.InitializeFunction(ctx, transformedReq)
+		if err != nil {
+			return fmt.Errorf("failed to initialize function on worker instance: %w", err)
+		}
 	}
 	return nil
 }
@@ -121,7 +127,6 @@ func (p *placementService) FindAvailableRunner(ctx context.Context, request *wor
 }
 
 func (p *placementService) AllocateRunnerProvisioning(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.ProvisionRunnerResponse, error) {
-	runnerHeaviness := evaluation.EvaluateRunnerHeaviness(int(request.Machine.VcpuCores), int(request.Machine.MemoryLimit))
 	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
 	workers, err := p.WorkersByFunction(ctx, functionIdentifier)
 	if err != nil {
@@ -136,7 +141,7 @@ func (p *placementService) AllocateRunnerProvisioning(ctx context.Context, reque
 		if err != nil {
 			return nil, fmt.Errorf("failed to get worker instance: %w", err)
 		}
-		eval := evaluation.EvaluateRunnerProvisioning(runnerHeaviness, workerInstance, workerMetrics)
+		eval := evaluation.EvaluateRunnerProvisioning(request.Machine.Weight, workerInstance, workerMetrics)
 		workerEvaluations = append(workerEvaluations, *eval)
 	}
 	workerInstance, err := evaluation.SelectWorker(workerEvaluations)

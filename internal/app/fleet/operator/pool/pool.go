@@ -16,9 +16,9 @@ type RunnerPool interface {
 	Lock()
 	Unlock()
 	Add(instance runner.RunnerInstance) error
-	Get(functionUuid string, runnerUuid string) (runner.RunnerInstance, error)
-	Remove(functionUuid string, runnerUuid string)
-	AvailableRunner(functionUuid string) (runner.RunnerInstance, error)
+	Get(functionIdentifier string, runnerUuid string) (runner.RunnerInstance, error)
+	Remove(functionIdentifier string, runnerUuid string)
+	AvailableRunner(functionIdentifier string) (runner.RunnerInstance, error)
 }
 
 type runnerPool struct {
@@ -71,23 +71,26 @@ func (r *runnerPool) Add(instance runner.RunnerInstance) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
+	functionIdentifier := instance.Config().FunctionIdentifier
+	runnerUuid := instance.Config().RunnerUuid
+
 	// Create inner map if it is non existent.
-	if r.pool[instance.Config().FunctionUuid] == nil {
-		r.pool[instance.Config().FunctionUuid] = make(map[string]runner.RunnerInstance)
+	if r.pool[functionIdentifier] == nil {
+		r.pool[functionIdentifier] = make(map[string]runner.RunnerInstance)
 	}
-	if r.pool[instance.Config().FunctionUuid][instance.Config().RunnerUuid] != nil {
-		return fmt.Errorf("pool already contains a runner instance with the given uuid: %s", instance.Config().RunnerUuid)
+	if r.pool[functionIdentifier][runnerUuid] != nil {
+		return fmt.Errorf("pool already contains a runner instance with the given uuid: %s", runnerUuid)
 	}
-	r.pool[instance.Config().FunctionUuid][instance.Config().RunnerUuid] = instance
+	r.pool[functionIdentifier][runnerUuid] = instance
 	return nil
 }
 
 // Get returns a runner instance by its uuid from the pool.
-func (r *runnerPool) Get(functionUuid string, runnerUuid string) (runner.RunnerInstance, error) {
+func (r *runnerPool) Get(functionIdentifier string, runnerUuid string) (runner.RunnerInstance, error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	instance := r.pool[functionUuid][runnerUuid]
+	instance := r.pool[functionIdentifier][runnerUuid]
 	if instance == nil {
 		return nil, fmt.Errorf("requested runner does not exist: %s", runnerUuid)
 	}
@@ -95,11 +98,11 @@ func (r *runnerPool) Get(functionUuid string, runnerUuid string) (runner.RunnerI
 }
 
 // Remove removes a runner instance from the pool.
-func (r *runnerPool) Remove(functionUuid string, runnerUuid string) {
+func (r *runnerPool) Remove(functionIdentifier string, runnerUuid string) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	delete(r.pool[functionUuid], runnerUuid)
+	delete(r.pool[functionIdentifier], runnerUuid)
 }
 
 // AvailableRunner returns a available runner instance from the pool.
