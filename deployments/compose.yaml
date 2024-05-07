@@ -34,26 +34,26 @@ services:
     environment:
       - MINIO_ROOT_USER=root
       - MINIO_ROOT_PASSWORD=7dbcf34172f78a6719f410a64bdb94fc
-      #- MINIO_NOTIFY_KAFKA_ENABLE_apollo_function_upload=on
-      #- MINIO_NOTIFY_KAFKA_BROKERS_apollo_function_upload=10.71.29.50:9092
-      #- MINIO_NOTIFY_KAFKA_TOPIC_apollo_function_upload=apollo_function_code_uploaded
+      - MINIO_NOTIFY_KAFKA_ENABLE_apollo_function_upload=on
+      - MINIO_NOTIFY_KAFKA_BROKERS_apollo_function_upload=10.71.29.50:9092
+      - MINIO_NOTIFY_KAFKA_TOPIC_apollo_function_upload=apollo_function_code_uploaded
 
-  apollo-minio-mc:
-    container_name: apollo-minio-mc
-    image: minio/mc:latest
-    depends_on:
-      - apollo-minio
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set minio http://apollo-minio:9000 root 7dbcf34172f78a6719f410a64bdb94fc;
-      /usr/bin/mc mb minio/apollo-kernels;
-      /usr/bin/mc mb minio/apollo-functions;
-      /usr/bin/mc mb minio/apollo-dependencies;
-      /usr/bin/mc admin config set minio notify_kafka:apollo-fn-upload brokers='10.71.29.50:9092' topic='apollo_function_code_uploaded' queue_dir='' queue_limit='0' enable='on';
-      /usr/bin/mc admin service restart minio;
-      /usr/bin/mc event add minio/apollo-functions arn:minio:sqs::apollo-fn-upload:kafka --event put;
-      exit 0;
-      "
+  # apollo-minio-mc:
+  #   container_name: apollo-minio-mc
+  #   image: minio/mc:latest
+  #   depends_on:
+  #     - apollo-minio
+  #   entrypoint: >
+  #     /bin/sh -c "
+  #     /usr/bin/mc alias set minio http://apollo-minio:9000 root 7dbcf34172f78a6719f410a64bdb94fc;
+  #     /usr/bin/mc mb minio/apollo-kernels;
+  #     /usr/bin/mc mb minio/apollo-functions;
+  #     /usr/bin/mc mb minio/apollo-dependencies;
+  #     /usr/bin/mc admin config set minio notify_kafka:apollo-fn-upload brokers='10.71.29.50:9092' topic='apollo_function_code_uploaded' queue_dir='' queue_limit='0' enable='on';
+  #     /usr/bin/mc admin service restart minio;
+  #     /usr/bin/mc event add minio/apollo-functions arn:minio:sqs::apollo-fn-upload:kafka --event put;
+  #     exit 0;
+  #     "
 
   apollo-postgres:
     container_name: apollo-postgres
