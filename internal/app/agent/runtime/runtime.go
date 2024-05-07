@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dennishilgert/apollo/pkg/logger"
-	sharedpb "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	sharedpb "github.com/dennishilgert/apollo/internal/pkg/proto/shared/v1"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 

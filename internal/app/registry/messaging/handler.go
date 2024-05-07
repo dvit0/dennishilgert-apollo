@@ -8,10 +8,10 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/dennishilgert/apollo/internal/app/registry/lease"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
-	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
+	messagespb "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1"
+	registrypb "github.com/dennishilgert/apollo/internal/pkg/proto/registry/v1"
 )
 
 var log = logger.NewLogger("apollo.registry.messaging.handler")

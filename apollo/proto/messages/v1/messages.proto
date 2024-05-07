@@ -6,7 +6,7 @@ import "apollo/proto/registry/v1/registry.proto";
 import "apollo/proto/frontend/v1/frontend.proto";
 import "apollo/proto/fleet/v1/fleet.proto";
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/messages/v1;messagespb";
+option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1;messagespb";
 
 message FunctionInitializationMessage {
   apollo.proto.fleet.v1.FunctionSpecs function = 1;

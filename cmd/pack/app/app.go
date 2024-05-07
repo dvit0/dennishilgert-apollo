@@ -3,9 +3,9 @@ package app
 import (
 	"github.com/dennishilgert/apollo/cmd/pack/config"
 	"github.com/dennishilgert/apollo/internal/app/pack"
-	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/signals"
+	"github.com/dennishilgert/apollo/internal/pkg/concurrency/runner"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/signals"
 	"github.com/joho/godotenv"
 )
 

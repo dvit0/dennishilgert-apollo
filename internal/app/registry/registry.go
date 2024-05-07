@@ -8,12 +8,12 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/registry/api"
 	"github.com/dennishilgert/apollo/internal/app/registry/lease"
 	"github.com/dennishilgert/apollo/internal/app/registry/messaging"
+	"github.com/dennishilgert/apollo/internal/pkg/cache"
+	"github.com/dennishilgert/apollo/internal/pkg/concurrency/runner"
+	"github.com/dennishilgert/apollo/internal/pkg/health"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/messaging/consumer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/cache"
-	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
-	"github.com/dennishilgert/apollo/pkg/health"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/messaging/consumer"
 	"github.com/google/uuid"
 )
 

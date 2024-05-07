@@ -5,7 +5,7 @@ package apollo.proto.registry.v1;
 import "google/protobuf/struct.proto";
 import "apollo/proto/shared/v1/shared.proto";
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/registry/v1;registrypb";
+option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/registry/v1;registrypb";
 
 service ServiceRegistry {
   rpc AcquireLease(AcquireLeaseRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}

@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator/runner"
-	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 )
 
 var log = logger.NewLogger("apollo.manager.pool")

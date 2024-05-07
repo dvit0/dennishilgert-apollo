@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dennishilgert/apollo/pkg/container"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/utils"
+	"github.com/dennishilgert/apollo/internal/pkg/container"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

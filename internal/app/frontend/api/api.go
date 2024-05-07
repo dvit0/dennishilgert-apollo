@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/frontend/operator"
-	"github.com/dennishilgert/apollo/pkg/health"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	frontendpb "github.com/dennishilgert/apollo/pkg/proto/frontend/v1"
-	sharedpb "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/health"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
+	frontendpb "github.com/dennishilgert/apollo/internal/pkg/proto/frontend/v1"
+	sharedpb "github.com/dennishilgert/apollo/internal/pkg/proto/shared/v1"
 	"google.golang.org/grpc"
 )
 

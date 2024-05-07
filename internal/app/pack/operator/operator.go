@@ -7,16 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dennishilgert/apollo/internal/pkg/concurrency/worker"
+	"github.com/dennishilgert/apollo/internal/pkg/container"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
-	"github.com/dennishilgert/apollo/pkg/container"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/messaging/producer"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	frontendpb "github.com/dennishilgert/apollo/pkg/proto/frontend/v1"
-	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
-	"github.com/dennishilgert/apollo/pkg/storage"
-	"github.com/dennishilgert/apollo/pkg/utils"
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
+	frontendpb "github.com/dennishilgert/apollo/internal/pkg/proto/frontend/v1"
+	messagespb "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/storage"
+	"github.com/dennishilgert/apollo/internal/pkg/utils"
 )
 
 var log = logger.NewLogger("apollo.package.operator")

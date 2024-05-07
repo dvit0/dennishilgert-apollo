@@ -6,7 +6,7 @@ import "google/protobuf/struct.proto";
 import "apollo/proto/shared/v1/shared.proto";
 import "apollo/proto/fleet/v1/fleet.proto";
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/frontend/v1;frontendpb";
+option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/frontend/v1;frontendpb";
 
 service Frontend {
   rpc InvokeFunction(InvokeFunctionRequest) returns (apollo.proto.fleet.v1.InvokeFunctionResponse) {}

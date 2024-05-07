@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/dennishilgert/apollo/pkg/configuration"
-	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/configuration"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/spf13/viper"
 )
 

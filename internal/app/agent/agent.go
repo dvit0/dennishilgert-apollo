@@ -6,12 +6,12 @@ import (
 
 	"github.com/dennishilgert/apollo/internal/app/agent/api"
 	"github.com/dennishilgert/apollo/internal/app/agent/runtime"
+	"github.com/dennishilgert/apollo/internal/pkg/concurrency/runner"
+	"github.com/dennishilgert/apollo/internal/pkg/health"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/concurrency/runner"
-	"github.com/dennishilgert/apollo/pkg/health"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/messaging/producer"
-	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
+	messagespb "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1"
 )
 
 var log = logger.NewLogger("apollo.agent")

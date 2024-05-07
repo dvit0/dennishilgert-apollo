@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package apollo.proto.health.v1;
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/health/v1;healthpb";
+option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/health/v1;healthpb";
 
 service Health {
   rpc Status(HealthStatusRequest) returns (HealthStatusResponse) {}

@@ -6,10 +6,10 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/dennishilgert/apollo/internal/app/pack/operator"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
-	"github.com/dennishilgert/apollo/pkg/storage"
+	messagespb "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/storage"
 )
 
 var log = logger.NewLogger("apollo.messaging.handler")

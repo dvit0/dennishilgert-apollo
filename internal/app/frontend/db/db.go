@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dennishilgert/apollo/internal/app/frontend/models"
-	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

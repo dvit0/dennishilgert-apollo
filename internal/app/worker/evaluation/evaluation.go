@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/dennishilgert/apollo/pkg/logger"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
+	registrypb "github.com/dennishilgert/apollo/internal/pkg/proto/registry/v1"
 )
 
 var log = logger.NewLogger("apollo.evaluation")

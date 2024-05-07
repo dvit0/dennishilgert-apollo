@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	"github.com/dennishilgert/apollo/pkg/utils"
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/utils"
 	"github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 )

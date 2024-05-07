@@ -5,7 +5,7 @@ import (
 
 	"github.com/dennishilgert/apollo/cmd/cli/cmd/image"
 	"github.com/dennishilgert/apollo/cmd/cli/cmd/messaging"
-	"github.com/dennishilgert/apollo/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/spf13/cobra"
 )
 

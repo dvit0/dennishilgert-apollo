@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 
 	"github.com/dennishilgert/apollo/internal/app/agent/runtime"
-	"github.com/dennishilgert/apollo/pkg/health"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	agentpb "github.com/dennishilgert/apollo/pkg/proto/agent/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/health"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	agentpb "github.com/dennishilgert/apollo/internal/pkg/proto/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 )

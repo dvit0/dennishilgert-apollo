@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package apollo.proto.shared.v1;
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/shared/v1;sharedpb";
+option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/shared/v1;sharedpb";
 
 message EmptyResponse {}
 

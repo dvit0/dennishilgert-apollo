@@ -1,7 +1,7 @@
 package scoring
 
 import (
-	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
+	registrypb "github.com/dennishilgert/apollo/internal/pkg/proto/registry/v1"
 )
 
 type ScoringResult struct {

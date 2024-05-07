@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator/runner"
-	taskRunner "github.com/dennishilgert/apollo/pkg/concurrency/runner"
-	"github.com/dennishilgert/apollo/pkg/concurrency/worker"
-	healthpb "github.com/dennishilgert/apollo/pkg/proto/health/v1"
+	taskRunner "github.com/dennishilgert/apollo/internal/pkg/concurrency/runner"
+	"github.com/dennishilgert/apollo/internal/pkg/concurrency/worker"
+	healthpb "github.com/dennishilgert/apollo/internal/pkg/proto/health/v1"
 )
 
 type WatchdogOptions struct {

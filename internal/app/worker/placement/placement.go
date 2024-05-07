@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/worker/evaluation"
+	"github.com/dennishilgert/apollo/internal/pkg/cache"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/cache"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
-	workerpb "github.com/dennishilgert/apollo/pkg/proto/worker/v1"
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
+	registrypb "github.com/dennishilgert/apollo/internal/pkg/proto/registry/v1"
+	workerpb "github.com/dennishilgert/apollo/internal/pkg/proto/worker/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

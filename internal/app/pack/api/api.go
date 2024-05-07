@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dennishilgert/apollo/pkg/health"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	packpb "github.com/dennishilgert/apollo/pkg/proto/pack/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/health"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	packpb "github.com/dennishilgert/apollo/internal/pkg/proto/pack/v1"
 	"google.golang.org/grpc"
 )
 

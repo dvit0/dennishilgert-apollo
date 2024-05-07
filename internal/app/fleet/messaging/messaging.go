@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/messaging"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/messaging"
 )
 
 var log = logger.NewLogger("apollo.manager.messaging")

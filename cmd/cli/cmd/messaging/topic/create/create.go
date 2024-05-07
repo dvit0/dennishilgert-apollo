@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/messaging"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/messaging"
 	"github.com/spf13/cobra"
 )
 

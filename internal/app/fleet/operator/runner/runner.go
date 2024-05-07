@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dennishilgert/apollo/pkg/logger"
-	agentpb "github.com/dennishilgert/apollo/pkg/proto/agent/v1"
-	healthpb "github.com/dennishilgert/apollo/pkg/proto/health/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	agentpb "github.com/dennishilgert/apollo/internal/pkg/proto/agent/v1"
+	healthpb "github.com/dennishilgert/apollo/internal/pkg/proto/health/v1"
 	"github.com/firecracker-microvm/firecracker-go-sdk"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"

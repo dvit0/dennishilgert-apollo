@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	frontendpb "github.com/dennishilgert/apollo/pkg/proto/frontend/v1"
+	frontendpb "github.com/dennishilgert/apollo/internal/pkg/proto/frontend/v1"
 )
 
 type Function struct {

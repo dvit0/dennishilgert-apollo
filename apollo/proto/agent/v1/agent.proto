@@ -4,7 +4,7 @@ package apollo.proto.agent.v1;
 
 import "google/protobuf/struct.proto";
 
-option go_package = "github.com/dennishilgert/apollo/pkg/proto/agent/v1;agentpb";
+option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/agent/v1;agentpb";
 
 service Agent {
   rpc Invoke(InvokeRequest) returns (InvokeResponse) {}

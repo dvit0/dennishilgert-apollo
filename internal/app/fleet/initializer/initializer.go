@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator/runner"
+	"github.com/dennishilgert/apollo/internal/pkg/container"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/container"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	"github.com/dennishilgert/apollo/pkg/storage"
-	"github.com/dennishilgert/apollo/pkg/utils"
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/storage"
+	"github.com/dennishilgert/apollo/internal/pkg/utils"
 )
 
 var log = logger.NewLogger("apollo.manager.initializer")

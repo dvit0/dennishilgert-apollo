@@ -10,13 +10,13 @@ import (
 
 	"github.com/dennishilgert/apollo/internal/app/fleet/initializer"
 	"github.com/dennishilgert/apollo/internal/app/fleet/operator"
+	"github.com/dennishilgert/apollo/internal/pkg/health"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/messaging/producer"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
-	"github.com/dennishilgert/apollo/pkg/health"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	"github.com/dennishilgert/apollo/pkg/messaging/producer"
-	fleetpb "github.com/dennishilgert/apollo/pkg/proto/fleet/v1"
-	messagespb "github.com/dennishilgert/apollo/pkg/proto/messages/v1"
-	sharedpb "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
+	messagespb "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1"
+	sharedpb "github.com/dennishilgert/apollo/internal/pkg/proto/shared/v1"
 	"google.golang.org/grpc"
 )
 

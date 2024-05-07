@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/app/registry/lease"
-	"github.com/dennishilgert/apollo/pkg/health"
-	"github.com/dennishilgert/apollo/pkg/logger"
-	registrypb "github.com/dennishilgert/apollo/pkg/proto/registry/v1"
-	sharedpb "github.com/dennishilgert/apollo/pkg/proto/shared/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/health"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	registrypb "github.com/dennishilgert/apollo/internal/pkg/proto/registry/v1"
+	sharedpb "github.com/dennishilgert/apollo/internal/pkg/proto/shared/v1"
 	"google.golang.org/grpc"
 )
 
