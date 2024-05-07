@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -100,4 +102,74 @@ func IsValidDirName(name string) bool {
 	pattern := `^(\/?)[a-zA-Z0-9_.][a-zA-Z0-9_.-]{0,254}$`
 	matched, _ := regexp.MatchString(pattern, name)
 	return matched
+}
+
+// CopyFile copies the file from the source path to the destination path.
+func CopyFile(srcPath string, destPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer src.Close()
+
+	out, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer func() {
+		if err := out.Close(); err != nil {
+			fmt.Printf("failed to close destination file: %v", err)
+		}
+	}()
+
+	if _, err := io.Copy(out, src); err != nil {
+		return fmt.Errorf("failed to copy file: %w", err)
+	}
+	if err := out.Sync(); err != nil {
+		return fmt.Errorf("failed to sync file: %w", err)
+	}
+	return nil
+}
+
+// Unzip extracts the zip archive to the destination path.
+func Unzip(archivePath string, destPath string) error {
+	archive, err := zip.OpenReader(archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to open zip archive: %v", err)
+	}
+	defer archive.Close()
+
+	for _, f := range archive.File {
+		filePath := filepath.Join(destPath, f.Name)
+
+		if !strings.HasPrefix(filePath, fmt.Sprintf("%s%s", filepath.Clean(destPath), string(os.PathSeparator))) {
+			return fmt.Errorf("%s: illegal file path", filePath)
+		}
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(filePath, os.ModePerm)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+
+		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return fmt.Errorf("failed to open file: %w", err)
+		}
+
+		fileInArchive, err := f.Open()
+		if err != nil {
+			return fmt.Errorf("failed to open file in archive: %w", err)
+		}
+
+		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+			return fmt.Errorf("failed to copy file: %w", err)
+		}
+
+		dstFile.Close()
+		fileInArchive.Close()
+	}
+	return nil
 }
