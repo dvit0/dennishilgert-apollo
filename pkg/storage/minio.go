@@ -10,6 +10,11 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+type MinioObjectUploadedEvent struct {
+	EventName string
+	Key       string
+}
+
 type Options struct {
 	Endpoint        string
 	AccessKeyId     string
@@ -17,6 +22,8 @@ type Options struct {
 }
 
 type StorageService interface {
+	ListContents(ctx context.Context, bucketName string, prefix string) ([]string, error)
+	PresignUpload(ctx context.Context, bucketName string, objectName string, expires time.Duration) (*url.URL, error)
 	UploadObject(ctx context.Context, bucketName string, objectName string, filePath string) (*minio.UploadInfo, error)
 	DownloadObject(ctx context.Context, bucketName string, objectName string, targetPath string) error
 }
@@ -39,9 +46,24 @@ func NewStorageService(opts Options) (StorageService, error) {
 	}, nil
 }
 
+// ListContents returns a list of all objects in the specified bucket.
+func (s *storageService) ListContents(ctx context.Context, bucketName string, prefix string) ([]string, error) {
+	var contents []string
+	objectCh := s.minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{
+		Prefix: prefix,
+	})
+	for object := range objectCh {
+		if object.Err != nil {
+			return nil, object.Err
+		}
+		contents = append(contents, object.Key)
+	}
+	return contents, nil
+}
+
 // PresignUpload returns a presigned URL for uploading an object to the storage.
-func (s *storageService) PresignUpload(ctx context.Context, bucketName string, objectName string) (*url.URL, error) {
-	presignedUrl, err := s.minioClient.PresignedPutObject(ctx, bucketName, objectName, time.Second*3)
+func (s *storageService) PresignUpload(ctx context.Context, bucketName string, objectName string, expires time.Duration) (*url.URL, error) {
+	presignedUrl, err := s.minioClient.PresignedPutObject(ctx, bucketName, objectName, expires)
 	if err != nil {
 		return nil, err
 	}
