@@ -2,7 +2,7 @@
 	"name": "node-example",
 	"version": "1.0.0",
 	"description": "Example code for a node function",
-	"main": "node_wrapper.js",
+	"main": "wrapper.js",
 	"author": "Apollo",
 	"type": "module"
 }
