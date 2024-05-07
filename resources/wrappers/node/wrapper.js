@@ -1,7 +1,5 @@
-import { fileURLToPath } from 'url';
-import { join, dirname } from 'path';
+import { join } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const origConsoleLog = console.log;
 
 let initializationComplete = false;
@@ -50,7 +48,7 @@ async function processRequest(data) {
   try {
     const inputData = JSON.parse(data);
     const { context, event } = inputData;
-    const indexFile = join(__dirname, `${handlerFile}.mjs`);
+    const indexFile = join('/workspace/code', `${handlerFile}.mjs`);
 
     const indexModule = await import(indexFile);
     const handlerFunction = indexModule[handlerFunctionName];
