@@ -101,21 +101,17 @@ func (a *apiServer) Ready(ctx context.Context) error {
 
 // Invoke invokes a function.
 func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*agentpb.InvokeResponse, error) {
-	fnCtx := runtime.Context{
-		Runtime:        in.Context.Runtime,
-		RuntimeVersion: in.Context.RuntimeVersion,
-		RuntimeHandler: in.Context.RuntimeHandler,
-		MemoryLimit:    in.Context.MemoryLimit,
-		VCpuCores:      in.Context.VCpuCores,
-	}
-	fnEvt := runtime.Event{
+	event := runtime.Event{
 		EventUuid: in.Event.Uuid,
 		EventType: in.Event.Type,
+		SourceIp:  in.Event.SourceIp,
+		Headers:   in.Event.Headers,
+		Params:    in.Event.Params,
 		Payload:   in.Event.Payload,
 	}
 
 	log.Debugf("invoking function with event: %s", in.Event.Uuid)
-	result, err := a.persistentRuntime.Invoke(ctx, fnCtx, fnEvt)
+	result, err := a.persistentRuntime.Invoke(ctx, event)
 	if err != nil {
 		return nil, fmt.Errorf("function invocation failed: %w", err)
 	}

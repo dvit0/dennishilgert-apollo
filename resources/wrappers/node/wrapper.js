@@ -47,7 +47,7 @@ async function processRequest(data) {
 
   try {
     const inputData = JSON.parse(data);
-    const { context, event } = inputData;
+    const { event } = inputData;
     const indexFile = join('/workspace/code', `${handlerFile}.mjs`);
 
     const indexModule = await import(indexFile);
@@ -57,7 +57,7 @@ async function processRequest(data) {
       throw new Error(`Specified handler function does not exist: ${handlerFunctionName}`);
     }
 
-    await handlerFunction(context, event)
+    await handlerFunction(event)
       .then(logResult)
       .catch(logError)
       .finally(logDone);

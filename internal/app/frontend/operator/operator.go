@@ -184,6 +184,7 @@ func (o *frontendOperator) InvokeFunction(ctx context.Context, request *frontend
 			Uuid:     uuid.NewString(),
 			Type:     request.Event.Type,
 			SourceIp: request.Event.SourceIp,
+			Headers:  request.Event.Headers,
 			Params:   request.Event.Params,
 			Payload:  request.Event.Payload,
 		},

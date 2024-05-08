@@ -373,17 +373,13 @@ func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.In
 	defer instance.SetState(runner.RunnerStateReady)
 
 	invokeRequest := &agentpb.InvokeRequest{
-		Context: &agentpb.ContextData{
-			Runtime:        "mocked - will be removed in future",
-			RuntimeVersion: "mocked - will be removed in future",
-			RuntimeHandler: "mocked - will be removed in future",
-			VCpuCores:      -1,
-			MemoryLimit:    -1,
-		},
 		Event: &agentpb.EventData{
-			Uuid:    request.Event.Uuid,
-			Type:    request.Event.Type,
-			Payload: request.Event.Payload,
+			Uuid:     request.Event.Uuid,
+			Type:     request.Event.Type,
+			SourceIp: request.Event.SourceIp,
+			Headers:  request.Event.Headers,
+			Params:   request.Event.Params,
+			Payload:  request.Event.Payload,
 		},
 	}
 	// invoke the function code with the data of the event

@@ -32,9 +32,12 @@ type Context struct {
 }
 
 type Event struct {
-	EventUuid string      `json:"eventUuid"`
-	EventType string      `json:"eventType"`
-	Payload   interface{} `json:"payload"`
+	EventUuid string            `json:"eventUuid"`
+	EventType string            `json:"eventType"`
+	SourceIp  string            `json:"sourceIp"`
+	Headers   map[string]string `json:"headers"`
+	Params    map[string]string `json:"params"`
+	Payload   interface{}       `json:"payload"`
 }
 
 type DefaultProperties struct {
@@ -68,7 +71,7 @@ type PersistentRuntime interface {
 	Ready()
 	Wait() error
 	Tidy() error
-	Invoke(ctx context.Context, fnCtx Context, fnEvt Event) (*Result, error)
+	Invoke(ctx context.Context, event Event) (*Result, error)
 }
 
 type persistentRuntime struct {
@@ -185,7 +188,7 @@ func (p *persistentRuntime) Tidy() error {
 }
 
 // Invoke invokes the user-provided code within the specified runtime.
-func (p *persistentRuntime) Invoke(ctx context.Context, fnCtx Context, fnEvt Event) (*Result, error) {
+func (p *persistentRuntime) Invoke(ctx context.Context, event Event) (*Result, error) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -196,7 +199,7 @@ func (p *persistentRuntime) Invoke(ctx context.Context, fnCtx Context, fnEvt Eve
 		start = time.Now()
 	)
 
-	if err := p.sendInvocationData(fnCtx, fnEvt); err != nil {
+	if err := p.sendInvocationData(event); err != nil {
 		return nil, fmt.Errorf("sending invocation data failed: %w", err)
 	}
 
@@ -205,7 +208,7 @@ func (p *persistentRuntime) Invoke(ctx context.Context, fnCtx Context, fnEvt Eve
 	}
 
 	duration := time.Since(start)
-	return p.buildResult(fnEvt.EventUuid, logs, errs, data, duration), nil
+	return p.buildResult(event.EventUuid, logs, errs, data, duration), nil
 }
 
 // LogsToStructList converts a list of log lines to a list of Structs.
@@ -227,9 +230,9 @@ func LogsToStructList(logs []LogLine) ([]*structpb.Struct, error) {
 }
 
 // LogsToStructList converts a list of log lines to a list of Structs.
-func (p *persistentRuntime) sendInvocationData(fnCtx Context, fnEvt Event) error {
-	log.Debugf("sending invocation data to runtime for event: %s", fnEvt.EventUuid)
-	fnParams := map[string]interface{}{"context": fnCtx, "event": fnEvt}
+func (p *persistentRuntime) sendInvocationData(event Event) error {
+	log.Debugf("sending invocation data to runtime for event: %s", event.EventUuid)
+	fnParams := map[string]interface{}{"event": event}
 	fnParamsBytes, err := json.Marshal(fnParams)
 	if err != nil {
 		return fmt.Errorf("encoding fn params to json failed: %w", err)
