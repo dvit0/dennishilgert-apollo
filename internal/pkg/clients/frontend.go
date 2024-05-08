@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
 	frontendpb "github.com/dennishilgert/apollo/internal/pkg/proto/frontend/v1"
 )
 
 type FrontendClient interface {
 	Close()
+	InvokeFunction(ctx context.Context, req *frontendpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error)
 	CreateFunction(ctx context.Context, req *frontendpb.CreateFunctionRequest) (*frontendpb.CreateFunctionResponse, error)
 }
 
@@ -33,6 +35,10 @@ func NewFrontendClient(ctx context.Context, address string) (FrontendClient, err
 
 func (f *frontendClient) Close() {
 	f.grpcClient.CloseConnection()
+}
+
+func (f *frontendClient) InvokeFunction(ctx context.Context, req *frontendpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error) {
+	return f.client.InvokeFunction(ctx, req)
 }
 
 func (f *frontendClient) CreateFunction(ctx context.Context, req *frontendpb.CreateFunctionRequest) (*frontendpb.CreateFunctionResponse, error) {

@@ -2,14 +2,19 @@ package rest
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/dennishilgert/apollo/internal/app/gateway/bridge"
-	"github.com/dennishilgert/apollo/internal/app/gateway/rest/models"
+	"github.com/dennishilgert/apollo/internal/app/gateway/bridge/models"
+	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/dennishilgert/apollo/internal/pkg/registry"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
+
+var log = logger.NewLogger("apollo.rest")
 
 type RestHandler interface {
 	RegisterHandlers(e *echo.Echo)
@@ -34,19 +39,40 @@ func NewRestHandler(serviceRegistryClient registry.ServiceRegistryClient) RestHa
 func (r *restHandler) RegisterHandlers(e *echo.Echo) {
 	apiV1 := e.Group("/api/v1")
 
-	apiV1.Use(RequestInterceptor)
+	// Middleware for handling invocations.
+	// If the request is an invocation, it will be handled by this middleware and not any other handler.
+	e.Use(r.invocationMiddleware)
 
-	apiV1.GET("/hello", func(c echo.Context) error {
-		return c.String(200, "Hello, World!")
-	})
+	apiV1.Use(requestInterceptor)
 
-	apiV1.POST("/functions", r.frontendBridge.CreateFunction, RequestValidator(func() interface{} {
+	apiV1.POST("/functions", r.frontendBridge.CreateFunction, requestValidator(func() interface{} {
 		return new(models.CreateFunctionRequest)
 	}))
 }
 
+func (r *restHandler) invocationMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		log.Debugf("potential invocation request received - checking for trigger ID")
+		if strings.Contains(c.Request().URL.Hostname(), ".func.") || c.Request().Header.Get("X-Trigger-ID") != "" {
+			log.Debugf("invocation request detected - proceeding with invocation")
+			if err := validateRequest(c, new(models.InvokeFunctionRequest)); err != nil {
+				return err
+			}
+			if err := r.frontendBridge.InvokeFunction(c); err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"status":  "Internal Server Error",
+					"message": errors.Unwrap(err).Error(),
+					"error":   err.Error(),
+				})
+			}
+			return nil
+		}
+		return next(c)
+	}
+}
+
 // RequestInterceptor creates a middleware for handling errors.
-func RequestInterceptor(next echo.HandlerFunc) echo.HandlerFunc {
+func requestInterceptor(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// Execute request handler
 		err := next(c)
@@ -68,7 +94,7 @@ func RequestInterceptor(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 // RequestValidator creates a middleware for validating requests.
-func RequestValidator(factoryFunc func() interface{}) echo.MiddlewareFunc {
+func requestValidator(factoryFunc func() interface{}) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			req := factoryFunc()
@@ -87,15 +113,16 @@ func RequestValidator(factoryFunc func() interface{}) echo.MiddlewareFunc {
 func validateRequest(c echo.Context, req interface{}) error {
 	validate := validator.New()
 
-	if err := c.Bind(req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request format: "+err.Error())
+	if err := bridge.BindBody(c, req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Failed to bind request body: %s", err.Error()))
 	}
+
 	if err := validate.Struct(req); err != nil {
 		// Check if the errors are ValidationErrors and return them directly.
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
 			return echo.NewHTTPError(http.StatusBadRequest, validationErrorResponse(validationErrors))
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "Error during request validation: "+err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error during request validation: %s", err.Error()))
 	}
 	return nil
 }

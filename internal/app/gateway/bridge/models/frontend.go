@@ -1,5 +1,10 @@
 package models
 
+type InvokeFunctionRequest struct {
+	HttpTriggerId string
+	Payload       map[string]interface{} `validate:"omitempty"`
+}
+
 type CreateFunctionRequest struct {
 	Name                string `json:"name" validate:"required"`
 	RuntimeName         string `json:"runtimeName" validate:"required"`
