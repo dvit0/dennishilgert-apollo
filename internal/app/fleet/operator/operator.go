@@ -40,6 +40,7 @@ type RunnerOperator interface {
 	RunnerPoolMetrics() *registrypb.RunnerPoolMetrics
 	AvailableRunner(request *fleetpb.AvailableRunnerRequest) (*fleetpb.AvailableRunnerResponse, error)
 	ProvisionRunner(request *fleetpb.ProvisionRunnerRequest) (*fleetpb.ProvisionRunnerResponse, error)
+	TeardownRunnersByFunction(ctx context.Context, functionIdentifier string)
 	InvokeFunction(ctx context.Context, request *fleetpb.InvokeFunctionRequest) (*fleetpb.InvokeFunctionResponse, error)
 }
 
@@ -330,6 +331,20 @@ func (r *runnerOperator) TeardownRunner(ctx context.Context, runnerInstance runn
 	// 	return err
 	// }
 	return nil
+}
+
+// TeardownRunnersByFunction tears down all runners of a specified function.
+func (r *runnerOperator) TeardownRunnersByFunction(ctx context.Context, functionIdentifier string) {
+	runnersByFunction, err := r.runnerPool.GetByFunction(functionIdentifier)
+	if err != nil {
+		log.Warnf("failed to get runners by function: %s", functionIdentifier)
+		return
+	}
+	for _, runnerInstance := range runnersByFunction {
+		if err := r.TeardownRunner(ctx, runnerInstance); err != nil {
+			log.Warnf("failed to tear down runner - manual cleanup needed: %s", runnerInstance.Config().RunnerUuid)
+		}
+	}
 }
 
 // TeardownRunners tears down all runners in the pool.

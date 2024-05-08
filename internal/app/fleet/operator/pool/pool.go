@@ -17,6 +17,7 @@ type RunnerPool interface {
 	Unlock()
 	Add(instance runner.RunnerInstance) error
 	Get(functionIdentifier string, runnerUuid string) (runner.RunnerInstance, error)
+	GetByFunction(functionIdentifier string) (map[string]runner.RunnerInstance, error)
 	Remove(functionIdentifier string, runnerUuid string)
 	AvailableRunner(functionIdentifier string) (runner.RunnerInstance, error)
 }
@@ -95,6 +96,18 @@ func (r *runnerPool) Get(functionIdentifier string, runnerUuid string) (runner.R
 		return nil, fmt.Errorf("requested runner does not exist: %s", runnerUuid)
 	}
 	return instance, nil
+}
+
+// GetByFunction returns all runner instances for a given function identifier.
+func (r *runnerPool) GetByFunction(functionIdentifier string) (map[string]runner.RunnerInstance, error) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	runners := r.pool[functionIdentifier]
+	if runners == nil {
+		return nil, fmt.Errorf("no runners for given function identifier exist: %s", functionIdentifier)
+	}
+	return runners, nil
 }
 
 // Remove removes a runner instance from the pool.
