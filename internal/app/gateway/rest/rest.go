@@ -7,6 +7,7 @@ import (
 
 	"github.com/dennishilgert/apollo/internal/pkg/registry"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 type Options struct {
@@ -25,6 +26,8 @@ type restServer struct {
 
 func NewRestServer(serviceRegistryClient registry.ServiceRegistryClient, opts Options) RestServer {
 	e := echo.New()
+	e.HideBanner = true
+	e.Use(middleware.Recover())
 
 	restHandler := NewRestHandler(serviceRegistryClient)
 	restHandler.RegisterHandlers(e)

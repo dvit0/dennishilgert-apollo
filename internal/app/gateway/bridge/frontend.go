@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/dennishilgert/apollo/internal/app/gateway/bridge/clients"
+	"github.com/dennishilgert/apollo/internal/pkg/clients"
 	frontendpb "github.com/dennishilgert/apollo/internal/pkg/proto/frontend/v1"
 	registrypb "github.com/dennishilgert/apollo/internal/pkg/proto/registry/v1"
 	"github.com/dennishilgert/apollo/internal/pkg/registry"
@@ -29,8 +29,9 @@ func NewFrontendBridge(serviceRegistryClient registry.ServiceRegistryClient) Fro
 func (f frontendBridge) CreateFunction(c echo.Context) error {
 	client, err := f.client(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to create client: %v", err)})
+		return fmt.Errorf("failed to create frontend client: %w", err)
 	}
+	defer client.Close()
 	req := &frontendpb.CreateFunctionRequest{
 		Name:                c.FormValue("name"),
 		RuntimeName:         c.FormValue("runtime_name"),
@@ -39,7 +40,7 @@ func (f frontendBridge) CreateFunction(c echo.Context) error {
 	}
 	res, err := client.CreateFunction(c.Request().Context(), req)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to create function: %v", err)})
+		return fmt.Errorf("failed to create function: %w", err)
 	}
 	return c.JSON(http.StatusOK, res)
 }
