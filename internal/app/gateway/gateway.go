@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dennishilgert/apollo/internal/app/gateway/rest"
 	"github.com/dennishilgert/apollo/internal/pkg/concurrency/runner"
@@ -85,6 +86,9 @@ func (g *apiGateway) Run(ctx context.Context) error {
 		func(ctx context.Context) error {
 			log.Info("starting rest server")
 			if err := g.restServer.Run(); err != nil {
+				if strings.Contains(err.Error(), "http: Server closed") {
+					return nil
+				}
 				return fmt.Errorf("failed to start rest server: %w", err)
 			}
 			return nil
