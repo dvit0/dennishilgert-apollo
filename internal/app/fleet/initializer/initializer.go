@@ -15,7 +15,7 @@ import (
 	"github.com/dennishilgert/apollo/internal/pkg/utils"
 )
 
-var log = logger.NewLogger("apollo.manager.initializer")
+var log = logger.NewLogger("apollo.initializer")
 
 type Options struct {
 	DataPath             string
@@ -28,21 +28,22 @@ type RunnerInitializer interface {
 	InitializeRunner(ctx context.Context, cfg *runner.Config) error
 	RemoveRunner(ctx context.Context, runnerUuid string) error
 	InitializeFunction(ctx context.Context, request *fleetpb.InitializeFunctionRequest) error
+	DeinitializeFunction(ctx context.Context, request *fleetpb.DeinitializeFunctionRequest) error
 	InitializedFunctions() []string
 }
 
 type runnerInitializer struct {
-	storageService       storage.StorageService
 	dataPath             string
 	imageRegistryAddress string
+	storageService       storage.StorageService
 }
 
 // NewRunnerInitializer creates a new RunnerInitializer instance.
 func NewRunnerInitializer(storageService storage.StorageService, opts Options) RunnerInitializer {
 	return &runnerInitializer{
-		storageService:       storageService,
 		dataPath:             opts.DataPath,
 		imageRegistryAddress: opts.ImageRegistryAddress,
+		storageService:       storageService,
 	}
 }
 
@@ -144,6 +145,26 @@ func (r *runnerInitializer) InitializeFunction(ctx context.Context, request *fle
 	}
 	log.Infof("exporting function image: %s", refString)
 	if err := container.ImageExport(ctx, dockerClient, log, path, refString, filename, []string{"/code"}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *runnerInitializer) DeinitializeFunction(ctx context.Context, request *fleetpb.DeinitializeFunctionRequest) error {
+	path := naming.FunctionStoragePath(r.dataPath, request.Function.Uuid)
+	filename := naming.FunctionImageFileName(request.Function.Version)
+	functionIdentifier := naming.FunctionIdentifier(request.Function.Uuid, request.Function.Version)
+
+	log.Debugf("check if function is initialized")
+	exists, _ := utils.FileExists(strings.Join([]string{path, filename}, string(os.PathSeparator)))
+	if !exists {
+		log.Infof("function is not initialized: %s", functionIdentifier)
+		return nil
+	}
+
+	log.Infof("deinitializing function: %s", functionIdentifier)
+	if err := os.RemoveAll(strings.Join([]string{path, filename}, string(os.PathSeparator))); err != nil {
 		return err
 	}
 
@@ -262,13 +283,6 @@ func prepareTargetDirectory(path string) error {
 		ok, err := utils.IsDirAndWritable(path, fileInfo)
 		if !ok {
 			return fmt.Errorf("target path is not a directory or not writable: %v", err)
-		}
-		empty, err := utils.IsDirEmpty(path)
-		if !empty {
-			return fmt.Errorf("target directory is not empty")
-		}
-		if err != nil {
-			return fmt.Errorf("failed to check if target directory is empty: %v", err)
 		}
 	} else {
 		if err := os.MkdirAll(path, 0777); err != nil {

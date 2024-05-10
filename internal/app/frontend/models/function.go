@@ -4,6 +4,7 @@ import (
 	"time"
 
 	frontendpb "github.com/dennishilgert/apollo/internal/pkg/proto/frontend/v1"
+	"github.com/lib/pq"
 )
 
 type Function struct {
@@ -16,6 +17,7 @@ type Function struct {
 	Status              frontendpb.FunctionStatus `gorm:"not null"`
 	IdleTtl             int32                     `gorm:"not null"`
 	LogLevel            string                    `gorm:"not null"`
+	Environment         pq.StringArray            `gorm:"type:text[]; not null"`
 	RuntimeName         string                    `gorm:"not null"`
 	RuntimeVersion      string                    `gorm:"not null"`
 	RuntimeArchitecture string                    `gorm:"not null"`

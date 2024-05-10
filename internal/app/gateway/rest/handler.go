@@ -45,9 +45,19 @@ func (r *restHandler) RegisterHandlers(e *echo.Echo) {
 
 	apiV1.Use(requestInterceptor)
 
+	apiV1.POST("/kernels", r.frontendBridge.AddKernel, requestValidator(func() interface{} {
+		return new(models.AddKernelRequest)
+	}))
+
+	apiV1.POST("/runtimes", r.frontendBridge.AddRuntime, requestValidator(func() interface{} {
+		return new(models.AddRuntimeRequest)
+	}))
+
 	apiV1.POST("/functions", r.frontendBridge.CreateFunction, requestValidator(func() interface{} {
 		return new(models.CreateFunctionRequest)
 	}))
+
+	apiV1.GET("/functions/:functionUuid/code", r.frontendBridge.FunctionCodeUploadUrl)
 }
 
 func (r *restHandler) invocationMiddleware(next echo.HandlerFunc) echo.HandlerFunc {

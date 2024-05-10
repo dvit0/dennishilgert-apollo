@@ -151,26 +151,59 @@ func (a *apiServer) InitializeFunction(ctx context.Context, req *fleetpb.Initial
 		bgCtx, cancel := context.WithTimeout(a.appCtx, time.Minute*10)
 		defer cancel()
 
+		var message messagespb.FunctionInitializationResponseMessage
 		if err := a.runnerInitializer.InitializeFunction(bgCtx, req); err != nil {
-			log.Errorf("failed to prepare function: %v", err)
-			message := &messagespb.FunctionInitializationMessage{
+			log.Errorf("failed to initialize function: %v", err)
+			message = messagespb.FunctionInitializationResponseMessage{
 				Function:   req.Function,
 				WorkerUuid: a.workerUuid,
 				Reason:     err.Error(),
 				Success:    false,
 			}
-			a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
-			log.Errorf("failed to prepare function: %v", err)
-			return
+		} else {
+			log.Infof("function has been initialized successfully: %s", req.Function.Uuid)
+			message = messagespb.FunctionInitializationResponseMessage{
+				Function:   req.Function,
+				WorkerUuid: a.workerUuid,
+				Reason:     "ok",
+				Success:    true,
+			}
 		}
-		log.Infof("function has been prepared successfully: %s", req.Function.Uuid)
-		message := &messagespb.FunctionInitializationMessage{
-			Function:   req.Function,
-			WorkerUuid: a.workerUuid,
-			Reason:     "ok",
-			Success:    true,
+		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationResponsesTopic, &message)
+	}()
+	return &sharedpb.EmptyResponse{}, nil
+}
+
+// DeinitializeFunction deinitializes a function.
+func (a *apiServer) DeinitializeFunction(ctx context.Context, req *fleetpb.DeinitializeFunctionRequest) (*sharedpb.EmptyResponse, error) {
+	// Handle deinitialization request asynchronous and respond immediately.
+	go func() {
+		bgCtx, cancel := context.WithTimeout(a.appCtx, time.Minute*10)
+		defer cancel()
+
+		functionIdentifier := naming.FunctionIdentifier(req.Function.Uuid, req.Function.Version)
+
+		a.runnerOperator.TeardownRunnersByFunction(bgCtx, functionIdentifier)
+
+		var message messagespb.FunctionDeinitializationResponseMessage
+		if err := a.runnerInitializer.DeinitializeFunction(bgCtx, req); err != nil {
+			log.Errorf("failed to deinitialize function: %v", err)
+			message = messagespb.FunctionDeinitializationResponseMessage{
+				Function:   req.Function,
+				WorkerUuid: a.workerUuid,
+				Reason:     err.Error(),
+				Success:    false,
+			}
+		} else {
+			log.Infof("function has been deinitialized successfully: %s", req.Function.Uuid)
+			message = messagespb.FunctionDeinitializationResponseMessage{
+				Function:   req.Function,
+				WorkerUuid: a.workerUuid,
+				Reason:     "ok",
+				Success:    true,
+			}
 		}
-		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionInitializationTopic, message)
+		a.messagingProducer.Publish(bgCtx, naming.MessagingFunctionDeinitializationResponsesTopic, &message)
 	}()
 	return &sharedpb.EmptyResponse{}, nil
 }

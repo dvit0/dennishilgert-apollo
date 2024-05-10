@@ -3,6 +3,8 @@ package runner
 import (
 	"fmt"
 	"strings"
+
+	"github.com/dennishilgert/apollo/internal/pkg/utils"
 )
 
 type KernelArgsBuilder interface {
@@ -16,9 +18,7 @@ type KernelArgsBuilder interface {
 	WithWorkerUuid(workerUuid string) KernelArgsBuilder
 	WithFunctionIdentifier(functionIdentifier string) KernelArgsBuilder
 	WithRunnerUuid(runnerUuid string) KernelArgsBuilder
-	WithRuntimeHandler(handler string) KernelArgsBuilder
-	WithRuntimeBinaryPath(binaryPath string) KernelArgsBuilder
-	WithRuntimeBinaryArgs(binaryArgs []string) KernelArgsBuilder
+	WithRuntimeConfiguration(handler string, binaryPath string, binaryArgs []string, environment []string) KernelArgsBuilder
 	WithApiPort(port int) KernelArgsBuilder
 	WithMessagingBootstrapServers(servers string) KernelArgsBuilder
 	WithLogLevel(logLevel string) KernelArgsBuilder
@@ -34,9 +34,7 @@ type kernelArgsBuilder struct {
 	workerUuid                string
 	functionUuid              string
 	runnerUuid                string
-	runtimeHandler            string
-	runtimeBinaryPath         string
-	runtimeBinaryArgs         string
+	runtimeConfiguration      string
 	apiPort                   string
 	messagingBootstrapServers string
 	logLevel                  string
@@ -58,9 +56,7 @@ func (c *kernelArgsBuilder) Build() string {
 		c.workerUuid,
 		c.functionUuid,
 		c.runnerUuid,
-		c.runtimeHandler,
-		c.runtimeBinaryPath,
-		c.runtimeBinaryArgs,
+		c.runtimeConfiguration,
 		c.apiPort,
 		c.messagingBootstrapServers,
 		c.logLevel,
@@ -125,21 +121,19 @@ func (c *kernelArgsBuilder) WithRunnerUuid(runnerUuid string) KernelArgsBuilder 
 	return c
 }
 
-// WithRuntimeHandler sets the runtimeHandler argument.
-func (c *kernelArgsBuilder) WithRuntimeHandler(handler string) KernelArgsBuilder {
-	c.runtimeHandler = fmt.Sprintf("rt-hdlr=%s", handler)
-	return c
-}
-
-// WithRuntimeBinaryPath sets the runtimeBinaryPath argument.
-func (c *kernelArgsBuilder) WithRuntimeBinaryPath(binaryPath string) KernelArgsBuilder {
-	c.runtimeBinaryPath = fmt.Sprintf("rt-bin-path=%s", binaryPath)
-	return c
-}
-
-// WithRuntimeBinaryArgs sets the runtimeBinaryArgs argument.
-func (c *kernelArgsBuilder) WithRuntimeBinaryArgs(binaryArgs []string) KernelArgsBuilder {
-	c.runtimeBinaryArgs = fmt.Sprintf("rt-bin-args=\"%s\"", strings.Join(binaryArgs, " "))
+// WithRuntimeConfiguration sets the runtime configuration arguments.
+func (c *kernelArgsBuilder) WithRuntimeConfiguration(handler string, binaryPath string, binaryArgs []string, environment []string) KernelArgsBuilder {
+	runtimeConfiguration := map[string]interface{}{
+		"handler":     handler,
+		"binaryPath":  binaryPath,
+		"binaryArgs":  binaryArgs,
+		"environment": environment,
+	}
+	serializedRuntimeConfiguration, err := utils.SerializeJson(runtimeConfiguration)
+	if err != nil {
+		log.Errorf("error while serializing runtime configuration: %v", err)
+	}
+	c.runtimeConfiguration = fmt.Sprintf("rt-cfg=%s", serializedRuntimeConfiguration)
 	return c
 }
 

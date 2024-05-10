@@ -19,8 +19,9 @@ import (
 var log = logger.NewLogger("apollo.agent.runtime")
 
 type Config struct {
-	BinaryPath string
-	BinaryArgs []string
+	BinaryPath  string
+	BinaryArgs  []string
+	Environment []string
 }
 
 type Context struct {
@@ -87,6 +88,7 @@ type persistentRuntime struct {
 // NewPersistentRuntime creates a new PersistentRuntime instance.
 func NewPersistentRuntime(ctx context.Context, config Config) (PersistentRuntime, error) {
 	cmd := exec.CommandContext(ctx, config.BinaryPath, config.BinaryArgs...)
+	cmd.Env = append(cmd.Env, config.Environment...)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

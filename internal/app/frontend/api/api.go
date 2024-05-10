@@ -202,10 +202,10 @@ func (a *apiServer) ListFunctions(ctx context.Context, req *frontendpb.ListFunct
 	return res, nil
 }
 
-func (a *apiServer) GetFunctionCodeUploadUrl(ctx context.Context, req *frontendpb.FunctionCodeUploadUrlRequest) (*frontendpb.FunctionCodeUploadUrlResponse, error) {
-	res, err := a.frontendOperator.UpdateFunctionCode(ctx, req)
+func (a *apiServer) FunctionCodeUploadUrl(ctx context.Context, req *frontendpb.FunctionCodeUploadUrlRequest) (*frontendpb.FunctionCodeUploadUrlResponse, error) {
+	res, err := a.frontendOperator.FunctionCodeUploadUrl(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update function code: %w", err)
+		return nil, fmt.Errorf("failed to get function code upload url: %w", err)
 	}
 	return res, nil
 }

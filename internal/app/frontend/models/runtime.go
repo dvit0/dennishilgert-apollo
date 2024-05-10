@@ -11,6 +11,7 @@ type Runtime struct {
 	Version            string         `gorm:"primary_key; not null"`
 	BinaryPath         string         `gorm:"not null"`
 	BinaryArgs         pq.StringArray `gorm:"type:text[]; not null"`
+	Environment        pq.StringArray `gorm:"type:text[]; not null"`
 	DisplayName        string         `gorm:"not null"`
 	DefaultHandler     string         `gorm:"not null"`
 	DefaultMemoryLimit int32          `gorm:"not null"`

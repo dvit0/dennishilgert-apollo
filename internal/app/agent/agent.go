@@ -24,6 +24,7 @@ type Options struct {
 	RuntimeHandler     string
 	RuntimeBinaryPath  string
 	RuntimeBinaryArgs  []string
+	RuntimeEnvironment []string
 
 	ApiPort                   int
 	MessagingBootstrapServers string
@@ -57,8 +58,9 @@ func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 	}
 
 	persistentRuntime, err := runtime.NewPersistentRuntime(ctx, runtime.Config{
-		BinaryPath: opts.RuntimeBinaryPath,
-		BinaryArgs: opts.RuntimeBinaryArgs,
+		BinaryPath:  opts.RuntimeBinaryPath,
+		BinaryArgs:  opts.RuntimeBinaryArgs,
+		Environment: opts.RuntimeEnvironment,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("initializing runtime failed: %w", err)

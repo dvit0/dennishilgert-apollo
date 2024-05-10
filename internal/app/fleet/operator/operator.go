@@ -225,9 +225,10 @@ func (r *runnerOperator) ProvisionRunner(request *fleetpb.ProvisionRunnerRequest
 			},
 			string(os.PathSeparator),
 		),
-		RuntimeHandler:    request.Runtime.Handler,
-		RuntimeBinaryPath: request.Runtime.BinaryPath,
-		RuntimeBinaryArgs: request.Runtime.BinaryArgs,
+		RuntimeHandler:     request.Runtime.Handler,
+		RuntimeBinaryPath:  request.Runtime.BinaryPath,
+		RuntimeBinaryArgs:  request.Runtime.BinaryArgs,
+		RuntimeEnvironment: request.Runtime.Environment,
 		FunctionDrivePath: strings.Join(
 			[]string{
 				naming.FunctionStoragePath(r.runnerInitializer.DataPath(), request.Function.Uuid),
@@ -341,6 +342,7 @@ func (r *runnerOperator) TeardownRunnersByFunction(ctx context.Context, function
 		return
 	}
 	for _, runnerInstance := range runnersByFunction {
+		r.runnerPool.Remove(functionIdentifier, runnerInstance.Config().RunnerUuid)
 		if err := r.TeardownRunner(ctx, runnerInstance); err != nil {
 			log.Warnf("failed to tear down runner - manual cleanup needed: %s", runnerInstance.Config().RunnerUuid)
 		}
@@ -356,17 +358,17 @@ func (r *runnerOperator) TeardownRunners(ctx context.Context) {
 	functionCount := len(runnerPool)
 	functionIndex := 1
 
-	for functionUuid, runnersByFunction := range runnerPool {
+	for functionIdentifier, runnersByFunction := range runnerPool {
 		runnerCount := len(runnersByFunction)
 		runnerIndex := 1
 
 		if runnerCount > 0 {
-			log.Debugf("tearing down runners of function (%d/%d): %s", functionIndex, functionCount, functionUuid)
+			log.Debugf("tearing down runners of function (%d/%d): %s", functionIndex, functionCount, functionIdentifier)
 		}
 
 		for runnerUuid, runnerInstance := range runnersByFunction {
 			log.Debugf("tearing down runner (%d/%d): %s", runnerIndex, runnerCount, runnerUuid)
-			r.runnerPool.Remove(functionUuid, runnerUuid)
+			r.runnerPool.Remove(functionIdentifier, runnerUuid)
 			if err := r.TeardownRunner(ctx, runnerInstance); err != nil {
 				log.Warnf("failed to tear down runner - manual cleanup needed: %s", runnerUuid)
 			}

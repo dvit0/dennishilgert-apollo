@@ -24,6 +24,7 @@ type Config struct {
 	RuntimeHandler           string
 	RuntimeBinaryPath        string
 	RuntimeBinaryArgs        []string
+	RuntimeEnvironment       []string
 	FunctionDrivePath        string
 	SocketPath               string
 	LogFilePath              string
@@ -92,9 +93,7 @@ func firecrackerConfig(cfg Config) firecracker.Config {
 			WithWorkerUuid(cfg.WorkerUuid).
 			WithFunctionIdentifier(naming.FunctionIdentifier(cfg.FunctionUuid, cfg.FunctionVersion)).
 			WithRunnerUuid(cfg.RunnerUuid).
-			WithRuntimeHandler(cfg.RuntimeHandler).
-			WithRuntimeBinaryPath(cfg.RuntimeBinaryPath).
-			WithRuntimeBinaryArgs(cfg.RuntimeBinaryArgs).
+			WithRuntimeConfiguration(cfg.RuntimeHandler, cfg.RuntimeBinaryPath, cfg.RuntimeBinaryArgs, cfg.RuntimeEnvironment).
 			WithApiPort(cfg.AgentApiPort).
 			WithMessagingBootstrapServers(cfg.MessagingBoostrapServers).
 			WithLogLevel(cfg.LogLevel).

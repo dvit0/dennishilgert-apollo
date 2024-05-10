@@ -119,6 +119,7 @@ func NewFrontend(ctx context.Context, opts Options) (Frontend, error) {
 			GroupId: "apollo_frontend",
 			Topics: []string{
 				naming.MessagingFunctionStatusUpdateTopic,
+				naming.MessagingFunctionInitializationResponsesTopic,
 			},
 			BootstrapServers: opts.MessagingBootstrapServers,
 			WorkerCount:      opts.MessagingWorkerCount,
