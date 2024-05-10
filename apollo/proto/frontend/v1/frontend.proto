@@ -22,7 +22,7 @@ service Frontend {
   rpc CreateFunction(CreateFunctionRequest) returns (CreateFunctionResponse) {}
   rpc GetFunction(GetFunctionRequest) returns (GetFunctionResponse) {}
   rpc ListFunctions(ListFunctionsRequest) returns (ListFunctionsResponse) {}
-  rpc GetFunctionCodeUploadUrl(FunctionCodeUploadUrlRequest) returns (FunctionCodeUploadUrlResponse) {}
+  rpc FunctionCodeUploadUrl(FunctionCodeUploadUrlRequest) returns (FunctionCodeUploadUrlResponse) {}
   rpc UpdateFunctionRuntime(UpdateFunctionRuntimeRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc UpdateFunctionResources(UpdateFunctionResourcesRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc DeleteFunction(DeleteFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
@@ -31,10 +31,13 @@ service Frontend {
 enum FunctionStatus {
   FUNCTION_STATUS_UNSPECIFIED = 0;
   CREATED = 1;
-  PACKED = 2;
+  PACKING = 2;
   PACKING_FAILED = 3;
-  INITIALIZED = 4;
-  INITIALIZAION_FAILED = 5;
+  PACKED = 4;
+  INITIALIZING = 5;
+  INITIALIZAION_FAILED = 6;
+  INITIALIZED = 7;
+  READY = 8;
 }
 
 message KernelSpecs {
@@ -48,13 +51,14 @@ message RuntimeSpecs {
   string version = 2;
   string binary_path = 3;
   repeated string binary_args = 4;
-  string display_name = 5;
-  string default_handler = 6;
-  int32 default_memory_limit = 7;
-  int32 default_v_cpu_cores = 8;
-  string kernel_name = 9;
-  string kernel_version = 10;
-  string kernel_architecture = 11;
+  repeated string environment = 5;
+  string display_name = 6;
+  string default_handler = 7;
+  int32 default_memory_limit = 8;
+  int32 default_v_cpu_cores = 9;
+  string kernel_name = 10;
+  string kernel_version = 11;
+  string kernel_architecture = 12;
 }
 
 message FunctionSpecs {
@@ -67,11 +71,12 @@ message FunctionSpecs {
   FunctionStatus status = 7;
   int32 idle_ttl = 8;
   string log_level = 9;
-  string runtime_name = 10;
-  string runtime_version = 11;
-  string runtime_architecture = 12;
-  string runtime_display_name = 13;
-  string http_trigger_id = 14;
+  repeated string environment = 10;
+  string runtime_name = 11;
+  string runtime_version = 12;
+  string runtime_architecture = 13;
+  string runtime_display_name = 14;
+  string http_trigger_id = 15;
 }
 
 message EventSpecs {
@@ -145,7 +150,7 @@ message ListFunctionsResponse {
 }
 
 message FunctionCodeUploadUrlRequest {
-  string uuid = 1;
+  string function_uuid = 1;
 }
 
 message FunctionCodeUploadUrlResponse {
@@ -155,9 +160,10 @@ message FunctionCodeUploadUrlResponse {
 message UpdateFunctionRuntimeRequest {
   string uuid = 1;
   string handler = 2;
-  string runtime_name = 3;
-  string runtime_version = 4;
-  string runtime_architecture = 5;
+  repeated string environment = 3;
+  string runtime_name = 4;
+  string runtime_version = 5;
+  string runtime_architecture = 6;
 }
 
 message UpdateFunctionResourcesRequest {

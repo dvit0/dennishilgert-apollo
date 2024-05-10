@@ -10,6 +10,7 @@ import (
 
 	"github.com/dennishilgert/apollo/internal/app/worker/evaluation"
 	"github.com/dennishilgert/apollo/internal/pkg/cache"
+	"github.com/dennishilgert/apollo/internal/pkg/clients"
 	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	fleetpb "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1"
@@ -27,6 +28,7 @@ type Options struct {
 
 type PlacementService interface {
 	AllocateFunctionInitialization(ctx context.Context, request *workerpb.InitializeFunctionRequest) error
+	PerformFunctionDeinitialization(ctx context.Context, function *fleetpb.FunctionSpecs) error
 	FindAvailableRunner(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.AvailableRunnerResponse, error)
 	AllocateRunnerProvisioning(ctx context.Context, request *workerpb.AllocateInvocationRequest) (*fleetpb.ProvisionRunnerResponse, error)
 	AddInitializedFunction(ctx context.Context, workerUuid string, functionIdentifier string) error
@@ -86,6 +88,37 @@ func (p *placementService) AllocateFunctionInitialization(ctx context.Context, r
 		_, err = apiClient.InitializeFunction(ctx, transformedReq)
 		if err != nil {
 			return fmt.Errorf("failed to initialize function on worker instance: %w", err)
+		}
+	}
+	return nil
+}
+
+func (p *placementService) PerformFunctionDeinitialization(ctx context.Context, function *fleetpb.FunctionSpecs) error {
+	workers, err := p.WorkersByFunction(ctx, naming.FunctionIdentifier(function.Uuid, function.Version))
+	if err != nil {
+		return fmt.Errorf("failed to get workers by function: %w", err)
+	}
+	if len(workers) == 0 {
+		return fmt.Errorf("no workers found for function")
+	}
+	for _, worker := range workers {
+		workerInstance, _, err := p.Worker(ctx, worker)
+		if err != nil {
+			return fmt.Errorf("failed to get worker instance: %w", err)
+		}
+
+		client, err := clients.NewFleetManagerClient(ctx, fmt.Sprintf("%s:%d", workerInstance.Host, workerInstance.Port))
+		if err != nil {
+			return fmt.Errorf("failed to create fleet manager client: %w", err)
+		}
+		defer client.Close()
+		transformedReq := &fleetpb.DeinitializeFunctionRequest{
+			Function: function,
+		}
+
+		_, err = client.DeinitializeFunction(ctx, transformedReq)
+		if err != nil {
+			return fmt.Errorf("failed to deinitialize function on worker instance: %w", err)
 		}
 	}
 	return nil

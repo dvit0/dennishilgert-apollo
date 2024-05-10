@@ -12,12 +12,12 @@ var (
 	ImagePrefix = "apollo"
 
 	// Messaging topics.
-	MessagingFunctionInitializationTopic   = "apollo_function_initialization"
-	MessagingFunctionDeinitializationTopic = "apollo_function_deinitialization"
-	MessagingFunctionCodeUploadedTopic     = "apollo_function_code_uploaded"
-	MessagingFunctionPackageCreationTopic  = "apollo_function_package_creation"
-	MessagingFunctionStatusUpdateTopic     = "apollo_function_status_update"
-	MessagingInstanceHeartbeatTopic        = "apollo_instance_heartbeat"
+	MessagingFunctionInitializationResponsesTopic   = "apollo_function_initialization_responses"
+	MessagingFunctionDeinitializationRequestsTopic  = "apollo_function_deinitialization_requests"
+	MessagingFunctionDeinitializationResponsesTopic = "apollo_function_deinitialization_responses"
+	MessagingFunctionCodeUploadedTopic              = "apollo_function_code_uploaded"
+	MessagingFunctionStatusUpdateTopic              = "apollo_function_status_update"
+	MessagingInstanceHeartbeatTopic                 = "apollo_instance_heartbeat"
 
 	// Names of the storage buckets.
 	StorageKernelBucketName       = "apollo-kernels"

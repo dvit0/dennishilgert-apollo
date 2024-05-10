@@ -116,8 +116,9 @@ func NewManager(ctx context.Context, opts Options) (WorkerManager, error) {
 		consumer.Options{
 			GroupId: "apollo_worker_manager",
 			Topics: []string{
-				naming.MessagingFunctionInitializationTopic,
-				naming.MessagingFunctionDeinitializationTopic,
+				naming.MessagingFunctionInitializationResponsesTopic,
+				naming.MessagingFunctionDeinitializationRequestsTopic,
+				naming.MessagingFunctionDeinitializationResponsesTopic,
 			},
 			BootstrapServers: opts.MessagingBootstrapServers,
 			WorkerCount:      opts.MessagingWorkerCount,

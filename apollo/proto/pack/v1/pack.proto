@@ -2,10 +2,18 @@ syntax = "proto3";
 
 package apollo.proto.pack.v1;
 
-import "google/protobuf/struct.proto";
-
 option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/pack/v1;packpb";
 
-service Package {
-  
+service PackageService {
+  rpc PresignedUploadUrl(PresignedUploadUrlRequest) returns (PresignedUploadUrlResponse) {}
+}
+
+message PresignedUploadUrlRequest {
+  string bucket_name = 1;
+  string object_name = 2;
+  int32 expires_in = 3;
+}
+
+message PresignedUploadUrlResponse {
+  string raw_url = 1;
 }

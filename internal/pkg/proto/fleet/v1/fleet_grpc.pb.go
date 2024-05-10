@@ -20,10 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	FleetManager_InitializeFunction_FullMethodName = "/apollo.proto.fleet.v1.FleetManager/InitializeFunction"
-	FleetManager_AvailableRunner_FullMethodName    = "/apollo.proto.fleet.v1.FleetManager/AvailableRunner"
-	FleetManager_ProvisionRunner_FullMethodName    = "/apollo.proto.fleet.v1.FleetManager/ProvisionRunner"
-	FleetManager_InvokeFunction_FullMethodName     = "/apollo.proto.fleet.v1.FleetManager/InvokeFunction"
+	FleetManager_InitializeFunction_FullMethodName   = "/apollo.proto.fleet.v1.FleetManager/InitializeFunction"
+	FleetManager_DeinitializeFunction_FullMethodName = "/apollo.proto.fleet.v1.FleetManager/DeinitializeFunction"
+	FleetManager_AvailableRunner_FullMethodName      = "/apollo.proto.fleet.v1.FleetManager/AvailableRunner"
+	FleetManager_ProvisionRunner_FullMethodName      = "/apollo.proto.fleet.v1.FleetManager/ProvisionRunner"
+	FleetManager_InvokeFunction_FullMethodName       = "/apollo.proto.fleet.v1.FleetManager/InvokeFunction"
 )
 
 // FleetManagerClient is the client API for FleetManager service.
@@ -31,6 +32,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FleetManagerClient interface {
 	InitializeFunction(ctx context.Context, in *InitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
+	DeinitializeFunction(ctx context.Context, in *DeinitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error)
 	AvailableRunner(ctx context.Context, in *AvailableRunnerRequest, opts ...grpc.CallOption) (*AvailableRunnerResponse, error)
 	ProvisionRunner(ctx context.Context, in *ProvisionRunnerRequest, opts ...grpc.CallOption) (*ProvisionRunnerResponse, error)
 	InvokeFunction(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*InvokeFunctionResponse, error)
@@ -47,6 +49,15 @@ func NewFleetManagerClient(cc grpc.ClientConnInterface) FleetManagerClient {
 func (c *fleetManagerClient) InitializeFunction(ctx context.Context, in *InitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
 	out := new(v1.EmptyResponse)
 	err := c.cc.Invoke(ctx, FleetManager_InitializeFunction_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fleetManagerClient) DeinitializeFunction(ctx context.Context, in *DeinitializeFunctionRequest, opts ...grpc.CallOption) (*v1.EmptyResponse, error) {
+	out := new(v1.EmptyResponse)
+	err := c.cc.Invoke(ctx, FleetManager_DeinitializeFunction_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +96,7 @@ func (c *fleetManagerClient) InvokeFunction(ctx context.Context, in *InvokeFunct
 // for forward compatibility
 type FleetManagerServer interface {
 	InitializeFunction(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error)
+	DeinitializeFunction(context.Context, *DeinitializeFunctionRequest) (*v1.EmptyResponse, error)
 	AvailableRunner(context.Context, *AvailableRunnerRequest) (*AvailableRunnerResponse, error)
 	ProvisionRunner(context.Context, *ProvisionRunnerRequest) (*ProvisionRunnerResponse, error)
 	InvokeFunction(context.Context, *InvokeFunctionRequest) (*InvokeFunctionResponse, error)
@@ -96,6 +108,9 @@ type UnimplementedFleetManagerServer struct {
 
 func (UnimplementedFleetManagerServer) InitializeFunction(context.Context, *InitializeFunctionRequest) (*v1.EmptyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitializeFunction not implemented")
+}
+func (UnimplementedFleetManagerServer) DeinitializeFunction(context.Context, *DeinitializeFunctionRequest) (*v1.EmptyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeinitializeFunction not implemented")
 }
 func (UnimplementedFleetManagerServer) AvailableRunner(context.Context, *AvailableRunnerRequest) (*AvailableRunnerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AvailableRunner not implemented")
@@ -132,6 +147,24 @@ func _FleetManager_InitializeFunction_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FleetManagerServer).InitializeFunction(ctx, req.(*InitializeFunctionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FleetManager_DeinitializeFunction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeinitializeFunctionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FleetManagerServer).DeinitializeFunction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FleetManager_DeinitializeFunction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FleetManagerServer).DeinitializeFunction(ctx, req.(*DeinitializeFunctionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -200,6 +233,10 @@ var FleetManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitializeFunction",
 			Handler:    _FleetManager_InitializeFunction_Handler,
+		},
+		{
+			MethodName: "DeinitializeFunction",
+			Handler:    _FleetManager_DeinitializeFunction_Handler,
 		},
 		{
 			MethodName: "AvailableRunner",

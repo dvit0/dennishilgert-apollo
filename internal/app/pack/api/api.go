@@ -11,6 +11,7 @@ import (
 	"github.com/dennishilgert/apollo/internal/pkg/health"
 	"github.com/dennishilgert/apollo/internal/pkg/logger"
 	packpb "github.com/dennishilgert/apollo/internal/pkg/proto/pack/v1"
+	"github.com/dennishilgert/apollo/internal/pkg/storage"
 	"google.golang.org/grpc"
 )
 
@@ -27,18 +28,20 @@ type Server interface {
 }
 
 type apiServer struct {
-	packpb.UnimplementedPackageServer
+	packpb.UnimplementedPackageServiceServer
 
-	port    int
-	readyCh chan struct{}
-	running atomic.Bool
+	port           int
+	readyCh        chan struct{}
+	running        atomic.Bool
+	storageService storage.StorageService
 }
 
 // NewApiServer creates a new Server.
-func NewApiServer(opts Options) Server {
+func NewApiServer(storageService storage.StorageService, opts Options) Server {
 	return &apiServer{
-		port:    opts.Port,
-		readyCh: make(chan struct{}),
+		port:           opts.Port,
+		readyCh:        make(chan struct{}),
+		storageService: storageService,
 	}
 }
 
@@ -50,7 +53,7 @@ func (a *apiServer) Run(ctx context.Context, healthStatusProvider health.Provide
 
 	log.Infof("starting api server on port %d", a.port)
 	server := grpc.NewServer()
-	// Register server here.
+	packpb.RegisterPackageServiceServer(server, a)
 
 	healthServer := health.NewHealthServer(healthStatusProvider, log)
 	healthServer.Register(server)
@@ -119,4 +122,14 @@ func (a *apiServer) Ready(ctx context.Context) error {
 	case <-ctx.Done():
 		return errors.New("timeout while waiting for the api server to be ready")
 	}
+}
+
+func (a *apiServer) PresignedUploadUrl(ctx context.Context, req *packpb.PresignedUploadUrlRequest) (*packpb.PresignedUploadUrlResponse, error) {
+	url, err := a.storageService.PresignUpload(ctx, req.BucketName, req.ObjectName, time.Duration(req.ExpiresIn)*time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to presign upload url: %w", err)
+	}
+	return &packpb.PresignedUploadUrlResponse{
+		RawUrl: url.String(),
+	}, nil
 }

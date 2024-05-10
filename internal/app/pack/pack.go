@@ -113,6 +113,7 @@ func NewPackageService(ctx context.Context, opts Options) (PackageService, error
 
 	messagingHandler := messaging.NewMessagingHandler(
 		packageOperator,
+		messagingProducer,
 		messaging.Options{},
 	)
 	messagingHandler.RegisterAll()
@@ -123,7 +124,6 @@ func NewPackageService(ctx context.Context, opts Options) (PackageService, error
 			GroupId: "apollo_frontend",
 			Topics: []string{
 				naming.MessagingFunctionCodeUploadedTopic,
-				naming.MessagingFunctionPackageCreationTopic,
 			},
 			BootstrapServers: opts.MessagingBootstrapServers,
 			WorkerCount:      opts.MessagingWorkerCount,
@@ -134,6 +134,7 @@ func NewPackageService(ctx context.Context, opts Options) (PackageService, error
 	}
 
 	apiServer := api.NewApiServer(
+		storageService,
 		api.Options{
 			Port: opts.ApiPort,
 		},

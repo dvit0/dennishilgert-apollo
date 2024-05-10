@@ -45,7 +45,7 @@ func NewMessagingHandler(leaseService lease.LeaseService, opts Options) Messagin
 
 // RegisterAll registrates all handlers for the subscribed topics in the handler map.
 func (m *messagingHandler) RegisterAll() {
-	// Handle MessagingFunctionInitializationTopic messages
+	// Handle MessagingInstanceHeartbeatTopic messages
 	m.add(naming.MessagingInstanceHeartbeatTopic, func(msg *kafka.Message) {
 		var tempMessage TempInstanceHeartbeatMessage
 		// Unmarshal the message into a temporary struct to determine the type of metrics.

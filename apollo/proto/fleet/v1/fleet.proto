@@ -9,6 +9,7 @@ option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/fleet/v1
 
 service FleetManager {
   rpc InitializeFunction(InitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
+  rpc DeinitializeFunction(DeinitializeFunctionRequest) returns (apollo.proto.shared.v1.EmptyResponse) {}
   rpc AvailableRunner(AvailableRunnerRequest) returns (AvailableRunnerResponse) {}
   rpc ProvisionRunner(ProvisionRunnerRequest) returns (ProvisionRunnerResponse) {}
   rpc InvokeFunction(InvokeFunctionRequest) returns (InvokeFunctionResponse) {}
@@ -45,6 +46,7 @@ message RuntimeExecutionSpecs {
   string handler = 3;
   string binary_path = 4;
   repeated string binary_args = 5;
+  repeated string environment = 6;
 }
 
 message MachineSpecs {
@@ -68,6 +70,10 @@ message InitializeFunctionRequest {
   FunctionSpecs function = 1;
   KernelSpecs kernel = 2;
   RuntimeSpecs runtime = 3;
+}
+
+message DeinitializeFunctionRequest {
+  FunctionSpecs function = 1;
 }
 
 message AvailableRunnerRequest {

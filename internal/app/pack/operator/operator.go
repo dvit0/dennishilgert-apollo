@@ -30,7 +30,7 @@ type Options struct {
 type PackageOperator interface {
 	Run(ctx context.Context) error
 	DownloadDependencies(ctx context.Context) error
-	BuildPackage(function *fleetpb.FunctionSpecs, runtime *fleetpb.RuntimeSpecs)
+	BuildPackage(function *fleetpb.FunctionSpecs)
 }
 
 type packageOperator struct {
@@ -83,7 +83,7 @@ func (p *packageOperator) DownloadDependencies(ctx context.Context) error {
 	return nil
 }
 
-func (p *packageOperator) BuildPackage(function *fleetpb.FunctionSpecs, runtime *fleetpb.RuntimeSpecs) {
+func (p *packageOperator) BuildPackage(function *fleetpb.FunctionSpecs) {
 	task := worker.NewTask(func(ctx context.Context) (*fleetpb.FunctionSpecs, error) {
 		buildDir, err := p.createBuildDir()
 		if err != nil {
@@ -114,7 +114,7 @@ func (p *packageOperator) BuildPackage(function *fleetpb.FunctionSpecs, runtime 
 			return function, fmt.Errorf("failed to unzip file: %w", err)
 		}
 
-		dockerfileName := fmt.Sprintf("Dockerfile.package-%s", runtime.Name)
+		dockerfileName := "Dockerfile.package"
 		if err := utils.CopyFile(
 			strings.Join([]string{p.workingDir, "dockerfiles", dockerfileName}, string(os.PathSeparator)),
 			strings.Join([]string{buildDir, dockerfileName}, string(os.PathSeparator)),
@@ -143,12 +143,14 @@ func (p *packageOperator) BuildPackage(function *fleetpb.FunctionSpecs, runtime 
 			p.messagingProducer.Publish(context.Background(), naming.MessagingFunctionStatusUpdateTopic, messagespb.FunctionStatusUpdateMessage{
 				Function: function,
 				Status:   frontendpb.FunctionStatus_PACKING_FAILED,
+				Reason:   err.Error(),
 			})
 			return
 		}
 		p.messagingProducer.Publish(context.Background(), naming.MessagingFunctionStatusUpdateTopic, messagespb.FunctionStatusUpdateMessage{
 			Function: function,
 			Status:   frontendpb.FunctionStatus_PACKED,
+			Reason:   "ok",
 		})
 		log.Infof("package built successfully")
 	})

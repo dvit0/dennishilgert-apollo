@@ -7,7 +7,10 @@
 package packpb
 
 import (
+	context "context"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -15,50 +18,90 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-const ()
+const (
+	PackageService_PresignedUploadUrl_FullMethodName = "/apollo.proto.pack.v1.PackageService/PresignedUploadUrl"
+)
 
-// PackageClient is the client API for Package service.
+// PackageServiceClient is the client API for PackageService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type PackageClient interface {
+type PackageServiceClient interface {
+	PresignedUploadUrl(ctx context.Context, in *PresignedUploadUrlRequest, opts ...grpc.CallOption) (*PresignedUploadUrlResponse, error)
 }
 
-type packageClient struct {
+type packageServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewPackageClient(cc grpc.ClientConnInterface) PackageClient {
-	return &packageClient{cc}
+func NewPackageServiceClient(cc grpc.ClientConnInterface) PackageServiceClient {
+	return &packageServiceClient{cc}
 }
 
-// PackageServer is the server API for Package service.
-// All implementations should embed UnimplementedPackageServer
+func (c *packageServiceClient) PresignedUploadUrl(ctx context.Context, in *PresignedUploadUrlRequest, opts ...grpc.CallOption) (*PresignedUploadUrlResponse, error) {
+	out := new(PresignedUploadUrlResponse)
+	err := c.cc.Invoke(ctx, PackageService_PresignedUploadUrl_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PackageServiceServer is the server API for PackageService service.
+// All implementations should embed UnimplementedPackageServiceServer
 // for forward compatibility
-type PackageServer interface {
+type PackageServiceServer interface {
+	PresignedUploadUrl(context.Context, *PresignedUploadUrlRequest) (*PresignedUploadUrlResponse, error)
 }
 
-// UnimplementedPackageServer should be embedded to have forward compatible implementations.
-type UnimplementedPackageServer struct {
+// UnimplementedPackageServiceServer should be embedded to have forward compatible implementations.
+type UnimplementedPackageServiceServer struct {
 }
 
-// UnsafePackageServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to PackageServer will
+func (UnimplementedPackageServiceServer) PresignedUploadUrl(context.Context, *PresignedUploadUrlRequest) (*PresignedUploadUrlResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PresignedUploadUrl not implemented")
+}
+
+// UnsafePackageServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PackageServiceServer will
 // result in compilation errors.
-type UnsafePackageServer interface {
-	mustEmbedUnimplementedPackageServer()
+type UnsafePackageServiceServer interface {
+	mustEmbedUnimplementedPackageServiceServer()
 }
 
-func RegisterPackageServer(s grpc.ServiceRegistrar, srv PackageServer) {
-	s.RegisterService(&Package_ServiceDesc, srv)
+func RegisterPackageServiceServer(s grpc.ServiceRegistrar, srv PackageServiceServer) {
+	s.RegisterService(&PackageService_ServiceDesc, srv)
 }
 
-// Package_ServiceDesc is the grpc.ServiceDesc for Package service.
+func _PackageService_PresignedUploadUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PresignedUploadUrlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PackageServiceServer).PresignedUploadUrl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PackageService_PresignedUploadUrl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PackageServiceServer).PresignedUploadUrl(ctx, req.(*PresignedUploadUrlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// PackageService_ServiceDesc is the grpc.ServiceDesc for PackageService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Package_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "apollo.proto.pack.v1.Package",
-	HandlerType: (*PackageServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams:     []grpc.StreamDesc{},
-	Metadata:    "apollo/proto/pack/v1/pack.proto",
+var PackageService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "apollo.proto.pack.v1.PackageService",
+	HandlerType: (*PackageServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "PresignedUploadUrl",
+			Handler:    _PackageService_PresignedUploadUrl_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "apollo/proto/pack/v1/pack.proto",
 }
