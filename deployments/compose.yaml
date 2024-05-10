@@ -48,6 +48,18 @@ services:
       - POSTGRES_PASSWORD=8k2u2GF2tsv2tVRCS025481zbGHAsd23
       - POSTGRES_DB=apollo
 
+  apollo-mongo:
+    container_name: apollo-mongo
+    image: mongo:latest
+    volumes:
+      - "mongo_data:/data/db"
+    ports:
+      - "27017:27017"
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: H510Kmbsg6HsbpAsh6263dDwzndlzen7
+
   apollo-redis:
     container_name: apollo-redis
     image: redis:latest
@@ -83,4 +95,6 @@ volumes:
   minio_data:
     driver: local
   postgres_data:
+    driver: local
+  mongo_data:
     driver: local
