@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package apollo.proto.logs.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/logs/v1;logspb";
+
+service LogsService {
+  rpc FunctionInvocationLogs(FunctionInvocationLogsRequest) returns (FunctionInvocationLogsResponse) {}
+}
+
+message LogEntry {
+  google.protobuf.Timestamp timestamp = 1;
+  string log_level = 2;
+  string log_message = 3;
+}
+
+message InvocationLogs {
+  string event_uuid = 1;
+  repeated LogEntry logs = 2;
+}
+
+message FunctionInvocationLogsRequest {
+  string function_uuid = 1;
+  string function_version = 2;
+}
+
+message FunctionInvocationLogsResponse {
+  string function_uuid = 1;
+  string function_version = 2;
+  repeated InvocationLogs invocation_logs = 3;
+}

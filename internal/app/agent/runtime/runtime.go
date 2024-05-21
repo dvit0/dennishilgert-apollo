@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	logspb "github.com/dennishilgert/apollo/internal/pkg/proto/logs/v1"
 	sharedpb "github.com/dennishilgert/apollo/internal/pkg/proto/shared/v1"
-	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var log = logger.NewLogger("apollo.agent.runtime")
@@ -47,18 +48,12 @@ type DefaultProperties struct {
 	RawProperties json.RawMessage `json:"properties"`
 }
 
-type LogLine struct {
-	Timestamp int64
-	Level     string
-	Message   string
-}
-
 type Result struct {
 	EventUuid     string
 	Status        int
 	StatusMessage string
-	Duration      string
-	Logs          []LogLine
+	Duration      int64
+	Logs          []*logspb.LogEntry
 	Errors        []sharedpb.Error
 	Data          map[string]interface{}
 }
@@ -196,7 +191,7 @@ func (p *persistentRuntime) Invoke(ctx context.Context, event Event) (*Result, e
 
 	var (
 		errs  []sharedpb.Error
-		logs  []LogLine
+		logs  []*logspb.LogEntry
 		data  map[string]interface{}
 		start = time.Now()
 	)
@@ -213,25 +208,7 @@ func (p *persistentRuntime) Invoke(ctx context.Context, event Event) (*Result, e
 	return p.buildResult(event.EventUuid, logs, errs, data, duration), nil
 }
 
-// LogsToStructList converts a list of log lines to a list of Structs.
-func LogsToStructList(logs []LogLine) ([]*structpb.Struct, error) {
-	logList := make([]*structpb.Struct, 0, len(logs)) // Preallocate slice with the required capacity
-
-	for _, logLine := range logs {
-		structLine, err := structpb.NewStruct(map[string]interface{}{
-			"timestamp": logLine.Timestamp,
-			"level":     logLine.Level,
-			"message":   logLine.Message,
-		})
-		if err != nil {
-			return nil, err
-		}
-		logList = append(logList, structLine)
-	}
-	return logList, nil
-}
-
-// LogsToStructList converts a list of log lines to a list of Structs.
+// sendInvocationData sends the invocation data to the runtime.
 func (p *persistentRuntime) sendInvocationData(event Event) error {
 	log.Debugf("sending invocation data to runtime for event: %s", event.EventUuid)
 	fnParams := map[string]interface{}{"event": event}
@@ -247,7 +224,7 @@ func (p *persistentRuntime) sendInvocationData(event Event) error {
 }
 
 // processOutput reads the output buffer and processes the data.
-func (p *persistentRuntime) processOutput(logs *[]LogLine, errs *[]sharedpb.Error, data *map[string]interface{}) error {
+func (p *persistentRuntime) processOutput(logs *[]*logspb.LogEntry, errs *[]sharedpb.Error, data *map[string]interface{}) error {
 	log.Debug("processing output from runtime")
 	reader := bufio.NewReader(p.stdout)
 	for {
@@ -273,7 +250,7 @@ func (p *persistentRuntime) processOutput(logs *[]LogLine, errs *[]sharedpb.Erro
 }
 
 // handleLine processes a line from the output buffer.
-func (p *persistentRuntime) handleLine(defaultProps *DefaultProperties, logs *[]LogLine, errs *[]sharedpb.Error, data *map[string]interface{}) bool {
+func (p *persistentRuntime) handleLine(defaultProps *DefaultProperties, logs *[]*logspb.LogEntry, errs *[]sharedpb.Error, data *map[string]interface{}) bool {
 	switch defaultProps.Type {
 	case "log", "error":
 		var props struct {
@@ -289,10 +266,14 @@ func (p *persistentRuntime) handleLine(defaultProps *DefaultProperties, logs *[]
 			return true
 		}
 		if defaultProps.Type == "log" {
-			*logs = append(*logs, LogLine{Timestamp: defaultProps.Timestamp, Level: props.Level, Message: props.Message})
+			*logs = append(*logs, &logspb.LogEntry{Timestamp: &timestamppb.Timestamp{
+				Seconds: defaultProps.Timestamp,
+			}, LogLevel: props.Level, LogMessage: props.Message})
 		} else {
 			*errs = append(*errs, sharedpb.Error{Code: props.Code, Message: props.Message, Cause: props.Cause, Stack: props.Stack})
-			*logs = append(*logs, LogLine{Timestamp: defaultProps.Timestamp, Level: "error", Message: props.Message})
+			*logs = append(*logs, &logspb.LogEntry{Timestamp: &timestamppb.Timestamp{
+				Seconds: defaultProps.Timestamp,
+			}, LogLevel: "error", LogMessage: props.Message})
 		}
 	case "result":
 		var props struct {
@@ -314,7 +295,7 @@ func (p *persistentRuntime) handleLine(defaultProps *DefaultProperties, logs *[]
 }
 
 // buildResult creates a Result instance from the provided data.
-func (p *persistentRuntime) buildResult(eventUuid string, logs []LogLine, errs []sharedpb.Error, data map[string]interface{}, duration time.Duration) *Result {
+func (p *persistentRuntime) buildResult(eventUuid string, logs []*logspb.LogEntry, errs []sharedpb.Error, data map[string]interface{}, duration time.Duration) *Result {
 	status, statusMessage := 200, "ok"
 	if len(errs) > 0 {
 		status, statusMessage = 500, "error while invoking function"
@@ -323,7 +304,7 @@ func (p *persistentRuntime) buildResult(eventUuid string, logs []LogLine, errs [
 		EventUuid:     eventUuid,
 		Status:        status,
 		StatusMessage: statusMessage,
-		Duration:      fmt.Sprintf("%dms", duration.Milliseconds()),
+		Duration:      duration.Milliseconds(),
 		Logs:          logs,
 		Errors:        errs,
 		Data:          data,

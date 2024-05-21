@@ -10,15 +10,21 @@ import (
 	"github.com/dennishilgert/apollo/internal/app/agent/runtime"
 	"github.com/dennishilgert/apollo/internal/pkg/health"
 	"github.com/dennishilgert/apollo/internal/pkg/logger"
+	"github.com/dennishilgert/apollo/internal/pkg/messaging/producer"
+	"github.com/dennishilgert/apollo/internal/pkg/naming"
 	agentpb "github.com/dennishilgert/apollo/internal/pkg/proto/agent/v1"
+	logspb "github.com/dennishilgert/apollo/internal/pkg/proto/logs/v1"
+	messagespb "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var log = logger.NewLogger("apollo.agent.api")
 
 type Options struct {
-	Port int
+	Port               int
+	FunctionIdentifier string
 }
 
 type Server interface {
@@ -29,18 +35,22 @@ type Server interface {
 type apiServer struct {
 	agentpb.UnimplementedAgentServer
 
-	port              int
-	readyCh           chan struct{}
-	running           atomic.Bool
-	persistentRuntime runtime.PersistentRuntime
+	port               int
+	readyCh            chan struct{}
+	running            atomic.Bool
+	functionIdentifier string
+	persistentRuntime  runtime.PersistentRuntime
+	messagingProducer  producer.MessagingProducer
 }
 
 // NewApiServer creates a new Server.
-func NewApiServer(persistentRuntime runtime.PersistentRuntime, opts Options) Server {
+func NewApiServer(persistentRuntime runtime.PersistentRuntime, messagingProducer producer.MessagingProducer, opts Options) Server {
 	return &apiServer{
-		port:              opts.Port,
-		readyCh:           make(chan struct{}),
-		persistentRuntime: persistentRuntime,
+		port:               opts.Port,
+		readyCh:            make(chan struct{}),
+		functionIdentifier: opts.FunctionIdentifier,
+		persistentRuntime:  persistentRuntime,
+		messagingProducer:  messagingProducer,
 	}
 }
 
@@ -116,10 +126,19 @@ func (a *apiServer) Invoke(ctx context.Context, in *agentpb.InvokeRequest) (*age
 		return nil, fmt.Errorf("function invocation failed: %w", err)
 	}
 
-	logs, err := runtime.LogsToStructList(result.Logs)
-	if err != nil {
-		return nil, fmt.Errorf("log lines conversion failed: %w", err)
-	}
+	logs := append(result.Logs, &logspb.LogEntry{
+		Timestamp:  timestamppb.Now(),
+		LogLevel:   "info",
+		LogMessage: fmt.Sprintf("billed duration for exection: %dms", result.Duration),
+	})
+
+	log.Debugf("publishing function invocation logs")
+	a.messagingProducer.Publish(ctx, naming.MessagingFunctionInvocationLogsTopic, messagespb.FunctionInvocationLogsMessage{
+		FunctionIdentifier: a.functionIdentifier,
+		EventUuid:          result.EventUuid,
+		Logs:               logs,
+	})
+
 	data, err := structpb.NewStruct(result.Data)
 	if err != nil {
 		return nil, fmt.Errorf("result data conversion failed: %w", err)

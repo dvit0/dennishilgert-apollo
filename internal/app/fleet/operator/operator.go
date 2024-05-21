@@ -407,7 +407,7 @@ func (r *runnerOperator) InvokeFunction(ctx context.Context, request *fleetpb.In
 	// TODO: Send billed duration to user service and logs to the log collector via messaging.
 	// IDEA: This can be done directly inside the runner. The connection to the messaging
 	// service is already implemented, so why not use it.
-	log.Infof("Billed duration for execution: %s, duration: %s", invokeResponse.EventUuid, invokeResponse.Duration)
+	log.Infof("Billed duration for execution: %s, duration: %dms", invokeResponse.EventUuid, invokeResponse.Duration)
 	log.Infof("Logs for execution: %s, logs: %v", invokeResponse.EventUuid, invokeResponse.Logs)
 
 	response := &fleetpb.InvokeFunctionResponse{

@@ -5,6 +5,7 @@ package apollo.proto.messages.v1;
 import "apollo/proto/registry/v1/registry.proto";
 import "apollo/proto/frontend/v1/frontend.proto";
 import "apollo/proto/fleet/v1/fleet.proto";
+import "apollo/proto/logs/v1/logs.proto";
 
 option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/messages/v1;messagespb";
 
@@ -35,6 +36,12 @@ message FunctionStatusUpdateMessage {
   apollo.proto.fleet.v1.FunctionSpecs function = 1;
   apollo.proto.frontend.v1.FunctionStatus status = 2;
   string reason = 3;
+}
+
+message FunctionInvocationLogsMessage {
+  string function_identifier = 1;
+  string event_uuid = 2;
+  repeated apollo.proto.logs.v1.LogEntry logs = 3;
 }
 
 message RunnerAgentReadyMessage {

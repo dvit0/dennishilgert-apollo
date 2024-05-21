@@ -1,8 +1,10 @@
 package naming
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -17,6 +19,7 @@ var (
 	MessagingFunctionDeinitializationResponsesTopic = "apollo_function_deinitialization_responses"
 	MessagingFunctionCodeUploadedTopic              = "apollo_function_code_uploaded"
 	MessagingFunctionStatusUpdateTopic              = "apollo_function_status_update"
+	MessagingFunctionInvocationLogsTopic            = "apollo_function_invocation_logs"
 	MessagingInstanceHeartbeatTopic                 = "apollo_instance_heartbeat"
 
 	// Names of the storage buckets.
@@ -81,6 +84,18 @@ func ImageRefStr(imageRegistryAddress string, imageName string, imageTag string)
 
 func FunctionIdentifier(functionUuid string, functionVersion string) string {
 	return fmt.Sprintf("%s_%s", functionUuid, functionVersion)
+}
+
+func ExtractFunctionDetailsFromIdentifier(functionIdentifier string) (string, string, error) {
+	pattern := `^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})_((?:[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})|initial)$`
+	regex := regexp.MustCompile(pattern)
+	matches := regex.FindStringSubmatch(functionIdentifier)
+
+	if len(matches) < 3 {
+		return "", "", errors.New("input does not match the required format")
+	}
+	// matches[0] is the entire match, matches[1] is the function uuid, matches[2] is the function version.
+	return matches[1], matches[2], nil
 }
 
 func FunctionStoragePath(dataPath string, functionUuid string) string {

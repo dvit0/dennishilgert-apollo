@@ -19,6 +19,7 @@ enum InstanceType {
   WORKER_MANAGER = 2;
   FRONTEND = 3;
   PACKAGE_SERVICE = 4;
+  LOGS_SERVICE = 5;
 }
 
 message ServiceInstance {

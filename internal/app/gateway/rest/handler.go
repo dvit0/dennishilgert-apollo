@@ -23,15 +23,18 @@ type RestHandler interface {
 type restHandler struct {
 	serviceRegistryClient registry.ServiceRegistryClient
 	frontendBridge        bridge.FrontendBridge
+	logsBridge            bridge.LogsBridge
 }
 
 // NewRestHandler creates a new RestHandler.
 func NewRestHandler(serviceRegistryClient registry.ServiceRegistryClient) RestHandler {
 	frontendBridge := bridge.NewFrontendBridge(serviceRegistryClient)
+	logsBridge := bridge.NewLogsBridge(serviceRegistryClient)
 
 	return &restHandler{
 		serviceRegistryClient: serviceRegistryClient,
 		frontendBridge:        frontendBridge,
+		logsBridge:            logsBridge,
 	}
 }
 
@@ -58,6 +61,8 @@ func (r *restHandler) RegisterHandlers(e *echo.Echo) {
 	}))
 
 	apiV1.GET("/functions/:functionUuid/code", r.frontendBridge.FunctionCodeUploadUrl)
+
+	apiV1.GET("/functions/:functionUuid/:functionVersion/logs", r.logsBridge.GetInvocationLogs)
 }
 
 func (r *restHandler) invocationMiddleware(next echo.HandlerFunc) echo.HandlerFunc {

@@ -3,6 +3,7 @@ syntax = "proto3";
 package apollo.proto.agent.v1;
 
 import "google/protobuf/struct.proto";
+import "apollo/proto/logs/v1/logs.proto";
 
 option go_package = "github.com/dennishilgert/apollo/internal/pkg/proto/agent/v1;agentpb";
 
@@ -35,7 +36,7 @@ message InvokeResponse {
   string event_uuid = 1;
   int32 status = 2;
   string status_message = 3;
-  string duration = 4;
-  repeated google.protobuf.Struct logs = 5;
+  int64 duration = 4;
+  repeated apollo.proto.logs.v1.LogEntry logs = 5;
   google.protobuf.Struct data = 6;
 }

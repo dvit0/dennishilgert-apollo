@@ -68,8 +68,10 @@ func NewAgent(ctx context.Context, opts Options) (Agent, error) {
 
 	apiServer := api.NewApiServer(
 		persistentRuntime,
+		messagingProducer,
 		api.Options{
-			Port: opts.ApiPort,
+			Port:               opts.ApiPort,
+			FunctionIdentifier: opts.FunctionIdentifier,
 		},
 	)
 
