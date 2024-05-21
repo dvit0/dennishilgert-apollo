@@ -36,17 +36,17 @@ The core components of Apollo include all services the are necessary for the sys
 
 - **Apollo Frontend** - State: done
 
-- **Apollo API Gateway** - State: work in progress
+- **Apollo API Gateway** - State: done
 
 - **Apollo Service Registry** - State: done
 
-- **Apollo Package Service** - State: work in progress
+- **Apollo Package Service** - State: done
 
 - **Apollo CLI** - State: work in progress
 
 ### Feature components
 
-- **Apollo Log Service** - State: to do
+- **Apollo Log Service** - State: done
 
 ## Capabilities & Features
 
