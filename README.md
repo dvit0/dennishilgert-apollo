@@ -48,6 +48,26 @@ The core components of Apollo include all services the are necessary for the sys
 
 - **Apollo Log Service** - State: done
 
+## Getting Started
+
+To get started with Apollo, download the latest release binaries (coming soon) or build them from source.
+
+You can build the Apollo components on any system that has Go 1.21.5+, the `make` utility and `bash` installed, as follows:
+
+```bash
+# This builds the binaries for the system architecture specified in the make file.
+make build
+
+# This builds the binaries for all supported system architecutes.
+make cross-compile
+```
+
+Depending on the system architecture, the built binaries are placed under `bin/${os}_${arch}`.
+
+Soon there will be an option to pull the Docker images for the different components directly from Docker Hub or build them by your own.
+
+For now, each binary must be placed at a location of your choice. It is recommended to place every service binary inside of a separate folder as the environment variables can be set up with a specific `.env` file per service. The required environment variables per service and the next steps can be found [here](docs/getting-started.md).
+
 ## Capabilities & Features
 
 Apollo has a small set of capabilities and features, which will be expanded in the future.
