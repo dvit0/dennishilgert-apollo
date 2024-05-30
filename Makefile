@@ -8,7 +8,8 @@ PROTOC_GEN_GO_GRPC_VERSION = 1.3.0
 PROTO_PREFIX := github.com/dennishilgert/apollo
 GRPC_PROTOS := $(shell find apollo/proto -mindepth 1 -maxdepth 1 -type d)
 
-BUILD_DIR := ./bin
+BIN_DIR := ./bin
+BUILD_DIR := ./build
 DOCKER_DIR := ./docker
 
 GOARCH ?= amd64
@@ -49,7 +50,7 @@ CMD_DIRS := $(wildcard cmd/*)
 define buildCmd
 .PHONY: build-$(notdir $(1))
 build-$(notdir $(1)):
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(BUILD_DIR)/$(GOOS)_$(GOARCH)/$(notdir $(1)) ./cmd/$(notdir $(1))
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(BIN_DIR)/$(GOOS)_$(GOARCH)/$(notdir $(1)) ./cmd/$(notdir $(1))
 endef
 
 $(foreach ITEM,$(CMD_DIRS),$(eval $(call buildCmd,$(ITEM))))
@@ -71,6 +72,27 @@ $(foreach ITEM,$(CMD_DIRS),$(eval $(call dockerBuild,$(ITEM))))
 
 .PHONY: docker-build
 docker-build: $(foreach ITEM,$(CMD_DIRS),docker-$(notdir $(ITEM)))
+
+################################################################################
+# Build resources                                                              #
+################################################################################
+
+.PHONY: resources-build
+resources-build:
+	mkdir -p build
+	cp $(BIN_DIR)/$(GOOS)_$(GOARCH)/cli $(BUILD_DIR)/cli
+	cp $(BIN_DIR)/$(GOOS)_$(GOARCH)/agent $(BUILD_DIR)/agent
+	cp ./init/init $(BUILD_DIR)/init
+
+	cp ./resources/examples/node/index.mjs $(BUILD_DIR)/index.mjs
+	cp ./resources/examples/node/package.json $(BUILD_DIR)/package.json
+
+	cp ./resources/package/node/Dockerfile.initial-node $(BUILD_DIR)/Dockerfile.initial-node
+	cp ./resources/runtimes/node/Dockerfile.node $(BUILD_DIR)/Dockerfile.node
+	cp ./resources/wrappers/node/wrapper.js $(BUILD_DIR)/wrapper.js
+	cp ./resources/rootfs/Dockerfile.baseos $(BUILD_DIR)/Dockerfile.baseos
+
+	./scripts/build-base-images.sh $(BUILD_DIR)
 
 ################################################################################
 # Dependency Management                                                        #
@@ -99,4 +121,5 @@ cross-compile:
 
 .PHONY: clean
 clean:
+	rm -rf $(BIN_DIR)
 	rm -rf $(BUILD_DIR)
