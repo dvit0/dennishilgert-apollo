@@ -31,7 +31,7 @@ func Load() (*Config, error) {
 	viper.SetEnvPrefix("APOLLO")
 
 	// loading the values from the environment or use default values
-	configuration.LoadOrDefault("ApiPort", "APOLLO_API_PORT", 80)
+	configuration.LoadOrDefault("ApiPort", "APOLLO_API_PORT", 50051)
 
 	configuration.LoadOrDefault("MessagingBootstrapServers", "APOLLO_MESSAGING_BOOTSTRAP_SERVERS", nil)
 	configuration.LoadOrDefault("MessagingWorkerCount", "APOLLO_MESSAGING_WORKER_COUNT", 10)
